@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thank You — RoadSeva</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    text-align: center;
+  }
+  .header-satisfied {
+    background: #1a6b3c;
+    padding: 36px 28px 28px;
+    color: white;
+  }
+  .header-disputed {
+    background: #b45309;
+    padding: 36px 28px 28px;
+    color: white;
+  }
+  .header-force-closed {
+    background: #4b5563;
+    padding: 36px 28px 28px;
+    color: white;
+  }
+  .icon-big { font-size: 52px; margin-bottom: 12px; }
+  .header h1 { font-size: 22px; font-weight: 700; line-height: 1.3; }
+  .header .sub { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+  .body { padding: 28px 28px 20px; }
+  .message {
+    font-size: 15px;
+    color: #444;
+    line-height: 1.75;
+    margin-bottom: 20px;
+  }
+  .ref {
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 20px;
+  }
+  .ref strong { color: #333; }
+  .what-next {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #0369a1;
+    line-height: 1.7;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .what-next-disputed {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #92400e;
+    line-height: 1.7;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .what-next strong, .what-next-disputed strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .track-link {
+    display: inline-block;
+    background: #1a6b3c;
+    color: white;
+    text-decoration: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .track-link:hover { background: #155c33; }
+  .footer {
+    background: #f8f8f8;
+    border-top: 1px solid #eee;
+    padding: 14px 28px;
+    font-size: 12px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  {% if satisfied %}
+  <!-- ── Satisfied ──────────────────────────────────────────────── -->
+  <div class="header-satisfied header">
+    <div class="icon-big">✅</div>
+    <h1>Thank You!</h1>
+    <div class="sub">Your feedback has been recorded</div>
+  </div>
+  <div class="body">
+    <div class="message">
+      {{ message or "We are glad the issue was resolved. Your feedback helps us track performance and improve road maintenance across Visakhapatnam." }}
+    </div>
+    <div class="ref">
+      Complaint <strong>{{ report_id }}</strong> has been closed successfully.
+    </div>
+    <div class="what-next">
+      <strong>What happens next</strong>
+      This complaint is now permanently archived. You can retrieve its full details
+      at any time using your complaint reference number at
+      <strong>roadseva.onrender.com/track</strong>
+    </div>
+    <a href="/track?ref={{ report_id }}" class="track-link">
+      View Complaint Details
+    </a>
+  </div>
+
+  {% elif force_closed %}
+  <!-- ── Force-closed (second dispute) ─────────────────────────── -->
+  <div class="header-force-closed header">
+    <div class="icon-big">📋</div>
+    <h1>Feedback Recorded</h1>
+    <div class="sub">Complaint reference: {{ report_id }}</div>
+  </div>
+  <div class="body">
+    <div class="message">
+      {{ message or "We have noted your feedback. This complaint has been reviewed and acted upon multiple times. It has now been permanently closed." }}
+    </div>
+    <div class="what-next-disputed">
+      <strong>If the road is still damaged</strong>
+      Please file a new complaint at <strong>roadseva.onrender.com/citizen</strong>
+      with a fresh photo. A new complaint will be treated as a priority issue.
+    </div>
+    <a href="/citizen" class="track-link" style="background:#4b5563">
+      File a New Complaint
+    </a>
+  </div>
+
+  {% else %}
+  <!-- ── First dispute ──────────────────────────────────────────── -->
+  <div class="header-disputed header">
+    <div class="icon-big">🔍</div>
+    <h1>We Hear You</h1>
+    <div class="sub">Your concern has been escalated</div>
+  </div>
+  <div class="body">
+    <div class="message">
+      {{ message or "Thank you for letting us know. A senior officer will review the before and after photos of this work and decide the next steps within 48 hours." }}
+    </div>
+    <div class="ref">
+      Complaint <strong>{{ report_id }}</strong> — under review
+    </div>
+    <div class="what-next-disputed">
+      <strong>What happens now</strong>
+      A senior officer will compare the original complaint photo with the
+      work-done photo. If the work is found incomplete, the complaint will
+      be reopened immediately. You will not need to do anything further.
+    </div>
+    <a href="/track?report_id={{ report_id }}&search_type=id" class="track-link"
+       style="background:#b45309">
+      Track This Complaint
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    Greater Visakhapatnam Municipal Corporation · RoadSeva
+  </div>
+</div>
+
+</body>
+</html>

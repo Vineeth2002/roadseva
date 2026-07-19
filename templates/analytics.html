@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva — Grievance Analytics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --blue: #1a3a6b; --blue2: #1e4fa0; --saffron: #f47920;
+            --green: #138808; --red: #e74c3c; --purple: #6f42c1;
+            --bg: #f0f4f8; --white: #fff; --border: #e0e6f0;
+            --muted: #6b7a99; --shadow: 0 2px 10px rgba(26,58,107,.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: var(--bg); color: #1a1a2e; }
+
+        .header { background: var(--blue); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+        .header h1 { font-size: 17px; }
+        .header-sub { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 3px; }
+        .nav-link { color: white; text-decoration: none; padding: 5px 12px; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; font-size: 12px; }
+        .nav-link:hover { background: rgba(255,255,255,.12); }
+        .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        .page { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+        /* KPI strip */
+        .kpi-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .kpi { background: var(--white); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); border-top: 4px solid var(--border); }
+        .kpi.blue   { border-top-color: var(--blue); }
+        .kpi.green  { border-top-color: var(--green); }
+        .kpi.red    { border-top-color: var(--red); }
+        .kpi.orange { border-top-color: var(--saffron); }
+        .kpi.purple { border-top-color: var(--purple); }
+        .kpi.teal   { border-top-color: #17a2b8; }
+        .kpi-val { font-size: 32px; font-weight: bold; line-height: 1; margin-bottom: 5px; }
+        .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; line-height: 1.4; }
+        .kpi-sub { font-size: 11px; margin-top: 5px; font-weight: 500; }
+        .kpi-sub.up   { color: var(--red); }
+        .kpi-sub.down { color: var(--green); }
+        .kpi-sub.flat { color: var(--muted); }
+
+        /* Alert KPIs */
+        .alert-strip { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+        .alert-card { flex: 1; min-width: 200px; padding: 14px 18px; border-radius: 10px; display: flex; align-items: center; gap: 14px; }
+        .alert-card.red-bg   { background: #fde8e8; border: 1.5px solid #f5c6c6; }
+        .alert-card.amber-bg { background: #fff8e1; border: 1.5px solid #ffe082; }
+        .alert-icon { font-size: 28px; }
+        .alert-val { font-size: 26px; font-weight: bold; line-height: 1; }
+        .alert-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .alert-card.red-bg .alert-val { color: var(--red); }
+        .alert-card.amber-bg .alert-val { color: #d35400; }
+
+        /* Sections */
+        .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 14px; }
+        .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .chart-grid-full { margin-bottom: 20px; }
+        .chart-card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+        .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+        .chart-card .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+        .chart-wrap { position: relative; }
+
+        /* Ward table */
+        .ward-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ward-table th { background: var(--blue); color: white; padding: 9px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+        .ward-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .ward-table tr:hover td { background: #f8faff; }
+        .bar-bg { background: #eef0f8; border-radius: 4px; height: 8px; width: 100%; }
+        .bar-fill { background: var(--blue2); border-radius: 4px; height: 8px; }
+        .bar-fill.red { background: var(--red); }
+        .sev-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+        /* Officer table */
+        .officer-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .officer-table th { background: var(--green); color: white; padding: 9px 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+        .officer-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+
+        /* Source badges */
+        .src { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .src-web      { background: #e8f0fe; color: #1a3a6b; }
+        .src-phone    { background: #fff8e1; color: #d35400; }
+        .src-letter   { background: #f3e5f5; color: #7b1fa2; }
+        .src-walkin   { background: #e8f5e9; color: #2e7d32; }
+        .src-whatsapp { background: #e8f5e9; color: #1b5e20; }
+
+        .trend-box { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 8px; margin-top: 10px; }
+        .trend-box.up   { background: #fde8e8; color: var(--red); }
+        .trend-box.down { background: #d4edda; color: var(--green); }
+        .trend-box.flat { background: #f0f0f0; color: var(--muted); }
+
+        .last-updated { font-size: 11px; color: var(--muted); text-align: right; margin-bottom: 16px; }
+
+        @media (max-width: 900px) {
+            .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
+            .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>🏛️ RoadSeva — Grievance Analytics</h1>
+        <div class="header-sub">Greater Visakhapatnam Municipal Corporation · Roads & Buildings</div>
+    </div>
+    <div class="nav-right">
+        <a href="/staff" class="nav-link">← Dashboard</a>
+        {% if staff.role in ('admin','officer','commissioner') %}
+        <a href="/export" class="nav-link" style="background:#27ae60;border-color:#27ae60;">📥 Export CSV</a>
+        {% endif %}
+        <a href="/logout" class="nav-link" style="background:#c0392b;border-color:#c0392b;">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="last-updated">📊 Analytics as of: <strong id="ts">{{ now_ist }}</strong> IST &nbsp;·&nbsp; <a href="/analytics" style="color:var(--blue);">Refresh</a></div>
+
+    <!-- ── KPI Strip ── -->
+    <div class="kpi-strip">
+        <div class="kpi blue">
+            <div class="kpi-val" style="color:var(--blue);">{{ data.total }}</div>
+            <div class="kpi-label">Total Grievances Received</div>
+            <div class="kpi-sub flat">All time</div>
+        </div>
+        <div class="kpi green">
+            <div class="kpi-val" style="color:var(--green);">{{ data.resolved }}</div>
+            <div class="kpi-label">Grievances Redressed</div>
+            <div class="kpi-sub flat">{{ data.resolution_rate }}% rate</div>
+        </div>
+        <div class="kpi orange">
+            <div class="kpi-val" style="color:var(--saffron);">{{ data.open_c }}</div>
+            <div class="kpi-label">Open / Pending</div>
+            <div class="kpi-sub {% if data.open_c > 10 %}up{% else %}flat{% endif %}">Needs attention</div>
+        </div>
+        <div class="kpi red">
+            <div class="kpi-val" style="color:var(--red);">{{ data.critical }}</div>
+            <div class="kpi-label">Critical Severity</div>
+            <div class="kpi-sub {% if data.critical > 0 %}up{% else %}flat{% endif %}">Immediate action</div>
+        </div>
+        <div class="kpi teal">
+            <div class="kpi-val" style="color:#17a2b8;">{{ data.today_c }}</div>
+            <div class="kpi-label">Received Today</div>
+            <div class="kpi-sub flat">As of now</div>
+        </div>
+        <div class="kpi blue">
+            <div class="kpi-val" style="color:var(--blue2);">{{ data.daily_avg }}</div>
+            <div class="kpi-label">Daily Average</div>
+            <div class="kpi-sub flat">Per active day</div>
+        </div>
+        <div class="kpi purple">
+            <div class="kpi-val" style="color:var(--purple);">{{ data.avg_resolution_days }}</div>
+            <div class="kpi-label">Avg Redressal Time</div>
+            <div class="kpi-sub flat">Days</div>
+        </div>
+        <div class="kpi orange">
+            <div class="kpi-val" style="color:var(--saffron);">{{ data.this_month_c }}</div>
+            <div class="kpi-label">This Month</div>
+            <div class="trend-box {{ data.trend_dir }}">
+                {% if data.trend_dir == 'up' %}⬆ +{{ data.trend_pct }}% vs last month
+                {% elif data.trend_dir == 'down' %}⬇ {{ data.trend_pct }}% vs last month
+                {% else %}➡ No change vs last month{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Alert Cards ── -->
+    <div class="alert-strip">
+        <div class="alert-card red-bg">
+            <div class="alert-icon">🚨</div>
+            <div>
+                <div class="alert-val">{{ data.unassigned }}</div>
+                <div class="alert-lbl">Open grievances with no Concerned Official assigned</div>
+            </div>
+        </div>
+        <div class="alert-card amber-bg">
+            <div class="alert-icon">⏰</div>
+            <div>
+                <div class="alert-val">{{ data.sla_breach }}</div>
+                <div class="alert-lbl">Grievances open for more than 7 days (SLA breach)</div>
+            </div>
+        </div>
+        <div class="alert-card" style="background:#e8f5e9;border:1.5px solid #a5d6a7;">
+            <div class="alert-icon">✅</div>
+            <div>
+                <div class="alert-val" style="color:var(--green);">{{ data.resolution_rate }}%</div>
+                <div class="alert-lbl">Overall grievance redressal rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Daily & Monthly Trend ── -->
+    <div class="section-title">📈 Submission Trends</div>
+    <div class="chart-grid-2">
+        <div class="chart-card">
+            <h3>Daily Grievances — Last 30 Days</h3>
+            <div class="chart-sub">Each bar = one calendar day. Shows surge days clearly.</div>
+            <div class="chart-wrap" style="height:220px;">
+                <canvas id="chartDaily"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Monthly Grievances — Last 12 Months</h3>
+            <div class="chart-sub">Month-over-month trend. Rising bars = more complaints received.</div>
+            <div class="chart-wrap" style="height:220px;">
+                <canvas id="chartMonthly"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Hourly & Weekday Pattern ── -->
+    <div class="section-title">🕐 Submission Patterns</div>
+    <div class="chart-grid-2">
+        <div class="chart-card">
+            <h3>Hourly Pattern — When Do Citizens File?</h3>
+            <div class="chart-sub">Peak hours help schedule IVRS staff and officer availability.</div>
+            <div class="chart-wrap" style="height:200px;">
+                <canvas id="chartHourly"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Day of Week Pattern</h3>
+            <div class="chart-sub">Which weekdays receive the most grievances. Useful for Spandana scheduling.</div>
+            <div class="chart-wrap" style="height:200px;">
+                <canvas id="chartWeekday"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Status / Severity / Channel ── -->
+    <div class="section-title">🔍 Grievance Breakdown</div>
+    <div class="chart-grid-3">
+        <div class="chart-card">
+            <h3>Status Distribution</h3>
+            <div class="chart-sub">Current pipeline at a glance.</div>
+            <div class="chart-wrap" style="height:220px;">
+                <canvas id="chartStatus"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>AI Severity Split</h3>
+            <div class="chart-sub">How Groq AI classified submitted grievances.</div>
+            <div class="chart-wrap" style="height:220px;">
+                <canvas id="chartSeverity"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Intake Channel</h3>
+            <div class="chart-sub">Web portal vs IVRS phone vs letter vs Spandana walk-in.</div>
+            <div class="chart-wrap" style="height:220px;">
+                <canvas id="chartSource"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Damage Type ── -->
+    <div class="section-title">🛣️ Damage Type Analysis</div>
+    <div class="chart-grid-full">
+        <div class="chart-card">
+            <h3>Grievances by Damage Type</h3>
+            <div class="chart-sub">Which road issues citizens report most. Guides infrastructure budget allocation.</div>
+            <div class="chart-wrap" style="height:200px;">
+                <canvas id="chartDamage"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Ward Hotspots ── -->
+    <div class="section-title">📍 Ward Hotspot Analysis — Top 10</div>
+    <div class="chart-card" style="margin-bottom:20px;">
+        <h3>Most Reported Wards</h3>
+        <div class="chart-sub" style="margin-bottom:16px;">Wards with highest grievance count — guides field inspection priority and budget allocation.</div>
+        <table class="ward-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ward</th>
+                    <th>Total Grievances</th>
+                    <th>Open</th>
+                    <th>Critical</th>
+                    <th>Volume</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% set max_count = data.ward_rows[0].count if data.ward_rows else 1 %}
+            {% for w in data.ward_rows %}
+            <tr>
+                <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
+                <td style="font-weight:600;color:var(--blue);">{{ w.ward }}</td>
+                <td style="font-weight:bold;">{{ w.count }}</td>
+                <td style="color:var(--saffron);font-weight:600;">{{ w.open_count }}</td>
+                <td>
+                    {% if w.critical_count > 0 %}
+                    <span style="color:var(--red);font-weight:bold;">🔴 {{ w.critical_count }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="width:160px;">
+                    <div class="bar-bg">
+                        <div class="bar-fill {% if w.open_count > 3 %}red{% endif %}"
+                             style="width:{{ (w.count / max_count * 100)|int }}%"></div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── Officer Performance ── -->
+    {% if data.officer_rows %}
+    <div class="section-title">👷 Field Inspector Performance</div>
+    <div class="chart-card" style="margin-bottom:20px;">
+        <h3>Top Performers — Redressal Count</h3>
+        <div class="chart-sub" style="margin-bottom:16px;">Field inspectors ranked by number of grievances marked resolved.</div>
+        <table class="officer-table">
+            <thead><tr><th>#</th><th>Field Inspector</th><th>Grievances Redressed</th></tr></thead>
+            <tbody>
+            {% for o in data.officer_rows %}
+            <tr>
+                <td style="color:var(--muted);">{{ loop.index }}</td>
+                <td style="font-weight:600;">{{ o.name }}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <strong style="color:var(--green);">{{ o.resolved_count }}</strong>
+                        <div class="bar-bg" style="width:120px;">
+                            <div class="bar-fill" style="background:var(--green);width:{{ (o.resolved_count / data.officer_rows[0].resolved_count * 100)|int }}%"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- ── Channel Summary ── -->
+    <div class="section-title">📡 Intake Channel Summary</div>
+    <div class="chart-card" style="margin-bottom:20px;">
+        <h3>How Grievances Reached GVMC</h3>
+        <div class="chart-sub" style="margin-bottom:16px;">Tracks which channels citizens and staff are using most.</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        {% for s in data.source_rows %}
+        <div style="background:#f8faff;border:1.5px solid var(--border);border-radius:10px;padding:16px 22px;text-align:center;min-width:120px;">
+            <div style="font-size:24px;margin-bottom:6px;">
+                {% if s.source == 'web' %}🌐
+                {% elif s.source == 'phone' %}📞
+                {% elif s.source == 'letter' %}📄
+                {% elif s.source == 'walkin' %}🚶
+                {% elif s.source == 'whatsapp' %}💬
+                {% else %}📌{% endif %}
+            </div>
+            <div style="font-size:22px;font-weight:bold;color:var(--blue);">{{ s.count }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;text-transform:capitalize;">
+                {% if s.source == 'web' %}Online Portal
+                {% elif s.source == 'phone' %}IVRS / Phone
+                {% elif s.source == 'letter' %}Written Letter
+                {% elif s.source == 'walkin' %}Spandana
+                {% elif s.source == 'whatsapp' %}WhatsApp
+                {% else %}{{ s.source }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+
+</div><!-- /page -->
+
+<script>
+// ── Chart data from Jinja2 ────────────────────────────────────────────────────
+const dayLabels  = {{ data.day_rows | map(attribute='day') | list | tojson }};
+const dayData    = {{ data.day_rows | map(attribute='count') | list | tojson }};
+const monLabels  = {{ data.month_rows | map(attribute='month') | list | tojson }};
+const monData    = {{ data.month_rows | map(attribute='count') | list | tojson }};
+const hourLabels = {{ data.hourly_data | map(attribute='hour') | list | tojson }};
+const hourData   = {{ data.hourly_data | map(attribute='count') | list | tojson }};
+const wdLabels   = {{ data.weekday_data | map(attribute='day') | list | tojson }};
+const wdData     = {{ data.weekday_data | map(attribute='count') | list | tojson }};
+const statusLabels = {{ data.status_data.keys() | list | tojson }};
+const statusData   = {{ data.status_data.values() | list | tojson }};
+const sevLabels  = {{ data.severity_rows | map(attribute='severity') | list | tojson }};
+const sevData    = {{ data.severity_rows | map(attribute='count') | list | tojson }};
+const srcLabels  = {{ data.source_rows | map(attribute='source') | list | tojson }};
+const srcData    = {{ data.source_rows | map(attribute='count') | list | tojson }};
+const dmgLabels  = {{ data.damage_rows | map(attribute='damage_type') | list | tojson }};
+const dmgData    = {{ data.damage_rows | map(attribute='count') | list | tojson }};
+
+Chart.defaults.font.family = 'Arial, sans-serif';
+Chart.defaults.font.size = 12;
+
+const BLUE    = '#1a3a6b';
+const BLUE2   = '#1e4fa0';
+const SAFFRON = '#f47920';
+const GREEN   = '#138808';
+const RED     = '#e74c3c';
+const PURPLE  = '#6f42c1';
+const TEAL    = '#17a2b8';
+
+// ── Daily bar chart ──────────────────────────────────────────────────────────
+new Chart(document.getElementById('chartDaily'), {
+    type: 'bar',
+    data: {
+        labels: dayLabels,
+        datasets: [{
+            label: 'Grievances',
+            data: dayData,
+            backgroundColor: dayData.map((v,i) =>
+                i === dayData.length-1 ? SAFFRON : 'rgba(26,58,107,0.6)'),
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { ticks: { maxRotation: 45, font: { size: 9 } } },
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// ── Monthly line chart ───────────────────────────────────────────────────────
+new Chart(document.getElementById('chartMonthly'), {
+    type: 'line',
+    data: {
+        labels: monLabels,
+        datasets: [{
+            label: 'Grievances',
+            data: monData,
+            borderColor: BLUE2, backgroundColor: 'rgba(30,79,160,0.1)',
+            tension: 0.35, fill: true, pointRadius: 5,
+            pointBackgroundColor: SAFFRON,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+// ── Hourly bar chart ─────────────────────────────────────────────────────────
+new Chart(document.getElementById('chartHourly'), {
+    type: 'bar',
+    data: {
+        labels: hourLabels.map(h => h + ':00'),
+        datasets: [{
+            label: 'Grievances',
+            data: hourData,
+            backgroundColor: hourData.map(v => {
+                const max = Math.max(...hourData);
+                return v === max ? SAFFRON : 'rgba(26,58,107,0.5)';
+            }),
+            borderRadius: 3,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { title: i => i[0].label + ' hrs' } }
+        },
+        scales: {
+            x: { ticks: { font: { size: 9 } } },
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// ── Weekday bar chart ────────────────────────────────────────────────────────
+new Chart(document.getElementById('chartWeekday'), {
+    type: 'bar',
+    data: {
+        labels: wdLabels,
+        datasets: [{
+            label: 'Grievances',
+            data: wdData,
+            backgroundColor: [
+                '#e74c3c','rgba(26,58,107,0.6)','rgba(26,58,107,0.6)',
+                'rgba(26,58,107,0.6)','rgba(26,58,107,0.6)',
+                'rgba(26,58,107,0.6)','#e74c3c'
+            ],
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// ── Status doughnut ──────────────────────────────────────────────────────────
+const STATUS_COLORS = {
+    open: '#e74c3c', assigned: '#f39c12', inspecting: '#6f42c1',
+    inspected: '#17a2b8', resolved: '#138808', closed: '#95a5a6'
+};
+new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+        labels: statusLabels,
+        datasets: [{
+            data: statusData,
+            backgroundColor: statusLabels.map(s => STATUS_COLORS[s] || '#888'),
+            borderWidth: 2, borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+// ── Severity doughnut ────────────────────────────────────────────────────────
+const SEV_COLORS = {
+    critical: '#e74c3c', high: '#f39c12', medium: '#f1c40f',
+    low: '#138808', unknown: '#ccc'
+};
+new Chart(document.getElementById('chartSeverity'), {
+    type: 'doughnut',
+    data: {
+        labels: sevLabels,
+        datasets: [{
+            data: sevData,
+            backgroundColor: sevLabels.map(s => SEV_COLORS[s] || '#888'),
+            borderWidth: 2, borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+// ── Source doughnut ──────────────────────────────────────────────────────────
+const SRC_COLORS = ['#1a3a6b','#f39c12','#6f42c1','#138808','#17a2b8'];
+new Chart(document.getElementById('chartSource'), {
+    type: 'doughnut',
+    data: {
+        labels: srcLabels.map(s => ({
+            web:'Online Portal', phone:'IVRS/Phone', letter:'Letter',
+            walkin:'Spandana', whatsapp:'WhatsApp'
+        }[s] || s)),
+        datasets: [{
+            data: srcData,
+            backgroundColor: SRC_COLORS.slice(0, srcData.length),
+            borderWidth: 2, borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+// ── Damage type horizontal bar ────────────────────────────────────────────────
+new Chart(document.getElementById('chartDamage'), {
+    type: 'bar',
+    data: {
+        labels: dmgLabels,
+        datasets: [{
+            label: 'Grievances',
+            data: dmgData,
+            backgroundColor: 'rgba(26,58,107,0.7)',
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+
+</body>
+</html>

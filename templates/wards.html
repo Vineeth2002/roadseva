@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva — GVMC Ward Report Card</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; }
+
+        .header { background: #1a3a6b; color: white; padding: 20px 24px; text-align: center; }
+        .header h1 { font-size: 22px; margin-bottom: 4px; }
+        .header p { font-size: 13px; opacity: 0.8; }
+        .header .subtitle { font-size: 12px; opacity: 0.65; margin-top: 6px; }
+
+        .public-note { background: #e8f4fd; border-bottom: 1px solid #bee3f8; padding: 10px 24px; text-align: center; font-size: 13px; color: #2b6cb0; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+        /* Summary bar */
+        .summary-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+        .summary-card { background: white; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 130px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); text-align: center; }
+        .summary-card .num { font-size: 32px; font-weight: bold; color: #1a3a6b; }
+        .summary-card .lbl { font-size: 12px; color: #888; margin-top: 2px; }
+
+        /* Search */
+        .search-box { background: white; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); display: flex; gap: 10px; align-items: center; }
+        .search-box input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-size: 14px; }
+        .search-box input:focus { outline: none; border-color: #1a3a6b; }
+
+        /* Ward cards */
+        .ward-card { background: white; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); border-left: 5px solid #ddd; transition: box-shadow 0.15s; }
+        .ward-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .ward-card.excellent { border-left-color: #27ae60; }
+        .ward-card.good      { border-left-color: #2ecc71; }
+        .ward-card.average   { border-left-color: #f39c12; }
+        .ward-card.poor      { border-left-color: #e74c3c; }
+        .ward-card.no-data   { border-left-color: #bbb; }
+
+        .ward-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .ward-name { font-size: 16px; font-weight: bold; color: #222; }
+        .ward-rank { font-size: 13px; color: #888; margin-top: 2px; }
+
+        .rate-badge { font-size: 22px; font-weight: bold; padding: 6px 16px; border-radius: 20px; }
+        .rate-excellent { background: #d4edda; color: #27ae60; }
+        .rate-good      { background: #d4edda; color: #27ae60; }
+        .rate-average   { background: #fef3cd; color: #f39c12; }
+        .rate-poor      { background: #fde8e8; color: #e74c3c; }
+        .rate-nodata    { background: #f0f0f0; color: #aaa; }
+
+        /* Progress bar */
+        .progress-wrap { background: #f0f0f0; border-radius: 6px; height: 8px; margin-bottom: 12px; overflow: hidden; }
+        .progress-fill { height: 8px; border-radius: 6px; transition: width 0.5s; }
+        .fill-excellent { background: #27ae60; }
+        .fill-good      { background: #2ecc71; }
+        .fill-average   { background: #f39c12; }
+        .fill-poor      { background: #e74c3c; }
+        .fill-nodata    { background: #bbb; }
+
+        /* Stats row */
+        .stats-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+        .stat { display: flex; flex-direction: column; align-items: center; background: #f8f9fa; border-radius: 8px; padding: 8px 14px; min-width: 70px; }
+        .stat .val { font-size: 18px; font-weight: bold; }
+        .stat .key { font-size: 11px; color: #888; margin-top: 2px; }
+        .stat-total    .val { color: #1a3a6b; }
+        .stat-resolved .val { color: #27ae60; }
+        .stat-pending  .val { color: #e74c3c; }
+        .stat-days     .val { color: #8e44ad; }
+
+        /* Share button */
+        .share-btn { background: #1a3a6b; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-top: 12px; }
+        .share-btn:hover { background: #15305a; }
+        .copied-msg { font-size: 11px; color: #27ae60; margin-left: 8px; display: none; }
+
+        /* Grade label */
+        .grade-label { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+        .grade-excellent { color: #27ae60; }
+        .grade-good      { color: #27ae60; }
+        .grade-average   { color: #f39c12; }
+        .grade-poor      { color: #e74c3c; }
+        .grade-nodata    { color: #aaa; }
+
+        .footer { text-align: center; padding: 24px; font-size: 12px; color: #aaa; }
+
+        .no-results { text-align: center; padding: 40px; color: #888; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="/" style="color:white; text-decoration:none; font-size:14px; opacity:0.85;">← Home</a>
+    <h1>🏙️ GVMC Ward Report Card</h1>
+    <p>Visakhapatnam — Road Complaint Resolution Performance</p>
+    <div class="subtitle">🔴 Public Dashboard — Updated in real time | Data powered by RoadSeva</div>
+</div>
+
+<div class="public-note">
+    📢 This is a public transparency page. Citizens can check how well their ward is performing on road repairs.
+</div>
+
+<div class="container">
+
+    <!-- Summary -->
+    {% set total_complaints = wards | sum(attribute='total') %}
+    {% set total_resolved = wards | sum(attribute='resolved') %}
+    {% set total_open = wards | sum(attribute='open') %}
+    {% set overall_rate = ((total_resolved / total_complaints) * 100) | round(1) if total_complaints > 0 else 0 %}
+
+    <div class="summary-row">
+        <div class="summary-card">
+            <div class="num">{{ total_wards }}</div>
+            <div class="lbl">Wards Reporting</div>
+        </div>
+        <div class="summary-card">
+            <div class="num">{{ total_complaints }}</div>
+            <div class="lbl">Total Complaints</div>
+        </div>
+        <div class="summary-card">
+            <div class="num" style="color:#27ae60;">{{ total_resolved }}</div>
+            <div class="lbl">Resolved</div>
+        </div>
+        <div class="summary-card">
+            <div class="num" style="color:#e74c3c;">{{ total_open }}</div>
+            <div class="lbl">Pending</div>
+        </div>
+        <div class="summary-card">
+            <div class="num" style="color:#8e44ad;">{{ overall_rate }}%</div>
+            <div class="lbl">Overall Rate</div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+        🔍
+        <input type="text" id="searchInput" placeholder="Search ward name..." oninput="filterWards()">
+    </div>
+
+    <!-- Ward Cards -->
+    <div id="wardList">
+    {% for w in wards %}
+        {% if w.rate >= 80 %}
+            {% set grade = 'excellent' %}
+            {% set grade_label = '⭐ Excellent' %}
+        {% elif w.rate >= 60 %}
+            {% set grade = 'good' %}
+            {% set grade_label = '✅ Good' %}
+        {% elif w.rate >= 40 %}
+            {% set grade = 'average' %}
+            {% set grade_label = '⚠️ Average' %}
+        {% elif w.total == 0 %}
+            {% set grade = 'no-data' %}
+            {% set grade_label = '— No Data' %}
+        {% else %}
+            {% set grade = 'poor' %}
+            {% set grade_label = '🔴 Needs Attention' %}
+        {% endif %}
+
+        <div class="ward-card {{ grade }}" data-ward="{{ w.ward | lower }}">
+            <div class="ward-top">
+                <div>
+                    <div class="ward-name">📍 {{ w.ward }}</div>
+                    <div class="ward-rank">Rank #{{ w.rank }} out of {{ total_wards }} wards</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="rate-badge rate-{{ grade }}">{{ w.rate }}%</div>
+                    <div class="grade-label grade-{{ grade }}">{{ grade_label }}</div>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-fill fill-{{ grade }}" style="width:{{ w.rate }}%"></div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat stat-total">
+                    <span class="val">{{ w.total }}</span>
+                    <span class="key">Total</span>
+                </div>
+                <div class="stat stat-resolved">
+                    <span class="val">{{ w.resolved }}</span>
+                    <span class="key">Resolved</span>
+                </div>
+                <div class="stat stat-pending">
+                    <span class="val">{{ w.open }}</span>
+                    <span class="key">Pending</span>
+                </div>
+                <div class="stat stat-days">
+                    <span class="val">{{ w.avg_days }}</span>
+                    <span class="key">Avg Days</span>
+                </div>
+            </div>
+
+            <div>
+                <button class="share-btn" onclick="shareWard('{{ w.ward }}', '{{ w.rate }}', '{{ w.rank }}', '{{ total_wards }}', this)">
+                    📤 Share This Ward
+                </button>
+                <span class="copied-msg" id="copied-{{ loop.index }}">✅ Link copied!</span>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+
+    <div class="no-results" id="noResults" style="display:none;">
+        No wards found matching your search.
+    </div>
+
+</div>
+
+<div class="footer">
+    RoadSeva — Road Asset Management Platform | GVMC Visakhapatnam<br>
+    Data updates in real time as complaints are resolved
+</div>
+
+<script>
+function filterWards() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('.ward-card');
+    let visible = 0;
+    cards.forEach(function(card) {
+        const name = card.getAttribute('data-ward');
+        if (name.includes(query)) {
+            card.style.display = 'block';
+            visible++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function shareWard(ward, rate, rank, total, btn) {
+    const url = window.location.href;
+    const text = '📍 ' + ward + ' — Road Repair Rate: ' + rate + '%\n🏆 Rank #' + rank + ' out of ' + total + ' wards\n\nCheck your ward: ' + url;
+    if (navigator.share) {
+        navigator.share({ title: 'RoadSeva Ward Report', text: text, url: url });
+    } else {
+        navigator.clipboard.writeText(text).then(function() {
+            const idx = btn.nextElementSibling.id.replace('copied-', '');
+            const msg = document.getElementById('copied-' + idx);
+            msg.style.display = 'inline';
+            setTimeout(function() { msg.style.display = 'none'; }, 2000);
+        });
+    }
+}
+</script>
+
+</body>
+</html>

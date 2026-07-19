@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>grievance filed — RoadSeva GVMC Visakhapatnam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{--gov-blue:#1a3a6b;--gov-blue2:#1e4fa0;--saffron:#f47920;--green:#138808;--off-white:#f8f7f4;--text:#1a1a2e;--muted:#5a6478;--border:#d8dce8;--shadow:0 2px 16px rgba(26,58,107,.10);}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+.tricolor{display:flex;height:4px}
+.tricolor span:nth-child(1){flex:1;background:#ff9933}
+.tricolor span:nth-child(2){flex:1;background:#fff;border-top:1px solid #eee;border-bottom:1px solid #eee}
+.tricolor span:nth-child(3){flex:1;background:#138808}
+.top-strip{background:var(--gov-blue);color:rgba(255,255,255,.8);font-size:12px;padding:5px 24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.top-strip a{color:rgba(255,255,255,.8);text-decoration:none}
+.header{background:#fff;border-bottom:3px solid var(--saffron);box-shadow:var(--shadow)}
+.header-inner{max-width:800px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
+.emblem{width:44px;height:44px;background:var(--gov-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:3px solid var(--saffron)}
+.hd-org{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.hd-name{font-family:'DM Serif Display',serif;font-size:17px;color:var(--gov-blue)}
+.hd-name span{color:var(--saffron)}
+.main{max-width:800px;margin:0 auto;padding:40px 24px 60px}
+.success-card{background:#fff;border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px}
+.success-header{background:linear-gradient(135deg,var(--green) 0%,#0d6e06 100%);padding:40px 32px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.success-header::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:rgba(255,255,255,.06);border-radius:50%}
+.checkmark-circle{width:80px;height:80px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:40px;border:3px solid rgba(255,255,255,.4);position:relative;z-index:1;animation:popIn .5s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes popIn{0%{transform:scale(0);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.success-header h1{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:8px;position:relative;z-index:1}
+.success-header p{font-size:14px;opacity:.9;position:relative;z-index:1}
+.success-telugu{font-family:'Noto Sans Telugu',sans-serif;font-size:14px;opacity:.8;margin-top:6px;position:relative;z-index:1}
+.ref-box{margin:0 32px;transform:translateY(-20px);background:#fff;border-radius:12px;border:2px solid var(--green);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 4px 20px rgba(19,136,8,.15);flex-wrap:wrap}
+.ref-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px}
+.ref-number{font-family:'DM Serif Display',serif;font-size:22px;color:var(--green)}
+.ref-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn-copy{background:var(--green);color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn-copy:hover{background:#0d6e06}
+.btn-share{background:var(--off-white);color:var(--gov-blue);border:1.5px solid var(--border);padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-share:hover{background:#eef0f4}
+.info-section{padding:8px 32px 28px}
+.severity-row{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:14px 16px;border-radius:10px;border:1px solid var(--border)}
+.sev-badge{padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.sev-critical{background:#fee2e2;color:#991b1b}
+.sev-high{background:#fff3e0;color:#92400e}
+.sev-medium{background:#fef9c3;color:#713f12}
+.sev-low{background:#dcfce7;color:#166534}
+.sev-unknown{background:#f3f4f6;color:#374151}
+.sev-text{font-size:13px;color:var(--muted);flex:1}
+.sev-text strong{color:var(--text)}
+.timeline-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:16px;padding-bottom:20px;position:relative}
+.tl-item:last-child{padding-bottom:0}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--border)}
+.tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:2px solid var(--border);background:#fff}
+.tl-dot.done{background:var(--green);border-color:var(--green)}
+.tl-dot.active{background:var(--gov-blue2);border-color:var(--gov-blue2)}
+.tl-content{padding-top:4px;flex:1}
+.tl-label{font-size:14px;font-weight:600;color:var(--text)}
+.tl-desc{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.tl-time{font-size:11px;color:var(--muted);margin-top:3px;font-style:italic}
+.next-steps{background:var(--off-white);border-radius:12px;padding:20px;margin-top:20px;border:1px solid var(--border)}
+.next-steps h4{font-size:14px;font-weight:600;color:var(--gov-blue);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.next-item{display:flex;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted);line-height:1.55;align-items:flex-start}
+.next-item:last-child{margin-bottom:0}
+.ni-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.rqi-flag{margin-top:10px;padding:10px;background:#fff3e8;border-radius:6px;border-left:3px solid var(--saffron);display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#78350f}
+.dup-flag{margin-top:10px;padding:10px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706;display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#92400e}
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:20px 32px 28px;border-top:1px solid var(--border)}
+.btn-ap{background:var(--gov-blue);color:#fff;border:none;padding:13px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;transition:all .2s;display:block;font-family:'DM Sans',sans-serif;cursor:pointer}
+.btn-ap:hover{background:var(--gov-blue2)}
+.btn-as{background:#fff;color:var(--gov-blue);border:1.5px solid var(--border);padding:13px 20px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;text-align:center;transition:all .2s;display:block}
+.btn-as:hover{background:var(--off-white)}
+.report-another{background:#fff;border-radius:14px;border:1px solid var(--border);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.ra-text h4{font-size:15px;font-weight:600;color:var(--gov-blue);margin-bottom:4px}
+.ra-text p{font-size:13px;color:var(--muted)}
+.btn-ra{background:var(--saffron);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap;transition:all .2s;box-shadow:0 2px 8px rgba(244,121,32,.3)}
+.btn-ra:hover{background:#e06810}
+.notice-small{background:#e8f4fd;border-left:4px solid var(--gov-blue2);border-radius:6px;padding:12px 16px;font-size:13px;color:#1e3a5f;line-height:1.6;margin-top:16px;display:flex;gap:10px;align-items:flex-start}
+.footer{background:var(--gov-blue);color:rgba(255,255,255,.75);padding:24px;text-align:center;margin-top:40px}
+.footer p{font-size:13px;margin-bottom:6px}
+.footer a{color:rgba(255,255,255,.75);text-decoration:none}
+.footer a:hover{color:#fff}
+@media(max-width:600px){
+  .ref-box{margin:0 16px;transform:translateY(-16px)}
+  .info-section{padding:4px 20px 24px}
+  .action-row{grid-template-columns:1fr;padding:16px 20px 20px}
+  .success-header{padding:32px 20px}
+  .checkmark-circle{width:64px;height:64px;font-size:32px}
+  .success-header h1{font-size:22px}
+  .ref-number{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="tricolor"><span></span><span></span><span></span></div>
+<div class="top-strip">
+  <span>🇮🇳 Greater Visakhapatnam Municipal Corporation — road grievance Portal</span>
+  <span>Helpline: <a href="tel:18004250009">1800-4250-0009</a></span>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="emblem">🏛️</div>
+    <div>
+      <div class="hd-org">Greater Visakhapatnam Municipal Corporation</div>
+      <div class="hd-name">Road<span>Seva</span> — grievance filed</div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="success-card">
+
+    <div class="success-header">
+      <div class="checkmark-circle">✅</div>
+      <h1>grievance filed Successfully</h1>
+      <p>
+        {% if citizen_name %}Thank you, <strong>{{ citizen_name }}</strong>. Your grievance has been received by GVMC.
+        {% else %}Your grievance has been received by GVMC Visakhapatnam.{% endif %}
+      </p>
+      <div class="success-telugu">మీ ఫిర్యాదు విజయవంతంగా నమోదు చేయబడింది</div>
+    </div>
+
+    <div class="ref-box">
+      <div>
+        <div class="ref-label">Your Grievance Number — Save This</div>
+        <div class="ref-number" id="ref-num">{{ report_id }}</div>
+      </div>
+      <div class="ref-right">
+        <button class="btn-copy" onclick="copyRef()" id="copy-btn">📋 Copy</button>
+        <button class="btn-share" onclick="shareRef()">📤 Share</button>
+      </div>
+    </div>
+
+    <div class="info-section">
+
+      {% if severity and severity != 'unknown' %}
+      <div class="severity-row">
+        <span class="sev-badge sev-{{ severity }}">
+          {% if severity == 'critical' %}🔴{% elif severity == 'high' %}🟡{% elif severity == 'medium' %}🟢{% else %}⚪{% endif %}
+          {{ severity | title }}
+        </span>
+        <div class="sev-text">
+          <strong>AI Severity Assessment — </strong>
+          {% if severity == 'critical' %}this grievance is flagged Critical. GVMC will prioritise it for urgent response within 24 hours.
+          {% elif severity == 'high' %}Marked High priority. Expected response within 3 working days.
+          {% elif severity == 'medium' %}Medium priority. Expected response within 7 working days.
+          {% else %}Complaint received. Our team will review and respond accordingly.{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="timeline-title">📍 What Happens Next</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot done" style="color:#fff;font-size:16px">✓</div>
+          <div class="tl-content">
+            <div class="tl-label">Complaint Received</div>
+            <div class="tl-desc">Registered in the GVMC system with grievance number {{ report_id }}.</div>
+            <div class="tl-time">Just now</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot active" style="color:#fff;font-size:14px">🏛️</div>
+          <div class="tl-content">
+            <div class="tl-label">GVMC Reviews &amp; Assigns</div>
+            <div class="tl-desc">The officer reviews and assigns a field inspector for inspection.</div>
+            <div class="tl-time">{% if severity == 'critical' %}Within 24 hours{% elif severity == 'high' %}Within 1–2 working days{% else %}Within 2–3 working days{% endif %}</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="font-size:14px">👷</div>
+          <div class="tl-content">
+            <div class="tl-label">Field Inspector Inspects</div>
+            <div class="tl-desc">Engineer visits the location, confirms the damage, and raises a repair work order.</div>
+            <div class="tl-time">{% if severity == 'critical' %}Within 2–3 days{% elif severity == 'high' %}Within 3–5 days{% else %}Within 5–7 working days{% endif %}</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="font-size:14px">✅</div>
+          <div class="tl-content">
+            <div class="tl-label">Repair Completed — You Are Notified</div>
+            <div class="tl-desc">Once resolved, you will receive a confirmation message on your registered mobile number.</div>
+            <div class="tl-time">Depends on damage severity and repair schedule</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="next-steps">
+        <h4>💡 Important — Save Your Grievance Number</h4>
+        <div class="next-item">
+          <span class="ni-icon">📱</span>
+          <span>Save <strong>{{ report_id }}</strong> — you will need it to track your grievance status anytime.</span>
+        </div>
+        <div class="next-item">
+          <span class="ni-icon">🔍</span>
+          <span>Use the <strong>Track Grievance</strong> button below to check current status using your grievance number.</span>
+        </div>
+        <div class="next-item">
+          <span class="ni-icon">📞</span>
+          <span>If you do not receive an update within the expected time, call <strong>1800-4250-0009</strong> (Toll Free).</span>
+        </div>
+
+        {% if rqi_breach %}
+        <div class="rqi-flag">
+          <span style="font-size:18px;flex-shrink:0">⚠️</span>
+          <span><strong>Note:</strong> A road repair was previously done near this location within the last year. This has been automatically flagged for GVMC's quality review.</span>
+        </div>
+        {% endif %}
+
+        {% if duplicate_id %}
+        <div class="dup-flag">
+          <span style="font-size:18px;flex-shrink:0">📋</span>
+          <span>
+            <strong>Similar complaint already exists nearby.</strong>
+            Grievance <strong>{{ duplicate_id }}</strong> was already filed for the same type of damage
+            {% if duplicate_dist %}approximately <strong>{{ duplicate_dist }} metres</strong> from your location{% else %}in the same ward within the last 24 hours{% endif %}
+            and is still open. Your complaint has been registered and will be reviewed by the officer.
+            You can also track the existing complaint using that number.
+          </span>
+        </div>
+        {% endif %}
+
+      </div>
+
+    </div>
+
+    <!-- FIX: action buttons — track uses /track?ref= so it auto-searches -->
+    <div class="action-row">
+      <a href="/track?ref={{ report_id }}" class="btn-ap">🔍 Track this grievance</a>
+      <a href="/" class="btn-as">🏠 Back to Home</a>
+    </div>
+
+  </div>
+
+  <div class="report-another">
+    <div class="ra-text">
+      <h4>Spotted another road issue nearby?</h4>
+      <p>Each complaint needs its own grievance number. File a separate complaint.</p>
+    </div>
+    <a href="/citizen" class="btn-ra">📋 File Another Complaint</a>
+  </div>
+
+  <div class="notice-small">
+    <span style="font-size:18px;flex-shrink:0">🔒</span>
+    <div>Your personal details are kept confidential and used only for processing this grievance. Your information will not be shared publicly. For queries, call <strong>1800-4250-0009</strong>.</div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  <p><a href="/">Home</a> &nbsp;|&nbsp; <a href="/track">Track Grievance</a> &nbsp;|&nbsp; <a href="/citizen">File Complaint</a> &nbsp;|&nbsp; <a href="/about">Contact</a></p>
+  <p style="margin-top:8px;font-size:11px;opacity:.5">© 2026 Greater Visakhapatnam Municipal Corporation. RoadSeva — Smart City Initiative.</p>
+</footer>
+
+<script>
+const REF = "{{ report_id }}";
+function copyRef(){
+  navigator.clipboard.writeText(REF).then(()=>{
+    const b=document.getElementById('copy-btn');
+    b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='📋 Copy',2000);
+  }).catch(()=>{
+    const el=document.createElement('textarea');
+    el.value=REF; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    const b=document.getElementById('copy-btn');
+    b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='📋 Copy',2000);
+  });
+}
+function shareRef(){
+  const txt=`GVMC Road grievance reference: ${REF}\n\nTrack status at: ${window.location.origin}/track?ref=${REF}\n\nOpen the link to check status directly.`;
+  if(navigator.share){navigator.share({title:'GVMC RoadSeva Complaint',text:txt,url:`${window.location.origin}/track?ref=${REF}`}).catch(()=>{})}
+  else{navigator.clipboard.writeText(txt).then(()=>alert('grievance number and tracking link copied. You can now paste and share it.'));}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva - Staff Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .logo { text-align: center; margin-bottom: 32px; }
+        .logo h1 { font-size: 32px; color: #1a3a6b; }
+        .logo p { color: #888; font-size: 14px; margin-top: 4px; }
+        .card { background: white; border-radius: 16px; padding: 36px 32px; width: 100%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 20px; color: #1a3a6b; margin-bottom: 24px; text-align: center; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: bold; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #fafafa; }
+        input:focus { outline: none; border-color: #1a3a6b; }
+        .error-box { background: #fde8e8; color: #e74c3c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; text-align: center; }
+        .login-btn { width: 100%; padding: 14px; background: #1a3a6b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+        .hint { text-align: center; margin-top: 20px; font-size: 12px; color: #aaa; }
+    </style>
+</head>
+<body>
+<div class="logo">
+    <h1>🏛️ RoadSeva</h1>
+    <p>GVMC Visakhapatnam — Staff Portal</p>
+</div>
+
+<div class="card">
+    <h2>🔐 Staff Login</h2>
+
+    {% if error %}
+    <div class="error-box">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form action="/login" method="post">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Enter your username" required>
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+
+            <div style="position:relative">
+                <input
+                    type="password"
+                    name="password"
+                    id="password-input"
+                    placeholder="Enter your password"
+                    required>
+
+                <button
+                    type="button"
+                    onclick="togglePwd()"
+                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px"
+                    id="pwd-eye">
+                    👁️
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" class="login-btn">Login →</button>
+    </form>
+
+    <div class="hint">For access issues contact your administrator</div>
+</div>
+
+<script>
+function togglePwd() {
+    const inp = document.getElementById('password-input');
+    const eye = document.getElementById('pwd-eye');
+
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        eye.textContent = '🙈';
+    } else {
+        inp.type = 'password';
+        eye.textContent = '👁️';
+    }
+}
+</script>
+
+</body>
+</html>

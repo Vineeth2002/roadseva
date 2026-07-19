@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadSeva — GVMC Road Grievance Portal | Visakhapatnam</title>
+<meta name="description" content="File road damage grievances, report potholes, and infrastructure issues in Visakhapatnam (GVMC) online. Track your grievance status in real time.">
+<meta name="keywords" content="GVMC road grievance, Visakhapatnam pothole, road damage report, Greater Visakhapatnam Municipal Corporation, grievance redressal">
+<meta property="og:title" content="RoadSeva — GVMC Road Grievance Portal">
+<meta property="og:description" content="File road damage grievances in Visakhapatnam and track your grievance online.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{--gov-blue:#1a3a6b;--gov-blue2:#1e4fa0;--saffron:#f47920;--green:#138808;--white:#ffffff;--off-white:#f8f7f4;--light:#eef0f4;--text:#1a1a2e;--muted:#5a6478;--border:#d8dce8;--shadow:0 2px 16px rgba(26,58,107,.10);--shadow-lg:0 8px 40px rgba(26,58,107,.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text)}
+.tricolor{display:flex;height:5px}
+.tricolor span:nth-child(1){flex:1;background:#ff9933}
+.tricolor span:nth-child(2){flex:1;background:#fff}
+.tricolor span:nth-child(3){flex:1;background:#138808}
+.top-strip{background:var(--gov-blue);color:rgba(255,255,255,.8);font-size:12px;padding:6px 24px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.top-strip a{color:rgba(255,255,255,.8);text-decoration:none}
+.top-strip a:hover{color:#fff}
+.header{background:#fff;box-shadow:var(--shadow);position:sticky;top:0;z-index:100;border-bottom:3px solid var(--saffron)}
+.header-inner{max-width:1200px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:18px}
+.emblem{width:54px;height:54px;background:var(--gov-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;border:3px solid var(--saffron)}
+.hd-titles{flex:1}
+.hd-org{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.hd-name{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gov-blue);line-height:1.2}
+.hd-name span{color:var(--saffron)}
+.hd-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:12px;color:var(--muted)}
+.hd-btns{display:flex;gap:10px;align-items:center}
+.btn-outline{background:var(--off-white);color:var(--gov-blue);border:1.5px solid var(--border);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:500;text-decoration:none;transition:all .2s}
+.btn-outline:hover{background:var(--light)}
+.btn-primary{background:var(--saffron);color:#fff;border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;box-shadow:0 2px 8px rgba(244,121,32,.3)}
+.btn-primary:hover{background:#e06810;transform:translateY(-1px)}
+.hero{background:linear-gradient(135deg,var(--gov-blue) 0%,var(--gov-blue2) 55%,#2861c4 100%);color:#fff;padding:64px 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;right:-80px;width:420px;height:420px;background:rgba(255,255,255,.04);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-100px;left:-40px;width:320px;height:320px;background:rgba(244,121,32,.07);border-radius:50%}
+.hero-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 420px;gap:56px;align-items:center;position:relative;z-index:1}
+.hero-tagline{font-family:'DM Serif Display',serif;font-size:14px;opacity:.72;margin-bottom:12px;letter-spacing:.3px}
+.hero-tagline .tel{font-family:'Noto Sans Telugu',sans-serif;font-size:13px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:5px 14px;border-radius:100px;font-size:12px;font-weight:500;margin-bottom:20px;backdrop-filter:blur(10px)}
+.dot{width:7px;height:7px;background:#4ade80;border-radius:50%;animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+.hero h1{font-family:'DM Serif Display',serif;font-size:42px;line-height:1.15;margin-bottom:14px}
+.hero h1 span{color:var(--saffron)}
+.hero-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:17px;opacity:.8;margin-bottom:18px}
+.hero p{font-size:15px;line-height:1.75;opacity:.85;margin-bottom:30px;max-width:480px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.btn-hero-p{background:var(--saffron);color:#fff;padding:14px 30px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:10px;transition:all .2s;box-shadow:0 4px 16px rgba(244,121,32,.4)}
+.btn-hero-p:hover{background:#e06810;transform:translateY(-2px)}
+.btn-hero-s{background:rgba(255,255,255,.12);color:#fff;padding:14px 26px;border-radius:8px;font-size:15px;font-weight:500;text-decoration:none;border:1.5px solid rgba(255,255,255,.3);transition:all .2s;backdrop-filter:blur(10px)}
+.btn-hero-s:hover{background:rgba(255,255,255,.2)}
+.stats-card{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:28px;backdrop-filter:blur(20px)}
+.stats-card-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;opacity:.65;margin-bottom:20px;font-weight:500}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.stat-item{text-align:center;padding:10px;background:rgba(255,255,255,.06);border-radius:10px}
+.stat-num{font-family:'DM Serif Display',serif;font-size:34px;line-height:1;margin-bottom:5px}
+.stat-lbl{font-size:11px;opacity:.65;line-height:1.4}
+.stat-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:18px 0}
+.live-row{display:flex;align-items:center;gap:8px;font-size:11px;opacity:.65;justify-content:center}
+.section{padding:72px 24px}
+.section.white{background:#fff;border-bottom:1px solid var(--border)}
+.section.gray{background:var(--off-white)}
+.section-inner{max-width:1200px;margin:0 auto}
+.sec-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--saffron);margin-bottom:10px}
+.sec-title{font-family:'DM Serif Display',serif;font-size:32px;color:var(--gov-blue);margin-bottom:48px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.steps::before{content:'';position:absolute;top:31px;left:12.5%;width:75%;height:2px;background:linear-gradient(90deg,var(--saffron),var(--gov-blue2),var(--green));z-index:0}
+.step{text-align:center;padding:0 16px;position:relative;z-index:1}
+.step-ico{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 18px;border:3px solid #fff;box-shadow:var(--shadow)}
+.step:nth-child(1) .step-ico{background:#fff3e8}
+.step:nth-child(2) .step-ico{background:#e8f0ff}
+.step:nth-child(3) .step-ico{background:#e8f8ee}
+.step:nth-child(4) .step-ico{background:#fff8e1}
+.step-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+.step h4{font-size:15px;font-weight:600;color:var(--gov-blue);margin-bottom:8px}
+.step p{font-size:12px;color:var(--muted);line-height:1.65}
+.types-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.type-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:22px 18px;text-align:center;text-decoration:none;color:inherit;display:block;transition:all .2s}
+.type-card:hover{border-color:var(--gov-blue2);box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.type-emoji{font-size:34px;margin-bottom:10px;display:block}
+.type-card h4{font-size:14px;font-weight:600;color:var(--gov-blue);margin-bottom:5px}
+.type-card p{font-size:11px;color:var(--muted);line-height:1.5}
+.type-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:11px;color:var(--muted);margin-top:4px}
+.track-banner{background:linear-gradient(135deg,var(--green) 0%,#0d6e06 100%);padding:48px 24px;color:#fff}
+.track-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.track-banner h2{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:6px}
+.track-banner p{font-size:14px;opacity:.85}
+.track-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.track-input{padding:12px 18px;border-radius:8px;border:none;font-size:14px;width:280px;outline:none;font-family:'DM Sans',sans-serif}
+.track-input::placeholder{color:#999}
+.btn-track-go{background:#fff;color:var(--green);padding:12px 22px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-track-go:hover{background:#f0f0f0}
+.notice{background:#fff8e1;border-top:3px solid #f59e0b;padding:14px 24px}
+.notice-inner{max-width:1200px;margin:0 auto;display:flex;align-items:flex-start;gap:12px;font-size:13px;color:#78350f;line-height:1.65}
+.footer{background:var(--gov-blue);color:rgba(255,255,255,.8);padding:48px 24px 24px}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:20px}
+.footer-brand-name{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;margin-bottom:8px}
+.footer-brand p{font-size:13px;line-height:1.7;opacity:.7;margin-bottom:12px}
+.f-heading{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--saffron);margin-bottom:14px;font-weight:600}
+.f-links{list-style:none}
+.f-links li{margin-bottom:9px}
+.f-links a{color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;transition:color .2s}
+.f-links a:hover{color:#fff}
+.f-contact p{font-size:13px;margin-bottom:9px;line-height:1.65}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;font-size:11px;opacity:.55;flex-wrap:wrap;gap:6px}
+.alert{background:#fee2e2;border-left:4px solid #ef4444;padding:12px 20px;border-radius:6px;font-size:13px;color:#991b1b;max-width:1200px;margin:16px auto}
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr}.hero h1{font-size:30px}.stats-card{display:none}.steps{grid-template-columns:1fr 1fr;gap:32px}.steps::before{display:none}.types-grid{grid-template-columns:1fr 1fr}.footer-grid{grid-template-columns:1fr 1fr;gap:24px}.track-inner{flex-direction:column}.track-input{width:100%}.track-form{width:100%;flex-direction:column}.btn-track-go{width:100%}.hd-btns .btn-outline{display:none}}
+@media(max-width:500px){.types-grid{grid-template-columns:1fr 1fr}.steps{grid-template-columns:1fr}.top-strip{flex-direction:column;text-align:center;gap:4px}.footer-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="tricolor"><span></span><span></span><span></span></div>
+
+<div class="top-strip">
+  <span>🇮🇳 Government of Andhra Pradesh &nbsp;|&nbsp; Greater Visakhapatnam Municipal Corporation</span>
+  <span>Helpline: <a href="tel:18004250009">1800-4250-0009</a> (Toll Free) &nbsp;|&nbsp; <a href="/about">Contact Us</a></span>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="emblem">🏛️</div>
+    <div class="hd-titles">
+      <div class="hd-org">Greater Visakhapatnam Municipal Corporation</div>
+      <div class="hd-name">Road<span>Seva</span> — Citizen Grievance Portal</div>
+      <div class="hd-tel">రోడ్‌సేవ — పౌర ఫిర్యాదు పోర్టల్</div>
+    </div>
+    <div class="hd-btns">
+      <a href="/track" class="btn-outline">🔍 Track Grievance</a>
+      <a href="/citizen" class="btn-primary">📋 File a Grievance</a>
+    </div>
+  </div>
+</header>
+
+{% if error %}
+<div style="padding:0 24px"><div class="alert">⚠️ {{ error }}</div></div>
+{% endif %}
+
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-tagline">
+        Every Road. Every City. Every Citizen.
+        &nbsp;&nbsp;·&nbsp;&nbsp;
+        <span class="tel">ప్రతి రోడ్డు. ప్రతి నగరం. ప్రతి పౌరుడు.</span>
+      </div>
+      <div class="hero-badge"><span class="dot"></span> Live — Grievances processed 24×7</div>
+      <h1>Report Road Damage<br>in <span>Visakhapatnam</span></h1>
+      <div class="hero-tel">విశాఖపట్నంలో రోడ్డు నష్టాన్ని నివేదించండి</div>
+      <p>File your grievance online — no office visits, no waiting in queues. Your grievance reaches the concerned GVMC department directly and automatically. You will be notified once the issue is redressed.</p>
+      <div class="hero-cta">
+        <a href="/citizen" class="btn-hero-p">📋 File a Grievance <span style="font-size:11px;opacity:.8">— Takes 2 minutes</span></a>
+        <a href="/track" class="btn-hero-s">🔍 Track My Grievance</a>
+      </div>
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-title">Live Portal Statistics — GVMC Visakhapatnam</div>
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-num" id="stat-total" style="color:var(--saffron)">—</div><div class="stat-lbl">Total Grievances<br>Received</div></div>
+        <div class="stat-item"><div class="stat-num" id="stat-resolved" style="color:#4ade80">—</div><div class="stat-lbl">Grievances<br>Redressed</div></div>
+        <div class="stat-item"><div class="stat-num" id="stat-open" style="color:#60a5fa">—</div><div class="stat-lbl">Being<br>Processed</div></div>
+        <div class="stat-item"><div class="stat-num" style="color:#c084fc">98</div><div class="stat-lbl">Wards<br>Covered</div></div>
+      </div>
+      <hr class="stat-divider">
+      <div class="live-row"><span class="dot" style="background:#4ade80;width:6px;height:6px;animation:pulse 2s infinite"></span> Data updates every 30 seconds</div>
+    </div>
+  </div>
+</section>
+
+<section class="section white">
+  <div class="section-inner">
+    <div class="sec-label">Simple 4-Step Process</div>
+    <div class="sec-title">How to File a Grievance</div>
+    <div class="steps">
+      <div class="step"><div class="step-ico">📋</div><div class="step-num">Step 01</div><h4>You File</h4><p>Fill the form with a photo and your location. Takes less than 2 minutes from your phone.</p></div>
+      <div class="step"><div class="step-ico">🏛️</div><div class="step-num">Step 02</div><h4>GVMC Receives</h4><p>Your grievance reaches the concerned GVMC department instantly and automatically.</p></div>
+      <div class="step"><div class="step-ico">👷</div><div class="step-num">Step 03</div><h4>Team Acts</h4><p>A field inspector is assigned, inspects the site, and raises a work order for repair.</p></div>
+      <div class="step"><div class="step-ico">✅</div><div class="step-num">Step 04</div><h4>Grievance Redressed</h4><p>Once redressed, you receive a confirmation. Verify anytime using your grievance number.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section gray">
+  <div class="section-inner">
+    <div class="sec-label">What Can You Report?</div>
+    <div class="sec-title">Types of Road Grievances</div>
+    <div class="types-grid">
+      <a href="/citizen" class="type-card"><span class="type-emoji">🕳️</span><h4>Pothole</h4><p>Dangerous potholes causing vehicle damage and accident risk</p><div class="type-tel">గుంత</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">🛣️</span><h4>Road Damage</h4><p>Broken or cracked surface, uneven road, subsidence</p><div class="type-tel">రోడ్డు నష్టం</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">🚶</span><h4>Footpath</h4><p>Broken footpath, missing tiles, pedestrian hazards</p><div class="type-tel">పాదచారి మార్గం</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">💧</span><h4>Waterlogging</h4><p>Road flooding, poor drainage, water accumulation</p><div class="type-tel">నీరు నిల్వ</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">💡</span><h4>Street Light</h4><p>Non-functioning street lights, night safety hazards</p><div class="type-tel">వీధి దీపం</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">🏗️</span><h4>Median / Divider</h4><p>Damaged road divider, broken median, missing barriers</p><div class="type-tel">మీడియన్</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">🚧</span><h4>Road Signage</h4><p>Missing, damaged, or faded road signs and markings</p><div class="type-tel">రోడ్డు సంకేతాలు</div></a>
+      <a href="/citizen" class="type-card"><span class="type-emoji">📌</span><h4>Other Issue</h4><p>Any other road or infrastructure issue not listed</p><div class="type-tel">ఇతర సమస్య</div></a>
+    </div>
+  </div>
+</section>
+
+<section class="track-banner">
+  <div class="track-inner">
+    <div>
+      <h2>Already Filed a Grievance?</h2>
+      <p>Enter your grievance number to check the current redressal status instantly.</p>
+    </div>
+    <form class="track-form" action="/track" method="post">
+      <input type="hidden" name="search_type" value="id">
+      <input class="track-input" name="report_id" placeholder="e.g. GVMC-2603-A7KM2X" required>
+      <button type="submit" class="btn-track-go">Track Status →</button>
+    </form>
+  </div>
+</section>
+
+<div class="notice">
+  <div class="notice-inner">
+    <span style="font-size:20px;flex-shrink:0">ℹ️</span>
+    <div><strong>Important Notice:</strong> This portal is for road damage and infrastructure grievances only. For water supply, sanitation, building permissions, or property tax issues, please visit <strong>gvmc.gov.in</strong> or call helpline <strong>1800-4250-0009</strong> (Toll Free, 6 AM – 8 PM). All grievances are monitored by Greater Visakhapatnam Municipal Corporation.</div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-brand-name">RoadSeva — GVMC</div>
+        <p>Official road grievance redressal portal of Greater Visakhapatnam Municipal Corporation. File grievances, track redressal status, and help build better roads for Visakhapatnam.</p>
+        <div style="font-family:'Noto Sans Telugu',sans-serif;font-size:13px;opacity:.65">విశాఖపట్నం పౌర ఫిర్యాదు పోర్టల్</div>
+        <div style="margin-top:10px;font-size:12px;opacity:.55;font-style:italic">Every Road. Every City. Every Citizen.</div>
+      </div>
+      <div>
+        <div class="f-heading">Citizen Services</div>
+        <ul class="f-links">
+          <li><a href="/citizen">File a Grievance</a></li>
+          <li><a href="/track">Track Your Grievance</a></li>
+          <li><a href="/wards">Ward-wise Status</a></li>
+          <li><a href="/about">About RoadSeva</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="f-heading">Information</div>
+        <ul class="f-links">
+          <li><a href="/about">How It Works</a></li>
+          <li><a href="/wards">All 98 Wards</a></li>
+          <li><a href="/about">Privacy Notice</a></li>
+          <li><a href="/about">Contact Support</a></li>
+        </ul>
+      </div>
+      <div class="f-contact">
+        <div class="f-heading">Contact GVMC</div>
+        <p>📍 GVMC Main Office<br>Kommadi Road, Visakhapatnam<br>Andhra Pradesh — 530 003</p>
+        <p>📞 <strong style="color:#fff">1800-4250-0009</strong><br>Toll Free IVRS — 6 AM to 8 PM</p>
+        <p>🌐 <strong style="color:#fff">Online Portal</strong><br>File grievances 24×7 anytime</p>
+        <p>🌐 <a href="https://gvmc.gov.in" style="color:rgba(255,255,255,.7)">gvmc.gov.in</a></p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Greater Visakhapatnam Municipal Corporation. All rights reserved.</span>
+      <span>Powered by RoadSeva — Smart City Initiative, Visakhapatnam</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+async function loadStats(){
+  try{
+    const r=await fetch('/api/stats');
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.error)return;
+    const fmt=n=>(n||0).toLocaleString('en-IN');
+    document.getElementById('stat-total').textContent=fmt(d.total);
+    document.getElementById('stat-resolved').textContent=fmt(d.resolved);
+    document.getElementById('stat-open').textContent=fmt(d.open);
+  }catch(e){}
+}
+loadStats();
+setInterval(loadStats,30000);
+</script>
+</body>
+</html>

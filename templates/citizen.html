@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File a Grievance — RoadSeva GVMC Visakhapatnam</title>
+<meta name="description" content="File a road damage complaint in Visakhapatnam. Submit photo, location and details. GVMC will act on it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600&family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gov-blue:  #1a3a6b;
+  --gov-blue2: #1e4fa0;
+  --saffron:   #f47920;
+  --green:     #138808;
+  --white:     #ffffff;
+  --off-white: #f8f7f4;
+  --light:     #eef0f4;
+  --text:      #1a1a2e;
+  --muted:     #5a6478;
+  --border:    #d8dce8;
+  --red:       #ef4444;
+  --shadow:    0 2px 16px rgba(26,58,107,.10);
+  --shadow-lg: 0 8px 40px rgba(26,58,107,.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+.tricolor{display:flex;height:4px}
+.tricolor span:nth-child(1){flex:1;background:#ff9933}
+.tricolor span:nth-child(2){flex:1;background:#fff;border-top:1px solid #eee;border-bottom:1px solid #eee}
+.tricolor span:nth-child(3){flex:1;background:#138808}
+.top-strip{background:var(--gov-blue);color:rgba(255,255,255,.8);font-size:12px;padding:5px 24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.top-strip a{color:rgba(255,255,255,.8);text-decoration:none}
+
+.header{background:#fff;box-shadow:var(--shadow);border-bottom:3px solid var(--saffron)}
+.header-inner{max-width:1000px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
+.emblem{width:48px;height:48px;background:var(--gov-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:3px solid var(--saffron)}
+.hd-titles{flex:1}
+.hd-org{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.hd-name{font-family:'DM Serif Display',serif;font-size:18px;color:var(--gov-blue)}
+.hd-name span{color:var(--saffron)}
+.hd-back{color:var(--gov-blue);text-decoration:none;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--border);border-radius:6px;transition:all .2s}
+.hd-back:hover{background:var(--light)}
+
+.page-bar{background:var(--gov-blue);color:#fff;padding:20px 24px}
+.page-bar-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.page-bar h1{font-family:'DM Serif Display',serif;font-size:24px}
+.page-bar-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;opacity:.8;margin-top:3px}
+
+.stepper-wrap{background:#fff;border-bottom:1px solid var(--border);padding:0 24px}
+.stepper{max-width:1000px;margin:0 auto;display:flex;align-items:center;padding:18px 0}
+.step-item{display:flex;align-items:center;gap:10px;flex:1;position:relative}
+.step-item:not(:last-child)::after{content:'';flex:1;height:2px;background:var(--border);margin:0 6px;transition:background .3s}
+.step-item.done:not(:last-child)::after{background:var(--green)}
+.step-circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0;border:2px solid var(--border);background:#fff;color:var(--muted);transition:all .3s}
+.step-item.active .step-circle{border-color:var(--gov-blue2);background:var(--gov-blue2);color:#fff}
+.step-item.done .step-circle{border-color:var(--green);background:var(--green);color:#fff}
+.step-info{display:flex;flex-direction:column}
+.step-label{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.8px}
+.step-name{font-size:13px;font-weight:600;color:var(--text)}
+.step-item.active .step-name{color:var(--gov-blue2)}
+.step-item.done .step-name{color:var(--green)}
+
+.main{max-width:1000px;margin:0 auto;padding:28px 24px 60px}
+.layout{display:grid;grid-template-columns:1fr 270px;gap:24px;align-items:start}
+
+.alert-error{background:#fee2e2;border-left:4px solid var(--red);padding:13px 16px;border-radius:8px;font-size:14px;color:#991b1b;margin-bottom:20px;display:flex;gap:10px}
+.alert-info{background:#e8f4fd;border-left:4px solid var(--gov-blue2);padding:11px 14px;border-radius:6px;font-size:13px;color:#1e3a5f;margin-bottom:18px}
+
+.form-panel{display:none;animation:fadeIn .25s ease}
+.form-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.panel-card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.panel-header{padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.panel-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.pi-orange{background:#fff3e8}
+.pi-blue{background:#e8f0ff}
+.pi-green{background:#e8f8ee}
+.pi-purple{background:#f3e8ff}
+.panel-header h2{font-family:'DM Serif Display',serif;font-size:19px;color:var(--gov-blue)}
+.panel-header p{font-size:12px;color:var(--muted);margin-top:2px}
+.panel-body{padding:26px}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.field-row.full{grid-template-columns:1fr}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-label{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px}
+.field-label .req{color:var(--red);font-size:15px;line-height:1}
+.field-label .opt{font-size:11px;color:var(--muted);font-weight:400}
+.field-input{padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);transition:border-color .2s,box-shadow .2s;outline:none;background:#fff}
+.field-input:focus{border-color:var(--gov-blue2);box-shadow:0 0 0 3px rgba(30,79,160,.1)}
+.field-input::placeholder{color:#aab0be}
+.field-hint{font-size:11px;color:var(--muted);line-height:1.5}
+.field-error-msg{font-size:12px;color:var(--red);display:none}
+.field-group.has-error .field-error-msg{display:block}
+.field-group.has-error .field-input{border-color:var(--red)}
+select.field-input{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6478' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;appearance:none;padding-right:36px}
+textarea.field-input{resize:vertical;min-height:88px;line-height:1.6}
+
+.damage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
+.damage-card{border:2px solid var(--border);border-radius:10px;padding:13px 8px;text-align:center;cursor:pointer;transition:all .2s;user-select:none}
+.damage-card:hover{border-color:var(--gov-blue2);background:var(--light)}
+.damage-card.selected{border-color:var(--gov-blue2);background:#e8f0ff}
+.damage-card input[type=radio]{display:none}
+.damage-card .dc-emoji{font-size:26px;margin-bottom:5px;display:block}
+.damage-card .dc-name{font-size:11px;font-weight:600;color:var(--gov-blue)}
+.damage-card .dc-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:10px;color:var(--muted);margin-top:2px}
+
+.photo-drop{border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:#fafafa}
+.photo-drop:hover,.photo-drop.dragover{border-color:var(--gov-blue2);background:#f0f4ff}
+.photo-drop.has-photo{border-color:var(--green);background:#f0fff4}
+.photo-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-preview{display:none;margin-top:14px}
+.photo-preview img{width:100%;max-height:280px;object-fit:contain;border-radius:10px;border:2px solid var(--green);background:#f0f8ff}
+.photo-preview-name{font-size:12px;color:var(--green);font-weight:600;margin-top:7px;display:flex;align-items:center;gap:6px}
+.photo-remove{background:#fee2e2;color:var(--red);border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto}
+
+.gps-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.btn-gps{background:var(--gov-blue);color:#fff;border:none;padding:11px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-gps:hover{background:var(--gov-blue2)}
+.btn-gps.success{background:var(--green)}
+.gps-status{font-size:12px;margin-top:5px;display:none;align-items:center;gap:6px}
+.gps-status.ok{color:var(--green);display:flex}
+.gps-status.err{color:var(--red);display:flex}
+.gps-status.loading{color:var(--muted);display:flex}
+
+/* GPS tip banner */
+.gps-tip{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 13px;font-size:13px;color:#1b5e20;margin-bottom:12px;line-height:1.5}
+
+.ward-search-wrap{position:relative}
+.ward-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--gov-blue2);border-radius:8px;max-height:210px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-lg);display:none}
+.ward-opt{padding:10px 14px;font-size:13px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--light)}
+.ward-opt:last-child{border-bottom:none}
+.ward-opt:hover,.ward-opt.highlighted{background:var(--light)}
+
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.review-item{background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.review-item .ri-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.review-item .ri-val{font-size:14px;font-weight:500;color:var(--text)}
+.review-photo{width:100%;max-height:150px;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-bottom:10px}
+
+.declaration-block{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.declaration-mandatory{background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:12px 15px;font-size:13px;color:#78350f;line-height:1.65;display:flex;gap:10px;align-items:flex-start}
+.declaration-optional{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 15px;font-size:13px;color:#0c4a6e;line-height:1.65}
+.declaration-optional label{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.declaration-optional input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:var(--gov-blue);cursor:pointer}
+
+.panel-footer{padding:18px 26px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--off-white)}
+.btn-back{background:#fff;color:var(--gov-blue);border:1.5px solid var(--border);padding:11px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-back:hover{background:var(--light)}
+.btn-next{background:var(--gov-blue);color:#fff;border:none;padding:11px 26px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-next:hover{background:var(--gov-blue2)}
+.btn-submit{background:var(--green);color:#fff;border:none;padding:12px 30px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-submit:hover{background:#0d6e06;transform:translateY(-1px)}
+.btn-submit:disabled{background:#9ca3af;cursor:not-allowed;transform:none}
+.step-counter{font-size:13px;color:var(--muted)}
+.step-counter strong{color:var(--gov-blue)}
+
+.help-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow)}
+.help-card h4{font-size:14px;font-weight:600;color:var(--gov-blue);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.help-item{display:flex;gap:9px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.55}
+.hi-icon{font-size:17px;flex-shrink:0;margin-top:1px}
+.help-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.helpline-box{background:var(--gov-blue);color:#fff;border-radius:8px;padding:14px;text-align:center}
+.helpline-num{font-family:'DM Serif Display',serif;font-size:20px;margin:4px 0}
+
+.submit-loading{display:none;position:fixed;inset:0;background:rgba(26,58,107,.7);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#fff}
+.submit-loading.visible{display:flex}
+.spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:800px){
+  .layout{grid-template-columns:1fr}
+  .help-sidebar{display:none}
+  .field-row{grid-template-columns:1fr}
+  .damage-grid{grid-template-columns:repeat(2,1fr)}
+  .review-grid{grid-template-columns:1fr}
+  .stepper .step-info{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="submit-loading" id="submit-loading">
+  <div class="spinner"></div>
+  <div style="font-size:16px;font-weight:600">Submitting to GVMC...</div>
+  <div style="font-size:13px;opacity:.8">Uploading photo and analysing damage. Please wait.</div>
+</div>
+
+<div class="tricolor"><span></span><span></span><span></span></div>
+<div class="top-strip">
+  <span>🇮🇳 Greater Visakhapatnam Municipal Corporation — Road Grievance Portal</span>
+  <span>Helpline: <a href="tel:18004250009">1800-4250-0009</a> (Toll Free)</span>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="emblem">🏛️</div>
+    <div class="hd-titles">
+      <div class="hd-org">Greater Visakhapatnam Municipal Corporation</div>
+      <div class="hd-name">Road<span>Seva</span> — File a Grievance</div>
+    </div>
+    <a href="/" class="hd-back">← Back to Home</a>
+  </div>
+</header>
+
+<div class="page-bar">
+  <div class="page-bar-inner">
+    <div>
+      <h1>File a road grievance</h1>
+      <div class="page-bar-tel">రోడ్డు ఫిర్యాదు నమోదు చేయండి</div>
+    </div>
+    <div style="font-size:13px;opacity:.8;text-align:right">
+      Complaint goes directly to GVMC department.<br>
+      Grievance number issued instantly on submission.
+    </div>
+  </div>
+</div>
+
+<!-- Stepper -->
+<div class="stepper-wrap">
+  <div class="stepper">
+    <div class="step-item active" id="si-1">
+      <div class="step-circle" id="sc-1">1</div>
+      <div class="step-info">
+        <span class="step-label">Step 1</span>
+        <span class="step-name">Your Details</span>
+      </div>
+    </div>
+    <div class="step-item" id="si-2">
+      <div class="step-circle" id="sc-2">2</div>
+      <div class="step-info">
+        <span class="step-label">Step 2</span>
+        <span class="step-name">Location</span>
+      </div>
+    </div>
+    <div class="step-item" id="si-3">
+      <div class="step-circle" id="sc-3">3</div>
+      <div class="step-info">
+        <span class="step-label">Step 3</span>
+        <span class="step-name">Damage &amp; Photo</span>
+      </div>
+    </div>
+    <div class="step-item" id="si-4">
+      <div class="step-circle" id="sc-4">4</div>
+      <div class="step-info">
+        <span class="step-label">Step 4</span>
+        <span class="step-name">Review &amp; Submit</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  {% if error %}
+  <div class="alert-error">⚠️ <div>{{ error }}</div></div>
+  {% endif %}
+
+  <form id="complaintForm" action="/submit" method="post" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="csrf"      value="{{ csrf }}">
+    <input type="hidden" name="latitude"  id="lat-hidden" value="">
+    <input type="hidden" name="longitude" id="lng-hidden" value="">
+    <input type="hidden" name="location_text" id="location-text-hidden" value="">
+    <input type="hidden" name="photo_consent"  id="photo-consent-hidden" value="yes">
+
+    <div class="layout">
+      <div>
+
+        <!-- ── STEP 1: YOUR DETAILS ── -->
+        <div class="form-panel active" id="panel-1">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-icon pi-orange">👤</div>
+              <div>
+                <h2>Your Personal Details</h2>
+                <p>Required to send you status updates on your grievance</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="alert-info">
+                🔒 Your details are kept confidential and only used to update you about this grievance. They are never shared publicly.
+              </div>
+              <div class="field-row">
+                <div class="field-group" id="fg-name">
+                  <label class="field-label" for="citizen_name">Full Name <span class="req">*</span></label>
+                  <input class="field-input" type="text" id="citizen_name" name="citizen_name"
+                    placeholder="e.g. Suresh Kumar" maxlength="100" autocomplete="name">
+                  <span class="field-error-msg">Please enter your full name</span>
+                </div>
+                <div class="field-group" id="fg-phone">
+                  <label class="field-label" for="citizen_phone">Mobile Number <span class="req">*</span></label>
+                  <input class="field-input" type="tel" id="citizen_phone" name="citizen_phone"
+                    placeholder="10-digit mobile number" maxlength="15" autocomplete="tel">
+                  <span class="field-hint">You will receive status updates on this number</span>
+                  <span class="field-error-msg">Please enter a valid 10-digit mobile number</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field-group">
+                  <label class="field-label" for="citizen_email">Email Address <span class="opt">(Optional)</span></label>
+                  <input class="field-input" type="email" id="citizen_email" name="citizen_email"
+                    placeholder="yourname@email.com" maxlength="100" autocomplete="email">
+                  <span class="field-hint">For additional email notifications</span>
+                </div>
+                <div style="display:flex;align-items:flex-end">
+                  <div style="background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:13px;font-size:13px;color:var(--muted);line-height:1.6;width:100%">
+                    📱 <strong style="color:var(--text)">Status Updates</strong><br>
+                    You will be notified when your grievance is assigned, being inspected, and resolved.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-footer">
+              <span class="step-counter">Step <strong>1</strong> of 4</span>
+              <button type="button" class="btn-next" onclick="goNext(1)">Next: Location →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: LOCATION — GPS primary, ward optional ── -->
+        <div class="form-panel" id="panel-2">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-icon pi-blue">📍</div>
+              <div>
+                <h2>Complaint Location</h2>
+                <p>GPS is mandatory — your ward is auto-detected from coordinates</p>
+              </div>
+            </div>
+            <div class="panel-body">
+
+              <!-- GPS FIRST -->
+              <div class="field-row full" style="margin-bottom:0">
+                <div class="field-group">
+                  <label class="field-label">GPS Location <span style="color:red">*Required</span></label>
+                  <div class="gps-tip">
+                    📡 <strong>Tap "Capture GPS" to submit your complaint.</strong> Your ward is auto-detected automatically.
+                  </div>
+                  <div class="gps-row">
+                    <div class="field-input" id="gps-display" style="color:var(--muted)">
+                      Tap "Capture GPS" to record your exact location
+                    </div>
+                    <button type="button" class="btn-gps" id="gps-btn" onclick="captureGPS()">
+                      📡 Capture GPS
+                    </button>
+                  </div>
+                  <div class="gps-status" id="gps-status"></div>
+                  <span class="field-hint" style="margin-top:5px">GPS allows engineers to navigate to the exact spot within metres.</span>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+
+              <!-- LOCATION DESCRIPTION — mandatory if no GPS -->
+              <div class="field-row full">
+                <div class="field-group" id="fg-desc">
+                  <label class="field-label" for="description">
+                    Location Description <span class="req">*</span>
+                  </label>
+                  <textarea class="field-input" id="description" name="description"
+                    placeholder="e.g. Near Gajuwaka bus stand, opposite Hanuman temple, 50m from main junction. Describe a landmark, street name, or cross-road."
+                    maxlength="500" rows="3"></textarea>
+                 <span class="field-hint">Optional but helpful — name a nearby landmark, bus stop, or junction to help engineers find the exact spot.</span>
+                </div>
+              </div>
+
+              <!-- WARD — optional, auto-filled if GPS works -->
+              <div class="field-row full">
+                <div class="field-group" id="fg-ward">
+                  <label class="field-label">
+                    Ward / Area <span class="opt">(Optional — auto-detected from GPS)</span>
+                  </label>
+                  <div class="ward-search-wrap">
+                    <input class="field-input" type="text" id="ward-search"
+                      placeholder="Leave blank if GPS captured. Or type area — e.g. Gajuwaka, MVP Colony, Madhurawada..."
+                      autocomplete="off">
+                    <input type="hidden" id="ward-hidden" name="ward" value="">
+                    <div class="ward-dropdown" id="ward-dropdown"></div>
+                  </div>
+                  <span class="field-hint">If GPS fails, type your area name. All 98 GVMC wards covered. Use ↑ ↓ keys or Enter to select.</span>
+                  <span class="field-error-msg" id="ward-err">Please either capture GPS or select a ward</span>
+                </div>
+              </div>
+
+            </div>
+            <div class="panel-footer">
+              <button type="button" class="btn-back" onclick="goBack(2)">← Back</button>
+              <span class="step-counter">Step <strong>2</strong> of 4</span>
+              <button type="button" class="btn-next" id="btn-next-step2" onclick="goNext(2)" disabled style="opacity:0.4;cursor:not-allowed;" title="Capture GPS first to proceed">Next: Damage Details →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: DAMAGE + PHOTO ── -->
+        <div class="form-panel" id="panel-3">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-icon pi-green">🛣️</div>
+              <div>
+                <h2>Damage Type &amp; Photo</h2>
+                <p>Select the type of damage and upload a clear photo</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="field-group" id="fg-damage" style="margin-bottom:22px">
+                <label class="field-label">Type of Damage <span class="req">*</span></label>
+                <div style="margin-top:8px" class="damage-grid">
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Pothole">
+                    <span class="dc-emoji">🕳️</span>
+                    <div class="dc-name">Pothole</div>
+                    <div class="dc-tel">గుంత</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Road Damage">
+                    <span class="dc-emoji">🛣️</span>
+                    <div class="dc-name">Road Damage</div>
+                    <div class="dc-tel">రోడ్డు నష్టం</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Footpath">
+                    <span class="dc-emoji">🚶</span>
+                    <div class="dc-name">Footpath</div>
+                    <div class="dc-tel">పాదచారి మార్గం</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Waterlogging">
+                    <span class="dc-emoji">💧</span>
+                    <div class="dc-name">Waterlogging</div>
+                    <div class="dc-tel">నీరు నిల్వ</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Street Light">
+                    <span class="dc-emoji">💡</span>
+                    <div class="dc-name">Street Light</div>
+                    <div class="dc-tel">వీధి దీపం</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Median / Divider">
+                    <span class="dc-emoji">🏗️</span>
+                    <div class="dc-name">Median</div>
+                    <div class="dc-tel">మీడియన్</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Road Signage">
+                    <span class="dc-emoji">🚧</span>
+                    <div class="dc-name">Road Signage</div>
+                    <div class="dc-tel">రోడ్డు సంకేతాలు</div>
+                  </label>
+                  <label class="damage-card" onclick="selectDamage(this)">
+                    <input type="radio" name="damage_type" value="Other">
+                    <span class="dc-emoji">📌</span>
+                    <div class="dc-name">Other</div>
+                    <div class="dc-tel">ఇతర సమస్య</div>
+                  </label>
+                </div>
+                <span class="field-error-msg" id="damage-err" style="display:none">Please select a damage type</span>
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Photo of Damage <span class="req">*</span></label>
+                <div class="photo-drop" id="photo-drop" style="margin-top:6px">
+                  <input type="file" name="photo" id="photo-input" accept="image/*" capture="environment"
+                    onchange="handlePhoto(this)">
+                  <div style="font-size:36px;margin-bottom:10px">📷</div>
+                  <strong style="font-size:15px;color:var(--gov-blue)">Upload or Take a Photo</strong>
+                  <p style="font-size:13px;color:var(--muted);margin-top:6px">
+                    Take photo with your phone camera, or upload from gallery<br>
+                    <strong>JPG, PNG, WebP</strong> — Auto-compressed for upload
+                  </p>
+                  <p style="font-size:11px;color:var(--gov-blue);margin-top:6px;font-weight:600">
+                    📸 Take photo in good lighting · Show full damage clearly
+                  </p>
+                </div>
+                <div class="photo-preview" id="photo-preview">
+                  <img id="photo-img" src="" alt="Preview" style="width:100%;max-height:240px;object-fit:cover;border-radius:10px;border:2px solid var(--green)">
+                  <div class="photo-preview-name">
+                    <span>✅</span>
+                    <span id="photo-name"></span>
+                    <button type="button" class="photo-remove" onclick="removePhoto()">Remove</button>
+                  </div>
+                  <div id="photo-quality-tip" style="display:none;margin-top:8px;background:#f0fff4;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-size:12px;color:#1b5e20">
+                    ✅ Photo compressed and ready — clear photos improve AI accuracy and help engineers act faster.
+                  </div>
+                </div>
+                <span class="field-hint" style="margin-top:6px">📸 Good photos = faster repair. AI uses your photo to classify severity automatically.</span>
+                <span class="field-error-msg" id="photo-err" style="display:none">Please upload a photo of the damage</span>
+              </div>
+            </div>
+            <div class="panel-footer">
+              <button type="button" class="btn-back" onclick="goBack(3)">← Back</button>
+              <span class="step-counter">Step <strong>3</strong> of 4</span>
+              <button type="button" class="btn-next" onclick="goNext(3)">Review &amp; Submit →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 4: REVIEW + SUBMIT ── -->
+        <div class="form-panel" id="panel-4">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-icon pi-purple">✅</div>
+              <div>
+                <h2>Review your grievance</h2>
+                <p>Verify all details before submitting to GVMC</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="review-grid">
+                <div class="review-item">
+                  <div class="ri-label">Full Name</div>
+                  <div class="ri-val" id="rv-name">—</div>
+                </div>
+                <div class="review-item">
+                  <div class="ri-label">Mobile Number</div>
+                  <div class="ri-val" id="rv-phone">—</div>
+                </div>
+                <div class="review-item">
+                  <div class="ri-label">Ward / Area</div>
+                  <div class="ri-val" id="rv-ward" style="font-size:13px;color:var(--muted)">Auto-detected from GPS</div>
+                </div>
+                <div class="review-item">
+                  <div class="ri-label">Type of Damage</div>
+                  <div class="ri-val" id="rv-damage">—</div>
+                </div>
+                <div class="review-item" style="grid-column:1/-1">
+                  <div class="ri-label">📝 Location Description</div>
+                  <div class="ri-val" id="rv-desc" style="font-size:13px;color:var(--muted)">Not provided</div>
+                </div>
+                <div class="review-item" style="grid-column:1/-1">
+                  <div class="ri-label">📍 GPS Coordinates</div>
+                  <div class="ri-val" id="rv-gps" style="font-size:13px;color:var(--muted)">Not captured — ward will be assigned by GVMC office</div>
+                </div>
+              </div>
+              <div style="margin-bottom:18px">
+                <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Photo</div>
+                <img id="rv-photo" src="" alt="Complaint photo" class="review-photo" style="display:none">
+                <div id="rv-nophoto" style="background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--muted);display:none">No photo uploaded</div>
+              </div>
+
+              <div class="declaration-block">
+                <div class="declaration-mandatory">
+                  <span style="font-size:18px;flex-shrink:0">📋</span>
+                  <div>
+                    I confirm this complaint is genuine and the location is within Visakhapatnam city limits.
+                  </div>
+                </div>
+                <div class="declaration-optional">
+                  <label>
+                    <input type="checkbox" id="photo-consent-cb" checked
+                           onchange="document.getElementById('photo-consent-hidden').value = this.checked ? 'yes' : 'no'">
+                    <span>
+                      I allow GVMC to use this photo to improve road infrastructure services in Visakhapatnam.
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+            <div class="panel-footer">
+              <button type="button" class="btn-back" onclick="goBack(4)">← Edit Details</button>
+              <span class="step-counter">Step <strong>4</strong> of 4</span>
+              <button type="submit" class="btn-submit" id="submit-btn">
+                ✅ Submit Grievance to GVMC
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end form column -->
+
+      <!-- Sidebar -->
+      <div class="help-sidebar">
+        <div class="help-card">
+          <h4>💡 Tips for a Good Complaint</h4>
+          <div class="help-item">
+            <span class="hi-icon">📡</span>
+            <span><strong>Capture GPS first</strong> — ward is auto-detected, no need to know your ward number</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">📷</span>
+            <span>Take a clear, well-lit photo showing the full damage</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">🏘️</span>
+            <span>Mention a nearby landmark, bus stop or temple in description</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">📱</span>
+            <span>Enter correct mobile number to receive status updates</span>
+          </div>
+          <hr class="help-divider">
+          <h4>⏱️ Response Timeline</h4>
+          <div class="help-item" style="margin-top:8px">
+            <span class="hi-icon">🔴</span>
+            <span><strong>Critical:</strong> Response within 24 hours</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">🟡</span>
+            <span><strong>High:</strong> Within 3 working days</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">🟢</span>
+            <span><strong>Medium/Low:</strong> Within 7 working days</span>
+          </div>
+          <hr class="help-divider">
+          <div class="helpline-box">
+            <div style="font-size:11px;opacity:.8">Need help? Call us</div>
+            <div class="helpline-num">1800-4250-0009</div>
+            <p style="font-size:11px;opacity:.8">Toll Free — 24×7</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end layout -->
+  </form>
+</div><!-- end main -->
+
+<script>
+const WARDS = {{ wards|tojson }};
+
+// ── STEP NAVIGATION ───────────────────────────────────────────────────────────
+function setStep(n) {
+  document.querySelectorAll('.form-panel').forEach((p,i) => p.classList.toggle('active', i+1===n));
+  for (let i=1; i<=4; i++) {
+    const si = document.getElementById('si-'+i);
+    const sc = document.getElementById('sc-'+i);
+    si.classList.remove('active','done');
+    if (i < n)      { si.classList.add('done');   sc.textContent='✓'; }
+    else if (i===n) { si.classList.add('active'); sc.textContent=i; }
+    else            { sc.textContent=i; }
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goNext(from) {
+  if (!validate(from)) return;
+  if (from===3) buildReview();
+  setStep(from+1);
+}
+function goBack(from) { setStep(from-1); }
+
+// ── VALIDATION ────────────────────────────────────────────────────────────────
+function validate(step) {
+  if (step===1) {
+    const name  = document.getElementById('citizen_name').value.trim();
+    const phone = document.getElementById('citizen_phone').value.replace(/\s/g,'');
+    const phoneOk = /^[6-9]\d{9}$/.test(phone);
+    toggleError('fg-name',  !name);
+    toggleError('fg-phone', !phoneOk);
+    return name && phoneOk;
+  }
+  if (step===2) {
+    // GPS mandatory — outside GVMC blocks submission
+    const hasGPS  = !!document.getElementById('lat-hidden').value;
+    const hasDesc = !!document.getElementById('description').value.trim();
+    const ok = hasGPS && !gpsOutsideGVMC;
+if (gpsOutsideGVMC) {
+  document.querySelector('.gps-status').className = 'gps-status err';
+  document.querySelector('.gps-status').textContent = '🚫 Cannot proceed — your location is outside GVMC jurisdiction. RoadSeva only handles complaints within Visakhapatnam city limits. Call 1800-4250-0009 for other areas.';
+  document.getElementById('gps-btn').style.boxShadow = '0 0 0 3px #ef4444';
+  window.scrollTo({top: document.getElementById('gps-btn').offsetTop - 100, behavior: 'smooth'});
+  return false;
+}
+if (!hasGPS) {
+  const st = document.getElementById('gps-status') || document.querySelector('.gps-status');
+  if (st) { st.className='gps-status err'; st.textContent='❌ GPS is required. Please tap "Capture GPS" before submitting.'; }
+  document.getElementById('gps-btn').style.boxShadow = '0 0 0 3px red';
+}
+    const descErr = document.getElementById('desc-err');
+    if (descErr) descErr.style.display = ok ? 'none' : 'block';
+    const descInput = document.getElementById('description');
+    if (descInput) descInput.style.borderColor = ok ? '' : 'var(--red)';
+    return ok;
+  }
+  if (step===3) {
+    const hasDamage = !!document.querySelector('input[name=damage_type]:checked');
+    const hasPhoto  = !!document.getElementById('photo-input').files[0];
+    document.getElementById('damage-err').style.display = hasDamage ? 'none' : 'block';
+    document.getElementById('photo-err').style.display  = hasPhoto  ? 'none' : 'block';
+    return hasDamage && hasPhoto;
+  }
+  return true;
+}
+
+function toggleError(id, on) {
+  document.getElementById(id).classList.toggle('has-error', on);
+}
+
+// ── WARD SEARCH ───────────────────────────────────────────────────────────────
+const wardSearch   = document.getElementById('ward-search');
+const wardHidden   = document.getElementById('ward-hidden');
+const wardDropdown = document.getElementById('ward-dropdown');
+let wardHighlight  = -1;
+
+wardSearch.addEventListener('input', function() {
+  wardHidden.value = '';
+  wardSearch.style.borderColor = '';
+  wardHighlight = -1;
+  const q = wardSearch.value.trim().toLowerCase();
+  if (!q) { wardDropdown.style.display='none'; return; }
+  const hits = WARDS.filter(w => w.toLowerCase().includes(q)).slice(0, 10);
+  if (!hits.length) { wardDropdown.style.display='none'; return; }
+  wardDropdown.innerHTML = hits.map((w, i) => {
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const hi   = w.replace(new RegExp(safe, 'gi'), s => `<strong>${s}</strong>`);
+    return `<div class="ward-opt" data-ward="${w.replace(/"/g,'&quot;')}" data-idx="${i}"
+      onmousedown="pickWard('${w.replace(/'/g,"\\'")}')"><span>${hi}</span></div>`;
+  }).join('');
+  wardDropdown.style.display = 'block';
+});
+
+wardSearch.addEventListener('keydown', function(e) {
+  const opts = wardDropdown.querySelectorAll('.ward-opt');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    wardHighlight = Math.min(wardHighlight + 1, opts.length - 1);
+    highlightOpt(opts); return;
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    wardHighlight = Math.max(wardHighlight - 1, 0);
+    highlightOpt(opts); return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (wardDropdown.style.display !== 'none' && opts.length) {
+      const idx = wardHighlight >= 0 ? wardHighlight : 0;
+      const w   = opts[idx].getAttribute('data-ward');
+      if (w) pickWard(w);
+    }
+    return;
+  }
+  if (e.key === 'Escape') {
+    wardDropdown.style.display = 'none';
+    wardHighlight = -1;
+  }
+});
+
+function highlightOpt(opts) {
+  opts.forEach((o, i) => o.classList.toggle('highlighted', i === wardHighlight));
+  if (opts[wardHighlight]) opts[wardHighlight].scrollIntoView({block:'nearest'});
+}
+
+function pickWard(w) {
+  wardSearch.value  = w;
+  wardHidden.value  = w;
+  wardSearch.style.borderColor = '';
+  wardDropdown.style.display = 'none';
+  wardHighlight = -1;
+}
+
+document.addEventListener('click', function(e) {
+  if (!wardSearch.contains(e.target) && !wardDropdown.contains(e.target)) {
+    wardDropdown.style.display = 'none';
+  }
+});
+
+// ── GLOBAL ENTER KEY BLOCK ────────────────────────────────────────────────────
+document.getElementById('complaintForm').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.type !== 'submit' && e.target.type !== 'checkbox') {
+    e.preventDefault();
+  }
+});
+
+// ── GPS ───────────────────────────────────────────────────────────────────────
+let gpsOutsideGVMC = false;
+
+function _setNextBtn(enabled) {
+  const btn = document.getElementById('btn-next-step2');
+  if (!btn) return;
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '0.4';
+  btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  btn.title = enabled ? '' : 'Capture GPS first to proceed';
+}
+
+async function detectWardFromGPS(lat, lng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+    const res = await fetch(url, {headers: {'Accept-Language': 'en'}});
+    const data = await res.json();
+    const addr = data.address || {};
+
+    const city = addr.city || addr.town || addr.state_district || '';
+    const isVisakhapatnam = city.toLowerCase().includes('visakhapatnam') ||
+                            city.toLowerCase().includes('vizag') ||
+                            (addr.state_district || '').toLowerCase().includes('visakhapatnam');
+
+    if (!isVisakhapatnam) {
+      gpsOutsideGVMC = true;
+      _setNextBtn(false);
+      document.querySelector('.gps-status').className = 'gps-status err';
+      document.querySelector('.gps-status').textContent =
+        `🚫 Your location (${addr.county || addr.state_district || 'unknown area'}) is outside GVMC limits. RoadSeva only accepts complaints within Visakhapatnam city. Call helpline: 1800-4250-0009`;
+      let banner = document.getElementById('gvmc-boundary-error');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'gvmc-boundary-error';
+        banner.style.cssText = 'background:#fee2e2;border:2px solid #ef4444;border-radius:8px;padding:14px 18px;margin:12px 0;color:#991b1b;font-weight:600;font-size:14px;';
+        document.querySelector('.gps-tip')?.parentElement?.appendChild(banner);
+      }
+      banner.innerHTML = '🚫 Cannot submit — your GPS location is outside GVMC jurisdiction. RoadSeva only handles GVMC roads. For roads outside city limits, contact your local Gram Panchayat or NHAI.';
+      return;
+    }
+
+    // Inside GVMC
+    gpsOutsideGVMC = false;
+    const suburb = addr.suburb || addr.neighbourhood || addr.quarter ||
+                   addr.village || addr.city_district || addr.county || '';
+
+    if (!suburb) {
+      _setNextBtn(true);
+      document.querySelector('.gps-status').textContent = '✓ Location captured — please select your ward manually';
+      return;
+    }
+
+    const match = WARDS.find(w =>
+      w.toLowerCase().includes(suburb.toLowerCase()) ||
+      suburb.toLowerCase().includes((w.toLowerCase().split(' - ')[1] || w.toLowerCase()))
+    );
+
+    if (match) {
+      document.getElementById('ward-hidden').value = match;
+      document.getElementById('ward-search').value = match;
+      document.getElementById('rv-ward').textContent = match;
+      document.getElementById('rv-ward').style.color = 'var(--text)';
+      document.querySelector('.gps-status').textContent = '✓ Location captured — Ward: ' + match;
+    } else {
+      document.querySelector('.gps-status').textContent = '✓ Location captured — please select your ward manually';
+    }
+    _setNextBtn(true);
+
+  } catch(e) {
+    // Network error — allow proceed, triage will handle
+    gpsOutsideGVMC = false;
+    _setNextBtn(true);
+    document.querySelector('.gps-status').textContent = '✓ Location captured — please select your ward manually';
+  }
+}
+function captureGPS() {
+  const btn = document.getElementById('gps-btn');
+  const st  = document.getElementById('gps-status');
+  const dis = document.getElementById('gps-display');
+  if (!navigator.geolocation) {
+    st.className='gps-status err'; st.textContent='❌ GPS not supported on this device'; return;
+  }
+  btn.textContent='⏳ Locating...'; btn.disabled=true;
+  st.className='gps-status loading'; st.textContent='Capturing your location...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      if (pos.coords.accuracy < 5) {
+  st.className='gps-status err';
+  st.textContent='❌ GPS signal looks artificial. Please disable any fake GPS apps and try again.';
+  btn.textContent='📡 Capture GPS'; btn.disabled=false;
+  document.getElementById('lat-hidden').value='';
+  document.getElementById('lng-hidden').value='';
+  return;
+}
+      document.getElementById('lat-hidden').value = lat;
+      document.getElementById('lng-hidden').value = lng;
+      dis.textContent = `📍 ${lat}° N, ${lng}° E  (±${Math.round(pos.coords.accuracy)}m)`;
+      dis.style.color = 'var(--green)';
+      btn.textContent='✅ GPS Captured'; btn.className='btn-gps success'; btn.disabled=false;
+      st.className='gps-status ok'; st.textContent='✓ Location captured — ward will be auto-detected';
+      detectWardFromGPS(lat, lng);
+      // Clear any description error since GPS satisfies the requirement
+      const descErr = document.getElementById('desc-err');
+      if (descErr) descErr.style.display = 'none';
+      const descInput = document.getElementById('description');
+      if (descInput) descInput.style.borderColor = '';
+    },
+    err => {
+      btn.textContent='📡 Capture GPS'; btn.disabled=false;
+      st.className='gps-status err';
+      st.textContent = err.code===1
+        ? '❌ Location permission denied — please describe the location below instead.'
+        : '❌ Could not capture location. Please describe location in the text box below.';
+    },
+    {enableHighAccuracy:true, timeout:15000}
+  );
+}
+
+// ── DAMAGE SELECTION ──────────────────────────────────────────────────────────
+function selectDamage(el) {
+  document.querySelectorAll('.damage-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('damage-err').style.display='none';
+}
+
+// ── PHOTO HANDLING ────────────────────────────────────────────────────────────
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 20*1024*1024) {
+    document.getElementById('photo-err').textContent='File too large. Maximum 20MB allowed.';
+    document.getElementById('photo-err').style.display='block';
+    input.value=''; return;
+  }
+  const url = URL.createObjectURL(file);
+  document.getElementById('photo-img').src = url;
+  document.getElementById('photo-name').textContent = file.name + ' (compressing...)';
+  document.getElementById('photo-drop').classList.add('has-photo');
+  document.getElementById('photo-preview').style.display='block';
+  document.getElementById('photo-err').style.display='none';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.85);
+      const kb = Math.round(compressed.length * 0.75 / 1024);
+      console.log('[photo] compressed to ~' + kb + 'KB at ' + w + 'x' + h);
+      let hidden = document.getElementById('compressed_photo_data');
+      if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'compressed_photo';
+        hidden.id   = 'compressed_photo_data';
+        document.getElementById('complaintForm').appendChild(hidden);
+      }
+      hidden.value = compressed;
+      document.getElementById('photo-name').textContent = file.name + ' ✓ ready';
+      document.getElementById('photo-quality-tip').style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto() {
+  document.getElementById('photo-input').value='';
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('photo-drop').classList.remove('has-photo');
+  document.getElementById('photo-quality-tip').style.display='none';
+  const hidden = document.getElementById('compressed_photo_data');
+  if (hidden) hidden.value = '';
+}
+
+const drop = document.getElementById('photo-drop');
+drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('dragover')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('dragover'));
+drop.addEventListener('drop', e=>{
+  e.preventDefault(); drop.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    const dt=new DataTransfer(); dt.items.add(f);
+    document.getElementById('photo-input').files=dt.files;
+    handlePhoto(document.getElementById('photo-input'));
+  }
+});
+
+// ── REVIEW SCREEN ─────────────────────────────────────────────────────────────
+function buildReview() {
+  document.getElementById('rv-name').textContent  = document.getElementById('citizen_name').value||'—';
+  document.getElementById('rv-phone').textContent = document.getElementById('citizen_phone').value||'—';
+
+  // Ward — optional now
+  const wardVal = document.getElementById('ward-hidden').value;
+  const rvWard  = document.getElementById('rv-ward');
+  rvWard.textContent = wardVal || 'Auto-detected from GPS';
+  rvWard.style.color = wardVal ? 'var(--text)' : 'var(--muted)';
+
+  const d = document.querySelector('input[name=damage_type]:checked');
+  document.getElementById('rv-damage').textContent = d?d.value:'—';
+
+  const desc = document.getElementById('description').value.trim();
+  const descEl = document.getElementById('rv-desc');
+  descEl.textContent = desc||'Not provided'; descEl.style.color = desc?'var(--text)':'var(--muted)';
+
+  // Sync description into location_text hidden field for backend
+  document.getElementById('location-text-hidden').value = desc;
+
+  const lat=document.getElementById('lat-hidden').value;
+  const lng=document.getElementById('lng-hidden').value;
+  const gpsEl = document.getElementById('rv-gps');
+  if (lat&&lng) {
+    gpsEl.textContent=`${lat}° N, ${lng}° E`;
+    gpsEl.style.color='var(--green)';
+  } else {
+    gpsEl.textContent='Not captured — ward will be assigned by GVMC office';
+    gpsEl.style.color='var(--muted)';
+  }
+
+  const pSrc = document.getElementById('photo-img').src;
+  if (pSrc && !pSrc.endsWith(window.location.pathname)) {
+    document.getElementById('rv-photo').src=pSrc;
+    document.getElementById('rv-photo').style.display='block';
+    document.getElementById('rv-nophoto').style.display='none';
+  } else {
+    document.getElementById('rv-photo').style.display='none';
+    document.getElementById('rv-nophoto').style.display='block';
+  }
+}
+
+// ── FORM SUBMIT ───────────────────────────────────────────────────────────────
+document.getElementById('complaintForm').addEventListener('submit', function() {
+  // Sync description one more time before submit
+  document.getElementById('location-text-hidden').value =
+    document.getElementById('description').value.trim();
+
+  const compressed = document.getElementById('compressed_photo_data');
+  if (compressed && compressed.value && compressed.value.startsWith('data:')) {
+    document.getElementById('photo-input').disabled = true;
+  }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='⏳ Submitting to GVMC...';
+  document.getElementById('submit-loading').classList.add('visible');
+});
+</script>
+</body>
+</html>

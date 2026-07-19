@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadSeva — {{ "Zonal Dashboard" if staff.role == "zonal_commissioner" else "Commissioner Dashboard" }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial,sans-serif; background:#0f1923; color:#e0e0e0; min-height:100vh; }
+
+/* ── TOP BAR ── */
+.topbar {
+  background:#0a1219; padding:14px 24px;
+  display:flex; justify-content:space-between; align-items:center;
+  border-bottom:1px solid #1e3a4a; position:sticky; top:0; z-index:100;
+}
+.topbar-brand { font-size:17px; font-weight:700; color:white; }
+.topbar-sub   { font-size:12px; color:#888; margin-top:3px; }
+.live-dot     { width:8px; height:8px; background:#27ae60; border-radius:50%;
+                display:inline-block; margin-right:6px; animation:blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.topbar-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.nav-a {
+  color:#94a3b8; text-decoration:none; font-size:12px;
+  padding:5px 12px; border:1px solid rgba(255,255,255,.15);
+  border-radius:6px; transition:.15s;
+}
+.nav-a:hover { background:rgba(255,255,255,.06); color:#e0e0e0; }
+.nav-a.danger { background:#c0392b; border-color:#c0392b; color:white; }
+
+/* ── ROLE BADGE — shows who is logged in ── */
+.role-badge {
+  background:rgba(139,92,246,.2); color:#c4b5fd;
+  border:1px solid rgba(139,92,246,.35);
+  border-radius:12px; padding:3px 12px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+
+/* ── MAIN ── */
+.main { padding:20px 24px; max-width:1400px; margin:0 auto; }
+.last-updated { font-size:11px; color:#666; text-align:right; margin-bottom:14px; }
+
+/* ── SITUATION STRIP ── */
+.situation-strip {
+  border-radius:12px; border:1px solid; padding:16px 22px;
+  margin-bottom:20px; display:flex; align-items:flex-start; gap:14px;
+  transition:all .4s;
+}
+.sit-icon     { font-size:28px; flex-shrink:0; margin-top:2px; }
+.sit-headline { font-size:15px; font-weight:600; margin-bottom:4px; }
+.sit-detail   { font-size:13px; color:#94a3b8; line-height:1.6; }
+.sit-time     { font-size:11px; color:#64748b; flex-shrink:0; margin-top:4px; }
+
+/* ── ALERT BANNER ── */
+.alert-banner {
+  background:#2d1515; border:1px solid #e74c3c; border-radius:10px;
+  padding:14px 18px; margin-bottom:20px;
+  display:flex; align-items:center; gap:14px;
+}
+.alert-icon { font-size:24px; }
+.alert-text { font-size:14px; color:#f5a0a0; flex:1; }
+.alert-num  { font-size:28px; font-weight:bold; color:#e74c3c; }
+
+/* ── KPI GRID ── */
+.kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(155px,1fr));
+  gap:14px; margin-bottom:22px;
+}
+.kpi-card { background:#1a2a3a; border-radius:12px; padding:18px 20px; border-left:4px solid #4fc3f7; }
+.kpi-card.red    { border-left-color:#e74c3c; }
+.kpi-card.green  { border-left-color:#27ae60; }
+.kpi-card.orange { border-left-color:#f39c12; }
+.kpi-card.purple { border-left-color:#9b59b6; }
+.kpi-card.yellow { border-left-color:#f1c40f; }
+.kpi-num   { font-size:34px; font-weight:bold; color:white; line-height:1; }
+.kpi-label { font-size:11px; color:#888; margin-top:6px; text-transform:uppercase; letter-spacing:1px; }
+.kpi-sub   { font-size:11px; color:#666; margin-top:4px; }
+
+/* ── SECTION GRIDS ── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.grid-3 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+@media(max-width:900px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+/* ── PANEL ── */
+.panel { background:#1a2a3a; border-radius:12px; padding:20px; }
+.panel-title {
+  font-size:12px; color:#888; text-transform:uppercase; letter-spacing:1px;
+  margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;
+}
+.panel-title a {
+  font-size:11px; color:#4fc3f7; text-decoration:none;
+  text-transform:none; letter-spacing:0;
+}
+
+/* ── CRITICAL REPORTS ── */
+.critical-list { display:flex; flex-direction:column; gap:8px; }
+.critical-row {
+  background:#2d1515; border:1px solid rgba(231,76,60,.2);
+  border-radius:8px; padding:12px; cursor:pointer; transition:border-color .2s;
+}
+.critical-row:hover { border-color:#e74c3c; }
+.cr-rid   { font-size:11px; color:#888; font-family:monospace; }
+.cr-type  { font-size:14px; color:#f5a0a0; font-weight:bold; margin:4px 0; }
+.cr-ward  { font-size:12px; color:#888; }
+.cr-ai    { font-size:12px; color:#f39c12; margin-top:4px; }
+.cr-assigned { font-size:11px; margin-top:4px; }
+.cr-assigned.yes { color:#4fc3f7; }
+.cr-assigned.no  { color:#e74c3c; }
+
+/* ── OFFICER TABLE ── */
+.officer-table { width:100%; border-collapse:collapse; margin-top:6px; }
+.officer-table th {
+  font-size:10px; color:#888; text-transform:uppercase;
+  padding:7px 8px; border-bottom:1px solid #1e3a4a; text-align:left;
+}
+.officer-table td { padding:9px 8px; border-bottom:1px solid #1e3a4a; font-size:13px; }
+.officer-table tr:hover td { background:rgba(255,255,255,.02); cursor:pointer; }
+.o-name  { color:#e0e0e0; font-weight:500; }
+.o-count { font-size:17px; font-weight:bold; color:#27ae60; }
+.o-total { font-size:11px; color:#888; }
+
+/* ── WARD TABLE ── */
+.ward-table { width:100%; border-collapse:collapse; }
+.ward-table th {
+  font-size:10px; color:#888; text-transform:uppercase;
+  padding:7px 0; border-bottom:1px solid #1e3a4a; text-align:left;
+}
+.ward-table td { padding:9px 0; border-bottom:1px solid #1e3a4a; font-size:13px; }
+.ward-table tr { cursor:pointer; }
+.ward-table tr:hover td { background:rgba(255,255,255,.02); }
+.w-rank { color:#888; font-size:12px; width:28px; }
+.w-name { color:#4fc3f7; }
+.w-open.high { color:#e74c3c; font-weight:bold; }
+.w-open.med  { color:#f39c12; font-weight:bold; }
+.w-open.low  { color:#27ae60; }
+.sev-pill {
+  padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold;
+  background:rgba(231,76,60,.15); color:#e74c3c; border:1px solid rgba(231,76,60,.3);
+}
+.bar-bg   { background:#0f1923; border-radius:3px; height:5px; width:70px;
+            display:inline-block; vertical-align:middle; margin-left:6px; }
+.bar-fill { background:#4fc3f7; border-radius:3px; height:5px; }
+
+/* ── DAMAGE LIST ── */
+.dmg-row {
+  display:flex; justify-content:space-between; padding:6px 0;
+  border-bottom:1px solid #1e3a4a; font-size:13px;
+}
+.dmg-row:last-child { border-bottom:none; }
+
+/* ── CHART ── */
+.chart-wrap { position:relative; height:190px; }
+
+/* ── IMPORTANT NOTE: Commissioner cannot act on individual complaints ── */
+.commissioner-note {
+  background:rgba(139,92,246,.07);
+  border:1px solid rgba(139,92,246,.2);
+  border-radius:8px; padding:12px 16px;
+  font-size:12px; color:#a78bfa; margin-bottom:20px;
+  display:flex; align-items:flex-start; gap:10px; line-height:1.6;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .topbar { flex-direction:column; align-items:flex-start; gap:8px; padding:12px 16px; }
+  .main { padding:12px 14px; }
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+  .kpi-num { font-size:26px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div>
+    <div class="topbar-brand">
+      <span class="live-dot"></span>RoadSeva — {{ "Zonal Dashboard" if staff.role == "zonal_commissioner" else "Commissioner Dashboard" }}
+    </div>
+    <div class="topbar-sub">Greater Visakhapatnam Municipal Corporation</div>
+  </div>
+  <div class="topbar-right">
+    <span class="role-badge">{{ staff.role.replace("_"," ") }}</span>
+    <a href="/rqi" target="_blank" class="nav-a">🏆 Road Quality Index</a>
+    <a href="/analytics" target="_blank" class="nav-a">📊 Analytics</a>
+    <a href="/wards" target="_blank" class="nav-a">🏙️ All Wards</a>
+    <a href="/team" class="nav-a">👥 Team</a>
+    <a href="/change-password" class="nav-a">🔑 Password</a>
+    <a href="/logout" class="nav-a danger">Logout</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="last-updated">
+    Last updated: <span id="updateTime">loading…</span>
+    &nbsp;·&nbsp; Auto-refreshes every 30 seconds
+  </div>
+
+  <!-- Commissioner role note -->
+  <div class="commissioner-note">
+    <span style="font-size:18px;flex-shrink:0">ℹ️</span>
+    <div>
+      <strong>Commissioner view — city-wide intelligence only.</strong>
+      Individual complaint assignment and field operations are handled by Officers.
+      Tap any ward or complaint to open the Officer dashboard in a new tab for action.
+    </div>
+  </div>
+
+  <!-- Alert banner — only shown when critical complaints exist -->
+  {% if data.critical_open > 0 %}
+  <div class="alert-banner">
+    <div class="alert-icon">🚨</div>
+    <div class="alert-text">
+      Critical road damage requires immediate officer attention.
+      {% if data.unassigned > 0 %}
+        {{ data.unassigned }} complaint{{ 's' if data.unassigned != 1 }} still unassigned.
+      {% endif %}
+    </div>
+    <div class="alert-num" id="alertNum">{{ data.critical_open }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Situation summary strip — updates every 30s -->
+  <div class="situation-strip" id="situationStrip"
+       style="background:#1a2a3a; border-color:#2a4a6b;">
+    <div class="sit-icon" id="sitIcon">⏳</div>
+    <div style="flex:1">
+      <div class="sit-headline" id="sitHeadline">Loading city situation...</div>
+      <div class="sit-detail"   id="sitDetail">Dashboard is loading live data.</div>
+    </div>
+    <div class="sit-time" id="sitTime"></div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card red">
+      <div class="kpi-num" id="kpiOpen">{{ data.open_total }}</div>
+      <div class="kpi-label">Active Reports</div>
+      <div class="kpi-sub">Not yet resolved</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-num" id="kpiUnassigned">{{ data.unassigned or 0 }}</div>
+      <div class="kpi-label">Unassigned</div>
+      <div class="kpi-sub">Need officer attention</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-num" id="kpiCritical">{{ data.critical_open }}</div>
+      <div class="kpi-label">Critical Open</div>
+      <div class="kpi-sub">Immediate action needed</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-num" id="kpiSla">{{ data.sla_breached }}</div>
+      <div class="kpi-label">SLA Breached</div>
+      <div class="kpi-sub">Open &gt; 7 days</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-num" id="kpiMonth">{{ data.resolved_this_month }}</div>
+      <div class="kpi-label">Resolved This Month</div>
+      <div class="kpi-sub">Current month</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-num" id="kpiTotal">{{ data.total }}</div>
+      <div class="kpi-label">Total Reports</div>
+      <div class="kpi-sub">All time</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-num">{{ data.avg_days }}</div>
+      <div class="kpi-label">Avg Days to Resolve</div>
+      <div class="kpi-sub">Lower is better</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-num" id="kpiRate">{{ data.resolution_rate }}%</div>
+      <div class="kpi-label">Resolution Rate</div>
+      <div class="kpi-sub">Overall</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-num" id="kpiInspecting">{{ data.inspecting_now }}</div>
+      <div class="kpi-label">Engineers On Site</div>
+      <div class="kpi-sub">Right now</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-num">{{ data.override_stats.total_30d }}</div>
+      <div class="kpi-label">Supervisor Overrides</div>
+      <div class="kpi-sub">Last 30 days ({{ data.override_stats.total_all_time }} all-time)</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Critical Reports + Officer Performance -->
+  <div class="grid-2">
+
+    <!-- Critical open complaints -->
+    <div class="panel">
+      <div class="panel-title">
+        🚨 Critical Reports — Open
+        <a href="/staff?severity=critical&status=all" target="_blank">View all in Officer view →</a>
+      </div>
+      {% if data.critical_reports %}
+      <div class="critical-list">
+        {% for r in data.critical_reports %}
+        <a href="/staff?search={{ r.report_id }}&status=all" target="_blank"
+           style="text-decoration:none;">
+          <div class="critical-row">
+            <div class="cr-rid">{{ r.report_id }}</div>
+            <div class="cr-type">{{ r.damage_type }}</div>
+            <div class="cr-ward">📍 {{ r.ward }} &nbsp;·&nbsp; 🕐 {{ r.submitted_at[:16] }}</div>
+            {% if r.severity_details %}
+            <div class="cr-ai">ℹ️ {{ r.severity_details[:80] }}{% if r.severity_details|length > 80 %}…{% endif %}</div>
+            {% endif %}
+            {% if r.assigned_to %}
+            <div class="cr-assigned yes">🔧 {{ r.assigned_to }}
+              {% if r.assigned_officer %}· assigned by {{ r.assigned_officer }}{% endif %}
+            </div>
+            {% else %}
+            <div class="cr-assigned no">⚠️ Not yet assigned — tap to open Officer dashboard</div>
+            {% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:#27ae60;text-align:center;padding:24px;">✅ No critical reports open</div>
+      {% endif %}
+    </div>
+
+    <!-- Officer performance — who assigned how many -->
+    <div class="panel">
+      <div class="panel-title">👮 Officer Performance — Reports Managed</div>
+      {% if data.officer_rows %}
+      <table class="officer-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Officer</th>
+            <th>Assigned</th>
+            <th>Resolved</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in data.officer_rows %}
+          <tr onclick="window.open('/staff?search={{ o.name|urlencode }}&status=all','_blank')">
+            <td style="color:#888;font-size:12px;">{{ loop.index }}</td>
+            <td class="o-name">{% if loop.index == 1 %}⭐ {% endif %}{{ o.name }}</td>
+            <td class="o-total">{{ o.total }}</td>
+            <td class="o-count">{{ o.resolved_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <!-- Fall back to engineer performance if no officer data yet -->
+      {% if data.eng_rows %}
+      <table class="officer-table">
+        <thead><tr><th>#</th><th>Engineer</th><th>Resolved</th></tr></thead>
+        <tbody>
+          {% for e in data.eng_rows %}
+          <tr onclick="window.open('/staff?search={{ e.name|urlencode }}&status=all','_blank')">
+            <td style="color:#888;font-size:12px;">{{ loop.index }}</td>
+            <td class="o-name">{% if loop.index == 1 %}⭐ {% endif %}{{ e.name }}</td>
+            <td class="o-count">{{ e.resolved_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="color:#888;text-align:center;padding:20px;">No resolved reports yet</div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ROW 1.5: Supervisor Override Breakdown — only shown when overrides exist -->
+  {% if data.override_stats.by_officer %}
+  <div class="grid-2" style="margin-bottom:16px;">
+    <div class="panel" style="border-left:3px solid #f39c12;">
+      <div class="panel-title">⚠️ Supervisor Overrides — By Officer (Last 30 Days)</div>
+      <table class="officer-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Officer</th>
+            <th>Overrides</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in data.override_stats.by_officer %}
+          <tr onclick="window.open('/staff?search={{ o.done_by|urlencode }}&status=all','_blank')">
+            <td style="color:#888;font-size:12px;">{{ loop.index }}</td>
+            <td class="o-name">{{ o.done_by }}</td>
+            <td class="o-count" style="color:#f39c12;">{{ o.override_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div style="font-size:11px;color:#666;margin-top:10px;">
+        A high count for one officer may mean their team is understaffed or SLAs are slipping —
+        worth a direct conversation, not just a number.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ROW 2: Top Problem Wards + Monthly Trend -->
+  <div class="grid-3">
+
+    <!-- Ward table -->
+    <div class="panel">
+      <div class="panel-title">
+        📍 Top Problem Wards — Open Reports
+        <a href="/wards" target="_blank">All wards →</a>
+      </div>
+      <table class="ward-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ward</th>
+            <th>Open</th>
+            <th>Critical</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in data.ward_rows %}
+          <tr onclick="window.open('/staff?search={{ r.ward|urlencode }}&status=all','_blank')">
+            <td class="w-rank">{{ loop.index }}</td>
+            <td class="w-name">{{ r.ward }}</td>
+            <td>
+              <span class="w-open {% if r.open_count > 5 %}high{% elif r.open_count > 2 %}med{% else %}low{% endif %}">
+                {{ r.open_count }}
+              </span>
+              <span class="bar-bg">
+                <span class="bar-fill" style="width:{{ [r.open_count*8,70]|min }}px"></span>
+              </span>
+            </td>
+            <td>
+              {% if r.critical_count > 0 %}
+              <span class="sev-pill">{{ r.critical_count }}</span>
+              {% else %}
+              <span style="color:#888;">—</span>
+              {% endif %}
+            </td>
+            <td style="color:#888;">{{ r.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Monthly trend + damage types -->
+    <div class="panel">
+      <div class="panel-title">📊 Monthly Trend</div>
+      <div class="chart-wrap">
+        <canvas id="monthChart"></canvas>
+      </div>
+      <div style="margin-top:18px;">
+        <div class="panel-title" style="margin-bottom:10px;">🔧 By Damage Type</div>
+        {% for r in data.damage_rows %}
+        <div class="dmg-row">
+          <span>{{ r.damage_type }}</span>
+          <span style="color:#4fc3f7;font-weight:bold;">{{ r.count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /main -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script>
+// Set time on load
+document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('en-IN');
+
+// Monthly chart — initialised after Chart.js defers load
+window.addEventListener('load', function(){
+  var months = [{% for r in data.month_rows %}"{{ r.month }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  var counts  = [{% for r in data.month_rows %}{{ r.count }}{% if not loop.last %},{% endif %}{% endfor %}];
+  var canvas  = document.getElementById('monthChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: { labels: months, datasets: [{
+      label: 'Reports', data: counts,
+      backgroundColor: '#4fc3f755', borderColor: '#4fc3f7',
+      borderWidth: 2, borderRadius: 4
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#888', font:{size:10} }, grid:{color:'#1e3a4a'} },
+        y: { ticks: { color:'#888' }, grid:{color:'#1e3a4a'}, beginAtZero:true }
+      }
+    }
+  });
+});
+
+// ── LIVE REFRESH — every 30 seconds ──────────────────────────────────────────
+function refreshStats() {
+  fetch('/api/stats', { credentials: 'include' })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.error) return;
+      function set(id, val) {
+        var el = document.getElementById(id);
+        if (el && String(el.textContent).trim() !== String(val)) el.textContent = val;
+      }
+      set('kpiOpen',       data.open_total);
+      set('kpiUnassigned', data.unassigned);
+      set('kpiCritical',   data.critical_open);
+      set('kpiSla',        data.sla_breached);
+      set('kpiTotal',      data.total);
+      set('kpiInspecting', data.inspecting);
+      if (data.total > 0) {
+        set('kpiRate', Math.round(data.resolved / data.total * 100) + '%');
+      }
+      var alertEl = document.getElementById('alertNum');
+      if (alertEl) alertEl.textContent = data.critical_open;
+      document.getElementById('updateTime').textContent =
+        new Date().toLocaleTimeString('en-IN');
+      updateSituation(data);
+    })
+    .catch(function(){});
+}
+setInterval(refreshStats, 30000);
+
+// ── SITUATION SUMMARY — one intelligent sentence about city state ─────────────
+// Reads live numbers and picks the most important message for the commissioner.
+// No charts — just plain language.
+function updateSituation(data) {
+  var strip    = document.getElementById('situationStrip');
+  var icon     = document.getElementById('sitIcon');
+  var headline = document.getElementById('sitHeadline');
+  var detail   = document.getElementById('sitDetail');
+  var sitTime  = document.getElementById('sitTime');
+  if (!strip) return;
+
+  var open       = data.open_total    || 0;
+  var unassigned = data.unassigned    || 0;
+  var critical   = data.critical_open || 0;
+  var sla        = data.sla_breached  || 0;
+  var total      = data.total         || 0;
+  var resolved   = data.resolved      || 0;
+  var inspecting = data.inspecting    || 0;
+  var rate       = total > 0 ? Math.round(resolved / total * 100) : 0;
+
+  var bg, border, ico, head, desc;
+
+  if (critical > 0 && unassigned > 0) {
+    bg = '#2d1515'; border = '#e74c3c'; ico = '🚨';
+    head = critical + ' critical complaint' + (critical > 1 ? 's' : '') +
+           ' — ' + unassigned + ' still waiting for an officer';
+    desc = 'Officers must assign field engineers immediately. ' +
+           (sla > 0 ? sla + ' complaint' + (sla > 1 ? 's' : '') + ' have also breached 7-day SLA. ' : '') +
+           'Call your Grievance Officers now.';
+  } else if (critical > 0) {
+    bg = '#2d1e0f'; border = '#f39c12'; ico = '⚠️';
+    head = critical + ' critical complaint' + (critical > 1 ? 's' : '') +
+           ' open — officers have assigned engineers';
+    desc = 'Engineers are on site or assigned. ' +
+           (sla > 0 ? sla + ' complaint' + (sla > 1 ? 's have' : ' has') + ' exceeded 7 days. ' : '') +
+           'Resolution rate: ' + rate + '%.';
+  } else if (sla >= 3) {
+    bg = '#2d1e0f'; border = '#f39c12'; ico = '⚠️';
+    head = sla + ' complaint' + (sla > 1 ? 's have' : ' has') + ' been open more than 7 days';
+    desc = 'No critical complaints. ' +
+           (unassigned > 0 ? unassigned + ' still unassigned. ' : 'All assigned to engineers. ') +
+           'Resolution rate: ' + rate + '%.';
+  } else if (unassigned > 5) {
+    bg = '#1a2518'; border = '#f1c40f'; ico = '📋';
+    head = unassigned + ' complaints are waiting for officer assignment';
+    desc = 'No critical issues. Officers should review their inbox and assign engineers. ' +
+           (inspecting > 0 ? inspecting + ' engineer' + (inspecting > 1 ? 's are' : ' is') +
+            ' on site right now. ' : '') +
+           'City resolution rate: ' + rate + '%.';
+  } else if (rate >= 65) {
+    bg = '#0f2d1e'; border = '#27ae60'; ico = '✅';
+    head = 'City situation is under control — ' + rate + '% resolution rate';
+    desc = open + ' complaint' + (open > 1 ? 's' : '') + ' active. ' +
+           (inspecting > 0 ? inspecting + ' engineer' + (inspecting > 1 ? 's' : '') + ' on site. ' : '') +
+           (sla > 0 ? sla + ' approaching overdue.' : 'No SLA breaches.');
+  } else {
+    bg = '#1a2a3a'; border = '#4fc3f7'; ico = '📊';
+    head = open + ' active complaint' + (open > 1 ? 's' : '') + ' across the city';
+    desc = unassigned + ' unassigned. ' + inspecting + ' engineer' +
+           (inspecting > 1 ? 's' : '') + ' on site. Resolution rate: ' + rate + '%. ' +
+           (sla > 0 ? sla + ' complaint' + (sla > 1 ? 's' : '') + ' past 7 days — review with officers.' : 'No SLA breaches.');
+  }
+
+  strip.style.background  = bg;
+  strip.style.borderColor = border;
+  icon.textContent        = ico;
+  headline.textContent    = head;
+  headline.style.color    = border;
+  detail.textContent      = desc;
+  sitTime.textContent     = 'Updated ' +
+    new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+}
+
+// Run situation summary on page load using server-rendered KPI values
+(function initSituation(){
+  function getNum(id) {
+    var el = document.getElementById(id);
+    return el ? parseInt(el.textContent) || 0 : 0;
+  }
+  var rateStr = (document.getElementById('kpiRate') || {}).textContent || '0%';
+  var rate    = parseInt(rateStr) || 0;
+  var total   = getNum('kpiTotal');
+  updateSituation({
+    open_total:    getNum('kpiOpen'),
+    unassigned:    getNum('kpiUnassigned'),
+    critical_open: getNum('kpiCritical'),
+    sla_breached:  getNum('kpiSla'),
+    total:         total,
+    resolved:      total > 0 ? Math.round(rate / 100 * total) : 0,
+    inspecting:    getNum('kpiInspecting'),
+  });
+})();
+</script>
+</body>
+</html>

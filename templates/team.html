@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Team — RoadSeva GVMC</title>
+<style>
+  :root {
+    --navy: #0f1c2e;
+    --navy2: #162540;
+    --blue: #1a3a5c;
+    --accent: #e8a020;
+    --accent2: #f0b840;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f97316;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.04);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0b1623; color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+
+  /* ── Top nav ── */
+  .topbar {
+    background:var(--navy);
+    border-bottom:1px solid var(--border);
+    padding:0 24px;
+    height:60px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .topbar-left { display:flex; align-items:center; gap:16px; }
+  .logo { font-size:1.2rem; font-weight:700; color:var(--accent); letter-spacing:1px; }
+  .pagetitle { font-size:.9rem; color:var(--muted); }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .user-badge {
+    background:var(--blue);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:4px 14px;
+    font-size:.8rem;
+    color:var(--text);
+  }
+  .role-pill {
+    display:inline-block;
+    padding:2px 10px;
+    border-radius:12px;
+    font-size:.75rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .role-admin { background:rgba(239,68,68,.2); color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+  .role-commissioner { background:rgba(139,92,246,.2); color:#c4b5fd; border:1px solid rgba(139,92,246,.3); }
+  .role-officer { background:rgba(59,130,246,.2); color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+  .role-field_engineer { background:rgba(34,197,94,.2); color:#86efac; border:1px solid rgba(34,197,94,.3); }
+  .role-viewer { background:rgba(148,163,184,.2); color:#cbd5e1; border:1px solid rgba(148,163,184,.3); }
+  .nav-link {
+    color:var(--muted);
+    text-decoration:none;
+    font-size:.85rem;
+    padding:6px 12px;
+    border-radius:6px;
+    transition:.2s;
+  }
+  .nav-link:hover { background:var(--card); color:var(--text); }
+  .nav-link.active { color:var(--accent); background:rgba(232,160,32,.1); }
+
+  /* ── Main layout ── */
+  .page { max-width:1100px; margin:0 auto; padding:32px 24px; }
+
+  /* ── Alert banners ── */
+  .alert {
+    padding:14px 18px;
+    border-radius:8px;
+    margin-bottom:24px;
+    font-size:.9rem;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .alert-success { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); color:#86efac; }
+  .alert-error   { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:#fca5a5; }
+  .alert-info    { background:rgba(59,130,246,.1);  border:1px solid rgba(59,130,246,.3);  color:#93c5fd; }
+  .alert-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+  .temp-pass {
+    display:inline-block;
+    background:rgba(0,0,0,.3);
+    border:1px solid rgba(34,197,94,.4);
+    border-radius:4px;
+    padding:2px 8px;
+    font-family:monospace;
+    font-size:.95rem;
+    letter-spacing:1px;
+    color:#86efac;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background:var(--navy);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+    margin-bottom:28px;
+  }
+  .card-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+  }
+  .card-title { font-size:1.05rem; font-weight:600; color:var(--text); }
+  .card-subtitle { font-size:.8rem; color:var(--muted); margin-top:3px; }
+
+  /* ── Add member form ── */
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:640px) { .form-grid { grid-template-columns:1fr; } }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group.full { grid-column:1/-1; }
+  label { font-size:.82rem; color:var(--muted); font-weight:500; }
+  input, select {
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 14px;
+    color:var(--text);
+    font-size:.9rem;
+    outline:none;
+    transition:.2s;
+  }
+  input:focus, select:focus { border-color:var(--accent); background:rgba(232,160,32,.05); }
+  select option { background:#1a3a5c; }
+
+  .temp-pass-row { display:flex; gap:8px; align-items:flex-end; }
+  .temp-pass-row input { flex:1; }
+  .btn-gen {
+    background:rgba(255,255,255,.08);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 14px;
+    color:var(--muted);
+    font-size:.8rem;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:.2s;
+  }
+  .btn-gen:hover { background:rgba(255,255,255,.12); color:var(--text); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding:10px 20px;
+    border-radius:8px;
+    font-size:.88rem;
+    font-weight:600;
+    cursor:pointer;
+    border:none;
+    transition:.2s;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .btn-primary { background:var(--accent); color:#0b1623; }
+  .btn-primary:hover { background:var(--accent2); }
+  .btn-danger { background:rgba(239,68,68,.15); color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+  .btn-danger:hover { background:rgba(239,68,68,.25); }
+  .btn-warning { background:rgba(249,115,22,.15); color:#fdba74; border:1px solid rgba(249,115,22,.3); }
+  .btn-warning:hover { background:rgba(249,115,22,.25); }
+  .btn-success { background:rgba(34,197,94,.15); color:#86efac; border:1px solid rgba(34,197,94,.3); }
+  .btn-success:hover { background:rgba(34,197,94,.25); }
+  .btn-sm { padding:5px 12px; font-size:.78rem; }
+
+  /* ── Team table ── */
+  .team-table { width:100%; border-collapse:collapse; }
+  .team-table th {
+    text-align:left;
+    font-size:.75rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    padding:10px 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .team-table td {
+    padding:13px 12px;
+    border-bottom:1px solid rgba(255,255,255,.04);
+    font-size:.87rem;
+    vertical-align:middle;
+  }
+  .team-table tr:last-child td { border-bottom:none; }
+  .team-table tr:hover td { background:rgba(255,255,255,.02); }
+
+  .status-active   { color:var(--green); font-weight:600; font-size:.8rem; }
+  .status-inactive { color:var(--red);   font-weight:600; font-size:.8rem; }
+  .inactive-row td { opacity:.55; }
+  .inactive-row:hover td { opacity:.7; }
+
+  .created-by { font-size:.78rem; color:var(--muted); }
+  .must-change { font-size:.75rem; color:var(--orange); }
+
+  /* ── Info box ── */
+  .how-it-works {
+    background:rgba(59,130,246,.06);
+    border:1px solid rgba(59,130,246,.2);
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:28px;
+  }
+  .how-title { font-size:.85rem; color:#93c5fd; font-weight:600; margin-bottom:12px; }
+  .how-steps { list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .how-steps li {
+    font-size:.83rem;
+    color:var(--muted);
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .step-num {
+    background:rgba(59,130,246,.2);
+    color:#93c5fd;
+    border-radius:50%;
+    width:20px;
+    height:20px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.72rem;
+    font-weight:700;
+  }
+  .empty-state { text-align:center; padding:40px; color:var(--muted); font-size:.9rem; }
+
+  /* ── Responsive actions ── */
+  .actions { display:flex; gap:6px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-left">
+    <span class="logo">🛣 RoadSeva</span>
+    <span class="pagetitle">/ Manage Team</span>
+  </div>
+  <div class="topbar-right">
+    {% if staff["role"] in ("commissioner","admin") %}
+      <a href="/commissioner" class="nav-link">Dashboard</a>
+    {% else %}
+      <a href="/staff" class="nav-link">Dashboard</a>
+    {% endif %}
+    <a href="/team" class="nav-link active">Manage Team</a>
+    <a href="/change-password" class="nav-link">My Password</a>
+    <span class="user-badge">{{ staff["name"] }}</span>
+    <span class="role-pill role-{{ staff['role'] }}">{{ staff["role"].replace("_"," ") }}</span>
+    <a href="/logout" class="nav-link">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  {% if message %}
+  <div class="alert alert-success">
+    <span class="alert-icon">✅</span>
+    <div>
+      {{ message }}
+      {% if "Temp password:" in message %}
+        <br><span style="font-size:.82rem; color:#94a3b8; margin-top:4px; display:block;">
+          ⚠️ Tell this password to the person <strong>verbally or on a piece of paper</strong>. 
+          They will be forced to change it the moment they first log in.
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="alert alert-error">
+    <span class="alert-icon">❌</span>
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- How it works -->
+  <div class="how-it-works">
+    <div class="how-title">🔐 How Account Creation Works (Salesforce / Zoho model)</div>
+    <ul class="how-steps">
+      <li><span class="step-num">1</span>You fill in the new person's Name, Username, and a temporary password below</li>
+      <li><span class="step-num">2</span>The screen shows you the temporary password — tell it to the person verbally</li>
+      <li><span class="step-num">3</span>They log in — system immediately blocks them and forces a password change before they can see anything</li>
+      <li><span class="step-num">4</span>They set their own private password — you will never know it</li>
+      <li><span class="step-num">5</span>If they forget it, you can reset it here — they get a new temp and must change again</li>
+    </ul>
+  </div>
+
+  <!-- Add new member -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">➕ Add New Team Member</div>
+        <div class="card-subtitle">
+          {% if staff["role"] == "commissioner" %}
+            As Commissioner, you can add: Officers, Field Engineers, and Viewers
+          {% elif staff["role"] == "officer" %}
+            As Officer, you can add: Field Engineers
+          {% elif staff["role"] == "admin" %}
+            As IT Admin, you can add any role
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="/team/add-member">
+      <!-- FIX: CSRF token added — was missing, causing all new account creation to fail with "Session expired" -->
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" placeholder="e.g. Ravi Kumar" required>
+        </div>
+        <div class="form-group">
+          <label>Username *</label>
+          <input type="text" name="username" placeholder="e.g. ravi.kumar" required
+                 pattern="[a-zA-Z0-9._-]+" title="Letters, numbers, dots, hyphens only">
+        </div>
+        <div class="form-group">
+          <label>Role *</label>
+          <select name="role" required>
+            <option value="">Select role...</option>
+            {% for r in creatable_roles %}
+            <option value="{{ r }}">{{ role_labels[r] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Temporary Password * <span style="color:var(--orange); font-size:.75rem;">(tell this to the person directly)</span></label>
+          <div class="temp-pass-row">
+            <input type="text" name="temp_password" id="tempPassInput"
+                   placeholder="e.g. Gvmc@1234" required minlength="8">
+            <button type="button" class="btn-gen" onclick="genPass()">🎲 Generate</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Phone Number <span style="color:var(--muted); font-size:.75rem;">(optional — needed for SLA alert SMS)</span></label>
+          <input type="tel" name="phone" placeholder="e.g. 9876543210" maxlength="15"
+                 pattern="[0-9+\-\s]{0,15}" title="Numbers, +, -, and spaces only">
+        </div>
+        <div class="form-group">
+          <label>Zone <span style="color:var(--orange); font-size:.75rem;">(required for Zonal Commissioner)</span></label>
+          <input type="text" name="zone" placeholder="e.g. Zone 1">
+        </div>
+        <div class="form-group">
+          <label>Division <span style="color:var(--orange); font-size:.75rem;">(required for Assistant Engineer)</span></label>
+          <select name="division">
+            <option value="">— none —</option>
+            <option>Bheemunipatnam</option><option>Madhurawada</option>
+            <option>East</option><option>South</option><option>West</option>
+            <option>North</option><option>Gajuwaka</option>
+            <option>Aganampudi</option><option>Anakapalli</option><option>Pendurthi</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Ward List <span style="color:var(--orange); font-size:.75rem;">(comma-separated, required for WAS)</span></label>
+          <input type="text" name="ward_list" placeholder="Paste exact ward name(s) from the 98-ward list, comma-separated">
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+        <button type="submit" class="btn btn-primary">Create Account</button>
+        <span style="font-size:.8rem; color:var(--muted);">
+          The new person must change this password on their first login
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Current team members -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">👥 Your Team</div>
+        <div class="card-subtitle">People you can manage</div>
+      </div>
+    </div>
+
+    {% if team_members %}
+    <div style="overflow-x:auto;">
+      <table class="team-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created By</th>
+            <th>Added On</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in team_members %}
+          <tr class="{% if not m['is_active'] %}inactive-row{% endif %}">
+            <td>
+              {{ m["name"] }}
+              {% if m["must_change_password"] %}
+              <br><span class="must-change">⏳ Pending first login</span>
+              {% endif %}
+            </td>
+            <td><code style="font-size:.82rem; color:var(--accent);">{{ m["username"] }}</code></td>
+            <td><span class="role-pill role-{{ m['role'] }}">{{ m["role"].replace("_"," ") }}</span></td>
+            <td>
+              {% if m["is_active"] %}
+                <span class="status-active">● Active</span>
+              {% else %}
+                <span class="status-inactive">● Inactive</span>
+              {% endif %}
+            </td>
+            <td><span class="created-by">{{ m["created_by"] or "—" }}</span></td>
+            <td><span class="created-by">{{ m["created_at"][:10] if m["created_at"] else "—" }}</span></td>
+            <td>
+             <div class="actions">
+                <!-- Password reset and toggle forms use data-name attribute for safe JS name passing -->
+                <form method="post" action="/team/reset-password" style="display:inline;">
+                  <input type="hidden" name="staff_id" value="{{ m['id'] }}">
+                  <input type="hidden" name="csrf" value="{{ csrf }}">
+                  <button type="submit" class="btn btn-sm btn-warning"
+                          data-name="{{ m['name'] }}"
+                          onclick="return confirm('Reset ' + this.dataset.name + String.fromCharCode(39) + 's password? They will get a new temp password and must change it on next login.')">
+                    🔑 Reset Pass
+                  </button>
+                </form>
+                <!-- FIX: CSRF token added — was missing, causing activate/deactivate to always silently fail with "Session expired" -->
+                <!-- FIX: same backslash fix applied to deactivate confirm -->
+                <form method="post" action="/team/toggle" style="display:inline;">
+                  <input type="hidden" name="staff_id" value="{{ m['id'] }}">
+                  <input type="hidden" name="csrf" value="{{ csrf }}">
+                  {% if m["is_active"] %}
+                  <button type="submit" class="btn btn-sm btn-danger"
+                          data-name="{{ m['name'] }}"
+                          onclick="return confirm('Deactivate ' + this.dataset.name + '? They will be logged out immediately and cannot login until reactivated.')">
+                    🚫 Deactivate
+                  </button>
+                  {% else %}
+                  <button type="submit" class="btn btn-sm btn-success">
+                    ✅ Reactivate
+                  </button>
+                  {% endif %}
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      No team members yet. Add your first team member using the form above.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function genPass() {
+  // Produces passwords that pass all 7 RoadSeva password rules:
+  // 8+ chars, upper, lower, digit, special, 4+ unique chars, not in blocklist
+  const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   // no I/O to avoid confusion
+  const lower   = 'abcdefghjkmnpqrstuvwxyz';     // no i/l/o
+  const digits  = '23456789';                    // no 0/1
+  const special = '@#!$%';
+  const all     = upper + lower + digits + special;
+
+  let pass = '';
+  // Guarantee one of each required type
+  pass += upper[Math.floor(Math.random() * upper.length)];
+  pass += lower[Math.floor(Math.random() * lower.length)];
+  pass += lower[Math.floor(Math.random() * lower.length)];
+  pass += digits[Math.floor(Math.random() * digits.length)];
+  pass += digits[Math.floor(Math.random() * digits.length)];
+  pass += special[Math.floor(Math.random() * special.length)];
+  // Fill to 10 chars with random mix
+  while (pass.length < 10) {
+    pass += all[Math.floor(Math.random() * all.length)];
+  }
+  // Shuffle so the pattern isn't predictable
+  pass = pass.split('').sort(() => Math.random() - 0.5).join('');
+  document.getElementById('tempPassInput').value = pass;
+}
+
+</script>
+</body>
+</html>

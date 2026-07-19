@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva - Live Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; }
+        .header { background: #1a3a6b; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .nav-link { color: white; text-decoration: none; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-size: 13px; }
+        .nav-link:hover { background: rgba(255,255,255,0.1); }
+        .toolbar { background: white; padding: 12px 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+        .filter-btn { padding: 7px 18px; border-radius: 20px; border: 2px solid #ddd; font-size: 13px; cursor: pointer; background: white; font-weight: bold; transition: all 0.15s; }
+        .filter-btn.active-all      { background: #1a3a6b; color: white; border-color: #1a3a6b; }
+        .filter-btn.active-open     { background: #e74c3c; color: white; border-color: #e74c3c; }
+        .filter-btn.active-assigned { background: #f39c12; color: white; border-color: #f39c12; }
+        .filter-btn.active-resolved { background: #27ae60; color: white; border-color: #27ae60; }
+        .stats-bar { background: white; padding: 10px 24px; display: flex; gap: 24px; font-size: 13px; border-top: 1px solid #f0f0f0; flex-wrap: wrap; }
+        .stat-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .dot-open     { background: #e74c3c; }
+        .dot-assigned { background: #f39c12; }
+        .dot-resolved { background: #27ae60; }
+        #map { height: calc(100vh - 145px); width: 100%; }
+        .popup-box { min-width: 200px; font-size: 13px; }
+        .popup-id { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+        .popup-damage { font-size: 15px; font-weight: bold; color: #222; margin-bottom: 6px; }
+        .popup-status { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+        .popup-open     { background: #fde8e8; color: #e74c3c; }
+        .popup-assigned { background: #fef3cd; color: #f39c12; }
+        .popup-resolved { background: #d4edda; color: #27ae60; }
+        .popup-row { margin-bottom: 3px; color: #555; }
+        .no-data { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: white; border-radius: 12px; padding: 32px 40px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.12); z-index: 1000; }
+        .no-data h3 { color: #333; margin-bottom: 8px; }
+        .no-data p  { color: #888; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🗺️ RoadSeva — Live Map</h1>
+    <div class="header-right">
+        <span>👤 {{ staff.name }}</span>
+        <a href="/staff" class="nav-link">← Dashboard</a>
+        <a href="/analytics" class="nav-link">📊 Analytics</a>
+        <a href="/logout" class="nav-link">Logout</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <span style="font-size:13px; color:#888; font-weight:bold;">Filter:</span>
+    <button class="filter-btn active-all"  onclick="filterMap('all', this)">🗺️ All <span id="count-all">0</span></button>
+    <button class="filter-btn" onclick="filterMap('open', this)">🔴 Open <span id="count-open">0</span></button>
+    <button class="filter-btn" onclick="filterMap('assigned', this)">🟡 Assigned <span id="count-assigned">0</span></button>
+    <button class="filter-btn" onclick="filterMap('resolved', this)">🟢 Resolved <span id="count-resolved">0</span></button>
+</div>
+
+<div class="stats-bar">
+    <div class="stat-item"><span class="dot dot-open"></span> Open = urgent action needed</div>
+    <div class="stat-item"><span class="dot dot-assigned"></span> Assigned = work in progress</div>
+    <div class="stat-item"><span class="dot dot-resolved"></span> Resolved = completed</div>
+    <div class="stat-item" style="color:#888;">📍 Click any pin for details</div>
+</div>
+
+<div id="map"></div>
+
+{% if not reports %}
+<div class="no-data">
+    <h3>📍 No GPS data yet</h3>
+    <p>Reports submitted with location permission<br>will appear here as pins on the map.</p>
+</div>
+{% endif %}
+
+<!-- Pass data safely from Jinja2 to JS using a script tag -->
+<script id="reportData" type="application/json">
+{{ reports | tojson | safe }}
+</script>
+
+<script>
+// Read data safely — no Jinja2 inside JS
+const allReports = JSON.parse(document.getElementById('reportData').textContent);
+
+// Visakhapatnam centre
+const map = L.map('map').setView([17.6868, 83.2185], 12);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+}).addTo(map);
+
+const colors = { open: '#e74c3c', assigned: '#f39c12', resolved: '#27ae60' };
+
+let markers = [];
+const counts = { all: 0, open: 0, assigned: 0, resolved: 0 };
+
+function makeIcon(status) {
+    const color = colors[status] || '#999';
+    return L.divIcon({
+        className: '',
+        html: '<div style="width:18px;height:18px;background:' + color + ';border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+    });
+}
+
+allReports.forEach(function(r) {
+    if (!r.latitude || !r.longitude) return;
+
+    const marker = L.marker([r.latitude, r.longitude], { icon: makeIcon(r.status) });
+
+    const assignedLine = r.assigned_to
+        ? '<div class="popup-row">🔧 ' + r.assigned_to + '</div>'
+        : '<div class="popup-row" style="color:#bbb;">Not assigned yet</div>';
+
+    marker.bindPopup(
+        '<div class="popup-box">' +
+        '<div class="popup-id">' + r.report_id + '</div>' +
+        '<div class="popup-damage">' + r.damage_type + '</div>' +
+        '<span class="popup-status popup-' + r.status + '">' + r.status + '</span>' +
+        '<div class="popup-row">📍 ' + r.ward + '</div>' +
+        assignedLine +
+        '<div class="popup-row">👤 ' + (r.citizen_name || '') + '</div>' +
+        '<div class="popup-row" style="color:#aaa;font-size:11px;">🕐 ' + r.submitted_at + '</div>' +
+        '</div>',
+        { maxWidth: 260 }
+    );
+
+    marker._status = r.status;
+    marker.addTo(map);
+    markers.push(marker);
+
+    counts.all++;
+    if (counts[r.status] !== undefined) counts[r.status]++;
+});
+
+// Update count labels
+document.getElementById('count-all').textContent = counts.all;
+document.getElementById('count-open').textContent = counts.open;
+document.getElementById('count-assigned').textContent = counts.assigned;
+document.getElementById('count-resolved').textContent = counts.resolved;
+
+// Fit map to markers
+if (markers.length > 0) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.2));
+}
+
+function filterMap(status, btn) {
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+        b.className = 'filter-btn';
+    });
+    btn.className = 'filter-btn active-' + status;
+
+    markers.forEach(function(m) {
+        if (status === 'all' || m._status === status) {
+            if (!map.hasLayer(m)) map.addLayer(m);
+        } else {
+            if (map.hasLayer(m)) map.removeLayer(m);
+        }
+    });
+}
+</script>
+
+</body>
+</html>

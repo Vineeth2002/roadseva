@@ -1,0 +1,15 @@
+# ruff.toml
+[lint]
+select = ["E", "W", "F"]
+ignore = [
+    "E501",   # line too long
+    "E701",   # multiple statements on one line (colon)
+    "E702",   # multiple statements on one line (semicolon)
+    "E722",   # bare except
+    "E402",   # module level import not at top
+    "E401",   # multiple imports on one line
+    "F401",   # imported but unused (in utility/check scripts)
+    "F841",   # local variable assigned but never used
+    "F541",   # f-string without placeholders
+    "W292",   # no newline at end of file
+]

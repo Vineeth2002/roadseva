@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva — {{ data.ward_name }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:Arial,sans-serif; background:#f0f4f8; min-height:100vh; }
+        .header { background:#1a6b3c; color:white; padding:24px 20px; text-align:center; }
+        .header h1 { font-size:20px; margin-bottom:4px; }
+        .header .sub { font-size:13px; opacity:0.85; }
+        .main { max-width:500px; margin:0 auto; padding:20px; }
+
+        .kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+        .kpi { background:white; border-radius:12px; padding:20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+        .kpi-num { font-size:36px; font-weight:bold; color:#1a6b3c; }
+        .kpi-num.red { color:#e74c3c; }
+        .kpi-num.orange { color:#f39c12; }
+        .kpi-label { font-size:12px; color:#888; margin-top:4px; }
+
+        .rank-card { background:white; border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); text-align:center; }
+        .rank-num { font-size:48px; font-weight:bold; color:#1a6b3c; }
+        .rank-label { font-size:14px; color:#666; margin-top:4px; }
+        .rank-sub { font-size:12px; color:#aaa; margin-top:4px; }
+
+        .rate-card { background:white; border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+        .rate-label { font-size:13px; color:#666; margin-bottom:10px; font-weight:bold; }
+        .rate-bar-bg { background:#e0e0e0; border-radius:20px; height:20px; overflow:hidden; }
+        .rate-bar-fill { background:linear-gradient(90deg, #1a6b3c, #27ae60); height:20px; border-radius:20px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; transition:width 1s; }
+        .rate-pct { font-size:12px; font-weight:bold; color:white; }
+
+        .panel { background:white; border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+        .panel-title { font-size:13px; font-weight:bold; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+
+        .report-row { padding:10px 0; border-bottom:1px solid #f0f0f0; }
+        .report-row:last-child { border-bottom:none; }
+        .report-type { font-size:14px; font-weight:bold; color:#222; }
+        .report-meta { font-size:12px; color:#888; margin-top:3px; }
+        .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; }
+        .dot-open { background:#e74c3c; }
+        .dot-resolved { background:#27ae60; }
+        .dot-inspecting { background:#6f42c1; }
+
+        .footer { text-align:center; padding:20px; font-size:12px; color:#aaa; }
+        .powered { color:#1a6b3c; font-weight:bold; }
+
+        .share-btn { display:block; background:#25D366; color:white; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-size:15px; font-weight:bold; margin-bottom:12px; }
+        .back-btn { display:block; background:#1a6b3c; color:white; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-size:15px; font-weight:bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="/wards" style="color:white; text-decoration:none; font-size:14px; opacity:0.85;">← All Wards</a>
+    <h1>📍 {{ data.ward_name }}</h1>
+    <div class="sub">Road Damage Report Card — GVMC Visakhapatnam</div>
+    <div class="sub" style="margin-top:4px; opacity:0.7;">Public transparency dashboard</div>
+</div>
+
+<div class="main">
+
+    {% if data.total == 0 %}
+    <div style="text-align:center; padding:40px; background:white; border-radius:12px; margin-bottom:16px;">
+        <div style="font-size:48px;">✅</div>
+        <div style="font-size:18px; font-weight:bold; color:#1a6b3c; margin-top:12px;">No reports yet</div>
+        <div style="color:#888; margin-top:8px; font-size:14px;">This ward has no road damage reports</div>
+    </div>
+    {% else %}
+
+    <!-- Resolution Rate -->
+    <div class="rate-card">
+        <div class="rate-label">✅ Resolution Rate</div>
+        <div class="rate-bar-bg">
+            <div class="rate-bar-fill" id="rateBar">
+                <span class="rate-pct">{{ data.rate }}%</span>
+            </div>
+        </div>
+        <div style="font-size:12px; color:#888; margin-top:8px;">{{ data.resolved }} of {{ data.total }} complaints resolved</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi">
+            <div class="kpi-num">{{ data.total }}</div>
+            <div class="kpi-label">Total Complaints</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-num">{{ data.resolved }}</div>
+            <div class="kpi-label">Resolved ✅</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-num red">{{ data.pending }}</div>
+            <div class="kpi-label">Pending ⏳</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-num orange">{{ data.critical }}</div>
+            <div class="kpi-label">Critical 🚨</div>
+        </div>
+    </div>
+
+    <!-- Ward Rank -->
+    <div class="rank-card">
+        <div class="rank-num">#{{ data.rank }}</div>
+        <div class="rank-label">Ward Rank in GVMC</div>
+        <div class="rank-sub">out of {{ data.total_wards }} wards by resolution rate</div>
+    </div>
+
+    <!-- Recent Reports -->
+    {% if data.recent %}
+    <div class="panel">
+        <div class="panel-title">Recent Complaints</div>
+        {% for r in data.recent %}
+        <div class="report-row">
+            <div class="report-type">
+                <span class="status-dot dot-{{ r.status }}"></span>
+                {{ r.damage_type }}
+            </div>
+            <div class="report-meta">
+                {{ r.submitted_at }} &nbsp;|&nbsp;
+                {% if r.status == 'resolved' %}✅ Resolved
+                {% elif r.status == 'inspecting' %}🔵 Being inspected
+                {% elif r.status == 'inspected' %}🔧 Repair scheduled
+                {% else %}⏳ Pending
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    <!-- Share on WhatsApp -->
+    <a href="https://wa.me/?text=Check road repair status for {{ data.ward_name }} in Visakhapatnam — https://roadseva.onrender.com/ward/{{ ward_id }}"
+       class="share-btn">
+        📲 Share on WhatsApp
+    </a>
+
+    <a href="/" class="back-btn">📝 Report a Road Problem</a>
+
+</div>
+
+<div class="footer">
+    Powered by <span class="powered">RoadSeva</span> — Every road. Every city. Every citizen.<br>
+    Data updated in real time
+</div>
+
+<script>
+    var bar = document.getElementById('rateBar');
+    if (bar) { bar.style.width = '{{ data.rate }}%'; }
+</script>
+</body>
+</html>

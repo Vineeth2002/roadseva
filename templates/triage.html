@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RoadSeva — Triage Queue</title>
+<style>
+:root {
+  --navy:#1a3a6b; --blue:#1e4fa0; --green:#27ae60; --red:#e74c3c;
+  --orange:#f39c12; --purple:#6f42c1; --teal:#0891b2; --bg:#f0f4f8;
+  --white:#fff; --border:#e0e6f0; --muted:#6b7a99;
+  --shadow:0 2px 10px rgba(26,58,107,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-height:100vh; }
+
+/* ── HEADER ── */
+.header {
+  background:var(--navy); color:white; padding:13px 16px;
+  display:flex; justify-content:space-between; align-items:center;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.header h1  { font-size:16px; }
+.header-sub { font-size:11px; color:rgba(255,255,255,.65); margin-top:2px; }
+.header-right { display:flex; gap:6px; align-items:center; }
+.nav-link { color:white; text-decoration:none; padding:5px 10px; border:1px solid rgba(255,255,255,.3); border-radius:6px; font-size:12px; }
+.nav-link:hover { background:rgba(255,255,255,.12); }
+.nav-logout { background:#c0392b; border-color:#c0392b; }
+
+/* ── ROLE NOTICE ── */
+.role-notice {
+  background:#e0f2fe; border-bottom:2px solid var(--teal);
+  padding:9px 16px; font-size:12px; color:#0369a1; text-align:center;
+}
+
+/* ── SUMMARY ── */
+.summary { display:flex; gap:0; background:var(--white); border-bottom:1px solid var(--border); }
+.sum-item { flex:1; text-align:center; padding:13px 8px; border-right:1px solid var(--border); }
+.sum-item:last-child { border-right:none; }
+.sum-num   { font-size:24px; font-weight:bold; line-height:1; }
+.sum-label { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:.5px; }
+
+/* ── REPORT CARD ── */
+.page-content { padding-bottom:72px; }
+.report-card {
+  background:var(--white); margin:10px 12px; border-radius:12px;
+  overflow:hidden; box-shadow:var(--shadow); border-left:5px solid var(--teal);
+}
+.report-card.urgent { border-left-color:var(--red); background:#fffafa; }
+
+.card-header {
+  padding:12px 14px; border-bottom:1px solid #f0f0f0;
+  display:flex; justify-content:space-between; align-items:flex-start;
+}
+.damage-name { font-size:16px; font-weight:bold; color:#222; }
+.rid-small   { font-size:11px; color:#aaa; margin-top:3px; font-family:monospace; }
+.status-badge {
+  padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;
+  background:#e0f2fe; color:var(--teal); border:1px solid var(--teal);
+  white-space:nowrap;
+}
+.urgent-badge {
+  display:inline-block; background:var(--red); color:white;
+  font-size:10px; font-weight:bold; padding:1px 7px; border-radius:10px; margin-left:5px;
+}
+
+.card-body { padding:12px 14px; }
+.info-row  { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-bottom:9px; align-items:center; }
+
+/* ── LOCATION BOX ── */
+.location-box {
+  background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;
+  padding:10px 12px; margin-bottom:10px; font-size:13px;
+}
+.location-box .loc-label { font-size:11px; font-weight:bold; color:#0369a1; text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.location-box .loc-text  { color:#1e3a5f; line-height:1.5; }
+.location-box .loc-gps   { font-size:11px; color:var(--muted); margin-top:4px; }
+
+/* ── CITIZEN PHOTO ── */
+.report-photo {
+  width:100%; max-width:280px; height:170px; border-radius:8px;
+  object-fit:cover; cursor:pointer; border:2px solid #eee; display:block; margin-bottom:4px;
+}
+.photo-hint { font-size:11px; color:var(--muted); margin-bottom:9px; }
+
+/* ── TRIAGE FORM ── */
+.triage-panel {
+  background:#f0fdf4; border:1.5px solid #86efac;
+  border-radius:10px; padding:14px; margin-top:2px;
+}
+.triage-panel h3 {
+  font-size:13px; color:#15803d; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;
+}
+.triage-panel p { font-size:12px; color:#166534; margin-bottom:12px; line-height:1.5; }
+
+/* Ward search + select */
+.ward-search-wrap { position:relative; margin-bottom:10px; }
+.ward-search-input {
+  width:100%; padding:9px 12px; border:1.5px solid #86efac; border-radius:7px 7px 0 0;
+  font-size:13px; background:white; outline:none;
+}
+.ward-search-input:focus { border-color:var(--teal); }
+.ward-select {
+  width:100%; padding:9px 12px; border:1.5px solid #86efac; border-top:none;
+  border-radius:0 0 7px 7px; font-size:13px; background:white; outline:none;
+  max-height:200px;
+}
+.ward-select:focus { border-color:var(--teal); }
+.ward-select option { padding:6px; }
+
+.notes-input {
+  width:100%; padding:9px 12px; border:1.5px solid #86efac; border-radius:7px;
+  font-size:13px; background:white; margin-bottom:10px; outline:none;
+  resize:vertical; min-height:52px; font-family:Arial,sans-serif;
+}
+.notes-input:focus { border-color:var(--teal); }
+
+/* ── BUTTONS ── */
+.btn { padding:8px 16px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:opacity .2s; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.btn-assign { background:var(--green); width:100%; justify-content:center; padding:11px; }
+.btn-assign:hover { opacity:.9; }
+.btn-skip   { background:#94a3b8; font-size:12px; padding:6px 12px; }
+
+/* ── SKIP PANEL ── */
+.skip-panel {
+  background:#fff7ed; border:1px solid #fed7aa; border-radius:8px;
+  padding:11px 14px; margin-top:8px;
+}
+.skip-panel p { font-size:12px; color:#9a3412; margin-bottom:8px; }
+.skip-row { display:flex; gap:7px; flex-wrap:wrap; }
+.skip-input {
+  flex:1; min-width:160px; padding:8px 10px; border:1px solid #fed7aa;
+  border-radius:6px; font-size:13px; background:white;
+}
+.btn-hold { background:#f97316; }
+
+/* ── ACTIVITY ── */
+.activity { padding:10px 14px 12px; border-top:1px solid #f0f0f0; }
+.activity-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; font-weight:bold; }
+.a-item { display:flex; gap:9px; font-size:12px; padding:5px 7px; background:#fafafa; border-radius:6px; margin-bottom:4px; }
+.a-dot  { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.dot-submitted { background:#95a5a6; }
+.a-body { flex:1; color:#333; line-height:1.4; }
+.a-who  { font-weight:bold; color:var(--navy); }
+.a-time { font-size:11px; color:#aaa; margin-top:2px; }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:56px 20px; color:var(--muted); }
+.empty-icon { font-size:44px; margin-bottom:14px; }
+.empty h3   { font-size:18px; font-weight:bold; color:var(--green); margin-bottom:7px; }
+
+/* ── SUCCESS TOAST ── */
+.toast {
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+  background:#166534; color:white; padding:10px 20px; border-radius:20px;
+  font-size:13px; font-weight:600; z-index:200; opacity:0;
+  transition:opacity .3s; pointer-events:none; white-space:nowrap;
+}
+.toast.show { opacity:1; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--white); border-top:1px solid var(--border);
+  display:flex; z-index:100; box-shadow:0 -2px 10px rgba(0,0,0,.08);
+}
+.bnav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:9px 4px; text-decoration:none;
+  color:var(--muted); font-size:10px; font-weight:500; gap:3px;
+}
+.bnav-item.active { color:var(--navy); }
+.bnav-icon { font-size:20px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>📋 RoadSeva — Triage Queue</h1>
+    <div class="header-sub">{{ staff.name }} · {{ staff.role | replace('_',' ') | title }}</div>
+  </div>
+  <div class="header-right">
+    <a href="/logout" class="nav-link nav-logout">Logout</a>
+  </div>
+</div>
+
+<!-- Role notice -->
+<div class="role-notice">
+  📍 These complaints have no GPS ward. Read the citizen's description, identify the ward, and assign it.
+  The SLA clock starts the moment you assign.
+</div>
+
+<!-- SUMMARY STRIP -->
+<div class="summary">
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--teal)">{{ reports|length }}</div>
+    <div class="sum-label">Pending</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--red)">{{ reports|selectattr('severity','equalto','critical')|list|length }}</div>
+    <div class="sum-label">Critical</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--orange)">{{ reports|selectattr('damage_type','equalto','Pothole')|list|length }}</div>
+    <div class="sum-label">Potholes</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--muted)">{{ reports|selectattr('photo_data','ne','')|list|length }}</div>
+    <div class="sum-label">With Photo</div>
+  </div>
+</div>
+
+<div class="page-content">
+
+{% if reports %}
+  {% for r in reports %}
+  <div class="report-card {% if r.severity == 'critical' %}urgent{% endif %}" id="card-{{ r.report_id }}">
+
+    <!-- Card header -->
+    <div class="card-header">
+      <div>
+        <div class="damage-name">
+          {{ r.damage_type }}
+          {% if r.severity == 'critical' %}
+          <span class="urgent-badge">🔴 CRITICAL</span>
+          {% endif %}
+        </div>
+        <div class="rid-small">{{ r.report_id }} · Received {{ r.submitted_at[:16] }}</div>
+      </div>
+      <span class="status-badge">📍 NEEDS WARD</span>
+    </div>
+
+    <!-- Card body -->
+    <div class="card-body">
+      <div class="info-row">
+        <span>👤 {{ r.citizen_name }}</span>
+        <span>📱 {{ r.citizen_phone }}</span>
+        {% if r.intake_channel and r.intake_channel != 'citizen_web' %}
+        <span>📥 {{ r.intake_channel }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Location description (most important for triage) -->
+      <div class="location-box">
+        <div class="loc-label">📍 Citizen's Location Description</div>
+        <div class="loc-text">
+          {% if r.location_text %}
+            {{ r.location_text }}
+          {% elif r.description %}
+            {{ r.description }}
+          {% else %}
+            <em style="color:var(--muted)">No location description provided</em>
+          {% endif %}
+        </div>
+        {% if r.latitude and r.longitude %}
+        <div class="loc-gps">
+          GPS available: {{ "%.4f"|format(r.latitude) }}°N, {{ "%.4f"|format(r.longitude) }}°E
+          — <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}&z=17"
+               target="_blank" style="color:var(--teal);">Open in Maps</a>
+        </div>
+        {% else %}
+        <div class="loc-gps" style="color:var(--red);">⚠️ GPS not captured — manual ward identification required</div>
+        {% endif %}
+      </div>
+
+      <!-- Citizen photo — most useful clue for ward identification -->
+      {% if r.photo_data %}
+        {% if r.photo_data.startswith('data:') %}
+        <img src="{{ r.photo_data }}" class="report-photo" title="Citizen photo — look for street signs, landmarks">
+        {% else %}
+        <img src="data:image/jpeg;base64,{{ r.photo_data }}" class="report-photo" title="Citizen photo">
+        {% endif %}
+        <div class="photo-hint">📷 Check photo for street signs or landmarks to identify ward</div>
+      {% endif %}
+
+      <!-- Severity from AI -->
+      {% if r.severity and r.severity != 'unknown' %}
+      <div style="font-size:12px;padding:6px 10px;border-radius:6px;margin-top:4px;
+        {% if r.severity=='critical' %}background:#fde8e8;color:#c0392b;border-left:3px solid var(--red);
+        {% elif r.severity=='high' %}background:#fef3cd;color:#d35400;border-left:3px solid var(--orange);
+        {% else %}background:#f0f0f0;color:#555;border-left:3px solid #ccc;{% endif %}">
+        AI Severity: <strong>{{ r.severity | upper }}</strong>
+        {% if r.severity_details %} — {{ r.severity_details[:80] }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TRIAGE FORM -->
+    <div style="padding:0 14px 14px;">
+      <div class="triage-panel">
+        <h3>🗺️ Assign Ward</h3>
+        <p>Type a ward name or area to search, then select from the list.
+           Once assigned, the complaint goes to the WAS for that ward and the SLA clock starts.</p>
+
+        <form action="/assign-ward" method="post"
+              onsubmit="return handleTriageSubmit(this, '{{ r.report_id }}')"
+              id="triage-form-{{ r.report_id }}">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+
+          <!-- Searchable ward dropdown -->
+          <div class="ward-search-wrap">
+            <input type="text"
+                   class="ward-search-input"
+                   placeholder="🔍 Type ward name, area, or landmark…"
+                   id="wardSearch-{{ r.report_id }}"
+                   oninput="filterWards(this, '{{ r.report_id }}')"
+                   autocomplete="off"
+                   spellcheck="false">
+            <select name="ward"
+                    class="ward-select"
+                    id="wardSelect-{{ r.report_id }}"
+                    required
+                    size="5">
+              <option value="" disabled selected>— Select ward —</option>
+              {% for ward in wards %}
+              <option value="{{ ward }}">{{ ward }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Optional note -->
+          <textarea name="triage_note"
+                    class="notes-input"
+                    placeholder="Optional: how did you identify this ward? (e.g. 'Street sign visible in photo shows Asilmetta Jn.')"
+                    rows="2"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();}"></textarea>
+
+          <button type="submit"
+                  class="btn btn-assign"
+                  id="assignBtn-{{ r.report_id }}">
+            ✅ Assign Ward &amp; Start SLA
+          </button>
+        </form>
+      </div>
+
+      <!-- Hold for later -->
+      <div class="skip-panel" style="margin-top:8px;">
+        <p>⏸ Not sure about the ward? Add a note and move to the next complaint — come back to this one.</p>
+        <div class="skip-row">
+          <form action="/add-comment" method="post" style="display:contents">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="text" name="comment" class="skip-input"
+                   placeholder="e.g. Needs field verification — checking with WAS Ward 32"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();}">
+            <button type="submit" class="btn btn-hold">⏸ Hold &amp; Note</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="activity">
+      <div class="activity-title">📜 Complaint Trail</div>
+      <div class="a-item">
+        <div class="a-dot dot-submitted"></div>
+        <div class="a-body">
+          <span class="a-who">{{ r.citizen_name }}</span> filed complaint — GPS ward detection failed
+          <div class="a-time">{{ r.submitted_at[:16] }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /report-card -->
+  {% endfor %}
+
+{% else %}
+<div class="empty">
+  <div class="empty-icon">✅</div>
+  <h3>Queue Clear</h3>
+  <p>No complaints waiting for ward assignment.<br>
+  All incoming complaints have GPS coordinates and are assigned automatically.</p>
+</div>
+{% endif %}
+
+</div><!-- /page-content -->
+
+<!-- SUCCESS TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="/triage" class="bnav-item active">
+    <span class="bnav-icon">📋</span>Queue
+  </a>
+  <a href="/change-password" class="bnav-item">
+    <span class="bnav-icon">🔑</span>Password
+  </a>
+  <a href="/logout" class="bnav-item">
+    <span class="bnav-icon">🚪</span>Logout
+  </a>
+</nav>
+
+<script>
+// ── WARD SEARCH FILTER ────────────────────────────────────────────────────────
+// Filters the select options in real-time as user types.
+// Works for both "Ward 41 — Maddilapalem" and partial text like "maddi"
+
+function filterWards(input, reportId) {
+  var query   = input.value.toLowerCase().trim();
+  var select  = document.getElementById('wardSelect-' + reportId);
+  var options = select.querySelectorAll('option');
+  var matched = 0;
+
+  options.forEach(function(opt) {
+    if (!opt.value) return; // skip placeholder
+    var text = opt.text.toLowerCase();
+    var show = !query || text.includes(query);
+    opt.style.display = show ? '' : 'none';
+    if (show) matched++;
+  });
+
+  // Auto-select if exactly one match
+  if (matched === 1) {
+    options.forEach(function(opt) {
+      if (opt.style.display !== 'none' && opt.value) {
+        select.value = opt.value;
+      }
+    });
+  }
+
+  // Show placeholder if no matches
+  var placeholder = select.querySelector('option[value=""]');
+  if (placeholder) {
+    placeholder.textContent = matched === 0
+      ? '⚠️ No wards match "' + input.value + '"'
+      : '— Select ward (' + matched + ' found) —';
+  }
+}
+
+// ── TRIAGE SUBMIT ─────────────────────────────────────────────────────────────
+function handleTriageSubmit(form, reportId) {
+  var select = document.getElementById('wardSelect-' + reportId);
+  if (!select.value) {
+    alert('Please select a ward before assigning.\nType in the search box to find it quickly.');
+    return false;
+  }
+  var btn = document.getElementById('assignBtn-' + reportId);
+  if (btn && btn.disabled) return false;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Assigning…';
+  }
+  return true;
+}
+
+// ── AUTO-REFRESH every 90 seconds (new triage items may arrive) ───────────────
+// Only refreshes if no form is being filled (no ward selected yet)
+(function(){
+  var REFRESH_MS = 90000;
+  var timer = setTimeout(function() {
+    // Check if any ward has been selected — if so, don't refresh mid-work
+    var selects = document.querySelectorAll('.ward-select');
+    var anySelected = false;
+    selects.forEach(function(s) { if (s.value) anySelected = true; });
+    if (!anySelected) {
+      window.location.reload();
+    }
+  }, REFRESH_MS);
+
+  // Cancel refresh if user starts interacting with a triage form
+  document.querySelectorAll('.ward-search-input, .ward-select').forEach(function(el) {
+    el.addEventListener('focus', function() { clearTimeout(timer); });
+  });
+})();
+</script>
+
+</body>
+</html>

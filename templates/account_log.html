@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Activity Log — RoadSeva</title>
+<style>
+:root {
+  --bg:#080f1a; --navy:#0d1b2e; --navy2:#122236;
+  --accent:#e8a020; --text:#e2e8f0; --muted:#94a3b8;
+  --border:rgba(255,255,255,0.07); --green:#22c55e; --red:#ef4444; --orange:#f97316; --blue:#3b82f6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+.topbar {
+  background:var(--navy); border-bottom:1px solid var(--border);
+  padding:0 28px; height:58px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.brand { font-size:1.1rem; font-weight:700; color:var(--accent); letter-spacing:1px; }
+.nav-a { color:var(--muted); text-decoration:none; font-size:.83rem; padding:5px 12px; border-radius:6px; transition:.15s; }
+.nav-a:hover { background:rgba(255,255,255,.05); color:var(--text); }
+.nav-a.active { color:var(--accent); background:rgba(232,160,32,.1); }
+.page { max-width:1100px; margin:0 auto; padding:28px 24px; }
+.page-header { margin-bottom:24px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.page-header h1 { font-size:1.4rem; font-weight:700; }
+.page-header p { font-size:.85rem; color:var(--muted); margin-top:4px; }
+.card { background:var(--navy); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.tbl { width:100%; border-collapse:collapse; }
+.tbl th { text-align:left; font-size:.73rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.tbl td { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.04); font-size:.86rem; vertical-align:middle; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:rgba(255,255,255,.02); }
+.action-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:12px;
+  font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+}
+.act-create     { background:rgba(34,197,94,.15);  color:#86efac; border:1px solid rgba(34,197,94,.3); }
+.act-deactivate { background:rgba(239,68,68,.15);  color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+.act-reactivate { background:rgba(59,130,246,.15); color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+.act-reset      { background:rgba(249,115,22,.15); color:#fdba74; border:1px solid rgba(249,115,22,.3); }
+.empty { text-align:center; padding:48px; color:var(--muted); font-size:.9rem; }
+.stat-row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+.stat { background:var(--navy); border:1px solid var(--border); border-radius:10px; padding:16px 20px; flex:1; min-width:120px; }
+.stat-val { font-size:1.6rem; font-weight:700; }
+.stat-lbl { font-size:.75rem; color:var(--muted); margin-top:3px; }
+.notes-cell { font-size:.78rem; color:var(--muted); max-width:220px; }
+.user-chip { background:var(--navy2); border:1px solid var(--border); border-radius:20px; padding:3px 14px; font-size:.8rem; }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <span class="brand">🛣 RoadSeva</span>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <a href="/admin" class="nav-a">← Admin Panel</a>
+    <a href="/account-log" class="nav-a active">Account Log</a>
+    <span class="user-chip">{{ staff["name"] }}</span>
+    <a href="/logout" class="nav-a">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Account Activity Log</h1>
+      <p>Complete audit trail of every account creation, deactivation, and password reset — GVMC RoadSeva</p>
+    </div>
+    <a href="/admin" class="nav-a" style="border:1px solid var(--border); padding:8px 16px; border-radius:8px;">← Back to Admin</a>
+  </div>
+
+  {% set created_count     = log | selectattr('action', 'equalto', 'create_account') | list | length %}
+  {% set deactivated_count = log | selectattr('action', 'equalto', 'deactivate')     | list | length %}
+  {% set reactivated_count = log | selectattr('action', 'equalto', 'reactivate')     | list | length %}
+  {% set reset_count       = log | selectattr('action', 'equalto', 'password_reset') | list | length %}
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat-val" style="color:var(--green)">{{ created_count }}</div>
+      <div class="stat-lbl">Accounts Created</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--red)">{{ deactivated_count }}</div>
+      <div class="stat-lbl">Deactivations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--blue)">{{ reactivated_count }}</div>
+      <div class="stat-lbl">Reactivations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--orange)">{{ reset_count }}</div>
+      <div class="stat-lbl">Password Resets</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">{{ log | length }}</div>
+      <div class="stat-lbl">Total Actions</div>
+    </div>
+  </div>
+
+  <div class="card">
+    {% if log %}
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Date &amp; Time</th>
+          <th>Action</th>
+          <th>Username</th>
+          <th>Done By</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in log %}
+        <tr>
+          <td style="color:var(--muted); font-size:.82rem; white-space:nowrap;">{{ entry.done_at }}</td>
+          <td>
+            {% if entry.action == 'create_account' %}
+              <span class="action-badge act-create">✦ Created</span>
+            {% elif entry.action == 'deactivate' %}
+              <span class="action-badge act-deactivate">✕ Deactivated</span>
+            {% elif entry.action == 'reactivate' %}
+              <span class="action-badge act-reactivate">✓ Reactivated</span>
+            {% elif entry.action == 'password_reset' %}
+              <span class="action-badge act-reset">🔑 Pwd Reset</span>
+            {% else %}
+              <span class="action-badge" style="background:rgba(148,163,184,.1); color:var(--muted);">{{ entry.action }}</span>
+            {% endif %}
+          </td>
+          <td><code style="font-size:.82rem; color:var(--accent);">{{ entry.target_username }}</code></td>
+          <td style="color:var(--muted); font-size:.84rem;">{{ entry.done_by }}</td>
+          <td class="notes-cell">{{ entry.details or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      No account actions recorded yet.<br>
+      <span style="font-size:.82rem;">Every account creation, deactivation, and password reset will appear here automatically.</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>

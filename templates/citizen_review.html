@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Was Your Road Fixed? — RoadSeva</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  .header {
+    background: #1a6b3c;
+    padding: 24px 28px;
+    color: white;
+  }
+  .header .logo {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .body { padding: 28px; }
+  .complaint-info {
+    background: #f8fdf9;
+    border: 1px solid #d4edda;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #444;
+    line-height: 1.7;
+  }
+  .complaint-info strong { color: #1a6b3c; }
+  .complaint-info .rid {
+    font-family: monospace;
+    font-size: 13px;
+    color: #555;
+    background: #eef7f1;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .question {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .sub {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .btn {
+    padding: 16px 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn .icon { font-size: 28px; }
+  .btn-yes {
+    background: #dcfce7;
+    color: #15803d;
+    border: 2px solid #86efac;
+  }
+  .btn-yes:hover { background: #bbf7d0; box-shadow: 0 4px 12px rgba(21,128,61,0.15); }
+  .btn-no {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 2px solid #fca5a5;
+  }
+  .btn-no:hover { background: #fee2e2; box-shadow: 0 4px 12px rgba(220,38,38,0.12); }
+  .note-section { display: none; margin-top: 4px; }
+  .note-section.visible { display: block; }
+  .note-label {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #1a6b3c; }
+  .submit-btn {
+    width: 100%;
+    background: #1a6b3c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: background 0.2s;
+  }
+  .submit-btn:hover { background: #155c33; }
+  .privacy {
+    font-size: 12px;
+    color: #9ca3af;
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+  .footer {
+    background: #f8f8f8;
+    border-top: 1px solid #eee;
+    padding: 14px 28px;
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="logo">RoadSeva · GVMC Visakhapatnam</div>
+    <h1>Was your road issue fixed?</h1>
+  </div>
+
+  <div class="body">
+    <div class="complaint-info">
+      <strong>Complaint:</strong> {{ damage_type }}<br>
+      <strong>Ward:</strong> {{ ward }}<br>
+      <strong>Reference:</strong> <span class="rid">{{ report_id }}</span>
+    </div>
+
+    <div class="question">Did the work get done properly?</div>
+    <div class="sub">Your honest answer helps us hold officials accountable. It takes 5 seconds.</div>
+
+    <form method="POST" id="reviewForm">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="satisfied" id="satisfiedInput" value="">
+      <input type="hidden" name="note" id="noteInput" value="">
+      <input type="hidden" name="token" value="{{ token }}">
+
+      <div class="btn-group">
+        <button type="button" class="btn btn-yes" onclick="selectResponse('yes')">
+          <span class="icon">✅</span>
+          Yes, Fixed
+        </button>
+        <button type="button" class="btn btn-no" onclick="selectResponse('no')">
+          <span class="icon">❌</span>
+          No, Still Broken
+        </button>
+      </div>
+
+      <div class="note-section" id="noteSection">
+        <div class="note-label">What's still wrong? (Optional)</div>
+        <textarea id="noteText" placeholder="e.g. Pothole is still there, only partially filled..."></textarea>
+        <button type="submit" class="submit-btn" id="submitBtn">Submit Feedback</button>
+      </div>
+
+      <div class="privacy">
+        Your response is anonymous to GVMC staff.<br>
+        We use this only to improve road maintenance quality.
+      </div>
+    </form>
+  </div>
+
+  <div class="footer">
+    Greater Visakhapatnam Municipal Corporation · RoadSeva
+  </div>
+</div>
+
+<script>
+function selectResponse(answer) {
+  document.getElementById('satisfiedInput').value = answer;
+  document.getElementById('noteSection').classList.add('visible');
+  if (answer === 'yes') {
+    document.getElementById('noteSection').style.display = 'none';
+    document.getElementById('noteInput').value = '';
+    document.getElementById('reviewForm').submit();
+  } else {
+    document.getElementById('noteSection').style.display = 'block';
+  }
+}
+document.getElementById('reviewForm').addEventListener('submit', function() {
+  document.getElementById('noteInput').value = document.getElementById('noteText').value;
+});
+</script>
+</body>
+</html>

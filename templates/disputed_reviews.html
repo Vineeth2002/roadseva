@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disputed Reviews — RoadSeva</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f0f4f8;
+  min-height: 100vh;
+}
+
+/* ── Top bar ── */
+.topbar {
+  background: #1a6b3c;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-logo { color: white; font-weight: 800; font-size: 17px; }
+.topbar-badge {
+  background: #f59e0b;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-user { color: rgba(255,255,255,0.85); font-size: 13px; }
+.back-link {
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.back-link:hover { color: white; }
+
+/* ── Page header ── */
+.page-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 20px 28px;
+}
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+}
+.page-header p {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.count-badge {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-top: 8px;
+}
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+}
+.empty .icon { font-size: 52px; margin-bottom: 16px; }
+.empty h2 { font-size: 18px; color: #6b7280; margin-bottom: 8px; }
+.empty p { font-size: 14px; }
+
+/* ── Report cards ── */
+.reports-list { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+
+.report-card {
+  background: white;
+  border-radius: 14px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  border: 1px solid #e5e7eb;
+}
+
+/* Card header */
+.card-header {
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.report-id {
+  font-family: monospace;
+  font-size: 13px;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.damage-badge {
+  font-size: 12px;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.ward-badge {
+  font-size: 12px;
+  color: #555;
+  background: #f3f4f6;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.citizen-note {
+  font-size: 13px;
+  color: #dc2626;
+  font-style: italic;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 4px 12px;
+  max-width: 320px;
+}
+
+/* Photo comparison */
+.photo-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+.photo-panel {
+  padding: 16px 20px;
+}
+.photo-panel:first-child {
+  border-right: 1px solid #e5e7eb;
+}
+.photo-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.label-before { color: #dc2626; }
+.label-after  { color: #15803d; }
+.photo-frame {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f4f6;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+.no-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ca3af;
+  font-size: 13px;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+}
+.no-photo-icon { font-size: 32px; }
+
+/* Timeline */
+.card-timeline {
+  padding: 14px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.tl-item { font-size: 12px; color: #555; }
+.tl-item strong { display: block; color: #111; font-size: 13px; }
+
+/* Decision area */
+.card-decision {
+  padding: 18px 20px;
+  background: white;
+}
+.decision-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.decision-label::before {
+  content: "⚖️";
+  font-size: 16px;
+}
+.note-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.note-row textarea {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.note-row textarea:focus { border-color: #1a6b3c; }
+.btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-reopen {
+  flex: 1;
+  min-width: 140px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 2px solid #fca5a5;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-reopen:hover { background: #fee2e2; }
+.btn-close {
+  flex: 1;
+  min-width: 140px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 2px solid #86efac;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-close:hover { background: #dcfce7; }
+
+/* Lightbox */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.lightbox.open { display: flex; }
+.lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.15);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .photo-comparison { grid-template-columns: 1fr; }
+  .photo-panel:first-child { border-right: none; border-bottom: 1px solid #e5e7eb; }
+  .btn-row { flex-direction: column; }
+  .page-header, .reports-list { padding-left: 16px; padding-right: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">RoadSeva</div>
+    <span class="topbar-badge">🔍 Disputed Reviews</span>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-user">{{ staff.name }} · {{ staff.role | replace('_',' ') | title }}</span>
+    <a href="/commissioner" class="back-link">← Dashboard</a>
+  </div>
+</div>
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>Citizen-Disputed Work Reviews</h1>
+  <p>These citizens marked the repair as <strong>incomplete</strong> after the field team marked it resolved.
+     Review the before and after photos and decide: reopen or close.</p>
+  {% if reports %}
+  <span class="count-badge">⚠️ {{ reports|length }} complaint{{ 's' if reports|length != 1 }} need{{ '' if reports|length != 1 else 's' }} your decision</span>
+  {% endif %}
+</div>
+
+<!-- Empty state -->
+{% if not reports %}
+<div class="empty">
+  <div class="icon">✅</div>
+  <h2>All clear — no disputed reviews</h2>
+  <p>When citizens dispute resolved complaints, they will appear here for your review.</p>
+</div>
+
+{% else %}
+<!-- Report cards -->
+<div class="reports-list">
+  {% for r in reports %}
+  <div class="report-card">
+
+    <!-- Card header -->
+    <div class="card-header">
+      <div class="card-meta">
+        <span class="report-id">{{ r.report_id }}</span>
+        <span class="damage-badge">{{ r.damage_type | replace('_',' ') }}</span>
+        <span class="ward-badge">📍 {{ r.ward }}</span>
+        {% if r.division_name %}
+        <span class="ward-badge">🏢 {{ r.division_name }} Division</span>
+        {% endif %}
+        {% if r.escalation_count and r.escalation_count > 0 %}
+        <span style="font-size:12px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:700;">
+          ⚠️ Escalated {{ r.escalation_count }}x
+        </span>
+        {% endif %}
+      </div>
+      {% if r.citizen_review_note %}
+      <div class="citizen-note">
+        "{{ r.citizen_review_note }}"
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Before / After photo comparison -->
+    <div class="photo-comparison">
+
+      <!-- Before: original complaint photo -->
+      <div class="photo-panel">
+        <div class="photo-label label-before">
+          📷 Before — Citizen's Original Photo
+        </div>
+        <div class="photo-frame">
+          {% if r.photo_data and r.photo_data.startswith('data:') %}
+          <img src="{{ r.photo_data }}" alt="Original complaint photo"
+               onclick="openLightbox(this.src)" title="Click to zoom">
+          {% else %}
+          <div class="no-photo">
+            <span class="no-photo-icon">📷</span>
+            No photo submitted with complaint
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- After: work done photo -->
+      <div class="photo-panel">
+        <div class="photo-label label-after">
+          🔧 After — Work Completed Photo
+        </div>
+        <div class="photo-frame">
+          {% if r.work_done_photo and r.work_done_photo.startswith('data:') %}
+          <img src="{{ r.work_done_photo }}" alt="Work done photo"
+               onclick="openLightbox(this.src)" title="Click to zoom">
+          {% else %}
+          <div class="no-photo">
+            <span class="no-photo-icon">🔧</span>
+            No work-done photo uploaded by field team
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Timeline -->
+    <div class="card-timeline">
+      <div class="tl-item">
+        <strong>{{ r.submitted_at[:10] if r.submitted_at else '—' }}</strong>
+        Reported
+      </div>
+      <div class="tl-item">
+        <strong>{{ r.assigned_to or '—' }}</strong>
+        Assigned to
+      </div>
+      <div class="tl-item">
+        <strong>{{ r.verified_damage_type or r.damage_type or '—' }}</strong>
+        Verified damage
+      </div>
+      <div class="tl-item">
+        <strong>{{ r.updated_at[:10] if r.updated_at else '—' }}</strong>
+        Marked resolved
+      </div>
+      <div class="tl-item">
+        <strong style="color:#dc2626;">Disputed</strong>
+        Citizen response
+      </div>
+    </div>
+
+    <!-- Decision area -->
+    <div class="card-decision">
+      <div class="decision-label">Your Decision</div>
+      <form method="POST" action="/resolve-dispute">
+        <input type="hidden" name="csrf"      value="{{ csrf }}">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="decision"  id="decision_{{ r.report_id }}" value="">
+        <div class="note-row">
+          <textarea name="note"
+                    placeholder="Optional: Add a note about your decision (e.g. 'Photos confirm work is incomplete', 'Road is clearly repaired in after photo')..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn-reopen"
+                  onclick="setDecision('{{ r.report_id }}', 'reopen')">
+            🔄 Reopen — Work Incomplete
+          </button>
+          <button type="submit" class="btn-close"
+                  onclick="setDecision('{{ r.report_id }}', 'close')">
+            ✅ Close — Work Was Done
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Lightbox for zoomed photos -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div class="lightbox-close" onclick="closeLightbox()">✕</div>
+  <img id="lightboxImg" src="" alt="Full size photo">
+</div>
+
+<script>
+function setDecision(reportId, decision) {
+  document.getElementById('decision_' + reportId).value = decision;
+}
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

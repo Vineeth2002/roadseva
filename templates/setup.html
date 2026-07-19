@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadSeva — First Time Setup</title>
+<style>
+:root {
+  --bg:#080f1a; --navy:#0d1b2e; --navy2:#122236;
+  --accent:#e8a020; --accent2:#f0b840;
+  --green:#22c55e; --text:#e2e8f0; --muted:#94a3b8;
+  --border:rgba(255,255,255,0.08); --red:#ef4444;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'Segoe UI',sans-serif; min-height:100vh;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:40px 20px;
+}
+.container { width:100%; max-width:580px; }
+
+.header { text-align:center; margin-bottom:36px; }
+.logo { font-size:2rem; font-weight:800; color:var(--accent); letter-spacing:2px; }
+.logo-sub { font-size:.85rem; color:var(--muted); margin-top:4px; letter-spacing:1px; }
+.setup-badge {
+  display:inline-block; margin-top:16px;
+  background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
+  color:#86efac; border-radius:20px; padding:4px 16px;
+  font-size:.8rem; font-weight:600;
+}
+
+/* Steps */
+.steps { display:flex; justify-content:center; gap:0; margin-bottom:32px; }
+.step-wrap { display:flex; flex-direction:column; align-items:center; }
+.step-circle {
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.8rem; font-weight:700; border:2px solid;
+}
+.step-circle.done    { background:var(--green); border-color:var(--green); color:#fff; }
+.step-circle.active  { background:var(--accent); border-color:var(--accent); color:#0b1623; }
+.step-circle.pending { background:transparent; border-color:rgba(255,255,255,.2); color:var(--muted); }
+.step-line  { width:48px; height:2px; background:rgba(255,255,255,.1); align-self:center; }
+.step-label { font-size:.72rem; color:var(--muted); margin-top:4px; text-align:center; white-space:nowrap; }
+
+/* Cards */
+.card {
+  background:var(--navy); border:1px solid var(--border);
+  border-radius:14px; padding:28px 28px 24px; margin-bottom:18px;
+}
+.card-title { font-size:1.05rem; font-weight:700; margin-bottom:4px; }
+.card-desc  { font-size:.85rem; color:var(--muted); line-height:1.6; margin-bottom:22px; }
+
+.form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+label { font-size:.82rem; color:var(--muted); font-weight:500; }
+input {
+  background:rgba(255,255,255,.05); border:1px solid var(--border);
+  border-radius:8px; padding:11px 14px; color:var(--text); font-size:.9rem;
+  outline:none; transition:.2s; width:100%;
+}
+input:focus { border-color:var(--accent); background:rgba(232,160,32,.04); }
+.hint { font-size:.76rem; color:var(--muted); }
+.input-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:480px) { .input-row { grid-template-columns:1fr; } }
+
+.pass-row { position:relative; }
+.pass-row input { padding-right:44px; }
+.eye {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; color:var(--muted); font-size:1rem;
+}
+
+/* Password strength meter */
+.strength-bar { height:4px; border-radius:2px; margin-top:6px; background:rgba(255,255,255,.1); transition:.3s; }
+.strength-bar.weak   { background:#ef4444; width:33%; }
+.strength-bar.medium { background:#f59e0b; width:66%; }
+.strength-bar.strong { background:#22c55e; width:100%; }
+.strength-label { font-size:.74rem; margin-top:3px; }
+.strength-label.weak   { color:#ef4444; }
+.strength-label.medium { color:#f59e0b; }
+.strength-label.strong { color:#22c55e; }
+
+.alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:.87rem; line-height:1.5; }
+.alert-error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#fca5a5; }
+
+/* Important box */
+.important-box {
+  background:rgba(232,160,32,.07); border:1px solid rgba(232,160,32,.25);
+  border-radius:10px; padding:16px 20px; margin-bottom:22px;
+}
+.important-box h3 { font-size:.85rem; color:var(--accent); margin-bottom:10px; font-weight:700; }
+.important-box ul  { list-style:none; display:flex; flex-direction:column; gap:8px; }
+.important-box li  { font-size:.83rem; color:var(--muted); display:flex; gap:9px; line-height:1.5; }
+.important-box li span:first-child { color:var(--accent); font-weight:700; flex-shrink:0; }
+
+/* Admin password box */
+.admin-box {
+  background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.25);
+  border-radius:10px; padding:14px 18px; margin-bottom:22px;
+}
+.admin-box h3 { font-size:.85rem; color:#fca5a5; margin-bottom:10px; font-weight:700; }
+.admin-box p  { font-size:.83rem; color:#fca5a5; line-height:1.6; }
+.admin-cred {
+  background:rgba(0,0,0,.3); border:1px solid rgba(239,68,68,.3);
+  border-radius:8px; padding:11px 14px; margin:10px 0;
+  display:flex; flex-direction:column; gap:5px;
+}
+.cred-row { display:flex; justify-content:space-between; font-size:.85rem; }
+.cred-label { color:var(--muted); }
+.cred-value { color:white; font-family:monospace; font-weight:700; letter-spacing:.5px; }
+.admin-box .warning-note {
+  font-size:.78rem; color:#f97316; margin-top:8px;
+  display:flex; align-items:flex-start; gap:6px; line-height:1.5;
+}
+
+/* What happens next */
+.what-next {
+  background:rgba(59,130,246,.06); border:1px solid rgba(59,130,246,.2);
+  border-radius:10px; padding:16px 20px;
+}
+.what-next h3 { font-size:.85rem; color:#93c5fd; margin-bottom:10px; font-weight:700; }
+.what-next ol { margin-left:16px; }
+.what-next li { font-size:.82rem; color:var(--muted); line-height:1.8; }
+
+.btn-submit {
+  width:100%; padding:14px; background:var(--accent); color:#0b1623;
+  border:none; border-radius:8px; font-size:1rem; font-weight:700;
+  cursor:pointer; transition:.2s; margin-top:4px;
+}
+.btn-submit:hover { background:var(--accent2); }
+.btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+
+.divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+.section-label {
+  font-size:.78rem; text-transform:uppercase; letter-spacing:1px;
+  color:var(--muted); margin-bottom:14px; font-weight:600;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">🛣 RoadSeva</div>
+    <div class="logo-sub">GVMC ROAD MANAGEMENT SYSTEM</div>
+    <div class="setup-badge">✦ First Time Setup</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step-wrap">
+      <div class="step-circle active">1</div>
+      <div class="step-label">Organisation</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-wrap">
+      <div class="step-circle active">2</div>
+      <div class="step-label">Commissioner</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-wrap">
+      <div class="step-circle pending">3</div>
+      <div class="step-label">Credential Card</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-wrap">
+      <div class="step-circle pending">4</div>
+      <div class="step-label">System Live</div>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="alert alert-error">❌ {{ error }}</div>
+  {% endif %}
+
+  <!-- Read before proceeding -->
+  <div class="important-box">
+    <h3>⚠️ Read Before Proceeding</h3>
+    <ul>
+      <li><span>①</span> This screen appears <strong>only once</strong> — on first deployment. It will never appear again after you click Submit.</li>
+      <li><span>②</span> You will create the Commissioner's account here. A printable Credential Card will be generated immediately after.</li>
+      <li><span>③</span> Print the Credential Card and hand it to the Commissioner in a sealed envelope — do not share it digitally.</li>
+      <li><span>④</span> The Commissioner must log in and change their password before any Officer or Engineer accounts are created.</li>
+      <li><span>⑤</span> After completing this setup, log in as IT Admin and change the admin password immediately — instructions are shown below.</li>
+    </ul>
+  </div>
+
+  <!-- Admin credentials box — clearly shows the real password -->
+  <div class="admin-box">
+    <h3>🔐 IT Administrator Account — Already Created</h3>
+    <p>The following IT Admin account is created automatically by the system. It exists before you run this setup.</p>
+    <div class="admin-cred">
+      <div class="cred-row">
+        <span class="cred-label">Username</span>
+        <span class="cred-value">admin</span>
+      </div>
+      <div class="cred-row">
+        <span class="cred-label">Password</span>
+        <span class="cred-value">[see database.py init_db()]</span>
+      </div>
+    </div>
+    <div class="warning-note">
+      ⚠️ <span>After finishing this setup, open a new tab → go to <strong>/login</strong> → log in as <strong>admin</strong> with password <strong>Admin@2024!</strong> → go to <strong>Change Password</strong> and set a new strong password. Do this before handing the system to anyone.</span>
+    </div>
+  </div>
+
+  <form method="post" action="/setup" id="setupForm">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+
+    <!-- Step 1: Organisation -->
+    <div class="card">
+      <div class="card-title">Step 1 — Organisation Details</div>
+      <p class="card-desc">This name will appear on all credential cards and official documents generated by RoadSeva.</p>
+      <div class="form-group">
+        <label>Organisation Full Name *</label>
+        <input type="text" name="org_name"
+               value="{{ org or 'Greater Visakhapatnam Municipal Corporation' }}"
+               placeholder="e.g. Greater Visakhapatnam Municipal Corporation" required>
+      </div>
+    </div>
+
+    <!-- Step 2: Commissioner -->
+    <div class="card">
+      <div class="card-title">Step 2 — Commissioner Account</div>
+      <p class="card-desc">
+        Create the Commissioner's login credentials. A temporary password is set here —
+        the Commissioner must change it on their very first login.
+        You will never need to know their real password after that.
+      </p>
+
+      <div class="section-label">Commissioner Details</div>
+      <div class="input-row">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="commissioner_name"
+                 placeholder="e.g. Sri G. Lakshmisha IAS" required
+                 autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Username * <span style="color:var(--muted);font-size:.74rem;">(no spaces)</span></label>
+          <input type="text" name="commissioner_username"
+                 placeholder="e.g. commissioner.gvmc" required
+                 pattern="[a-zA-Z0-9._-]+"
+                 title="Letters, numbers, dots, hyphens only. No spaces."
+                 autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Temporary Password *
+          <span style="color:#f97316; font-size:.75rem;">
+            (Commissioner changes this on first login)
+          </span>
+        </label>
+        <div class="pass-row">
+          <input type="text" name="commissioner_password" id="passField"
+                 required minlength="8"
+                 placeholder="e.g. Gvmc@Setup2024"
+                 oninput="checkStrength(this.value)"
+                 autocomplete="new-password">
+          <button type="button" class="eye" onclick="genPass()" title="Generate strong password">🎲</button>
+        </div>
+        <div class="strength-bar" id="strengthBar"></div>
+        <div class="strength-label" id="strengthLabel"></div>
+        <span class="hint">
+          Must be 8+ characters with uppercase, lowercase, number, and symbol (!@#$%).
+          Example: <strong>Gvmc@2024!</strong>
+        </span>
+      </div>
+
+      <!-- Password requirements checklist -->
+      <div style="background:rgba(255,255,255,.03); border-radius:8px; padding:12px 14px; margin-bottom:16px;">
+        <div style="font-size:.78rem; color:var(--muted); margin-bottom:7px; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">Password Requirements</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <span id="req-len"  class="req-pill">8+ chars</span>
+          <span id="req-up"   class="req-pill">Uppercase</span>
+          <span id="req-low"  class="req-pill">Lowercase</span>
+          <span id="req-num"  class="req-pill">Number</span>
+          <span id="req-sym"  class="req-pill">Symbol</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="what-next">
+        <h3>📋 What happens after you click "Complete Setup"</h3>
+        <ol>
+          <li>Commissioner account is created with this temporary password</li>
+          <li>A printable <strong>Credential Card</strong> is shown — print it immediately</li>
+          <li>Hand the sealed card to the Commissioner in person</li>
+          <li>Commissioner logs in → system forces them to set their own private password</li>
+          <li>Commissioner creates Officer accounts → Officers create Field Engineer accounts</li>
+        </ol>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit" id="submitBtn">
+      Complete Setup &amp; Generate Credential Card →
+    </button>
+  </form>
+
+</div>
+
+<style>
+.req-pill {
+  display:inline-block; padding:3px 10px; border-radius:12px;
+  font-size:.74rem; font-weight:600;
+  background:rgba(255,255,255,.06); color:var(--muted);
+  border:1px solid rgba(255,255,255,.1); transition:.2s;
+}
+.req-pill.met {
+  background:rgba(34,197,94,.12); color:#86efac;
+  border-color:rgba(34,197,94,.3);
+}
+</style>
+
+<script>
+// ── PASSWORD STRENGTH CHECK ───────────────────────────────────────────────────
+function checkStrength(val) {
+  var bar   = document.getElementById('strengthBar');
+  var label = document.getElementById('strengthLabel');
+  var checks = {
+    len: val.length >= 8,
+    up:  /[A-Z]/.test(val),
+    low: /[a-z]/.test(val),
+    num: /[0-9]/.test(val),
+    sym: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/~`]/.test(val),
+  };
+  // Update pill indicators
+  Object.entries(checks).forEach(function([key, met]) {
+    var el = document.getElementById('req-' + key);
+    if (el) el.classList.toggle('met', met);
+  });
+  var score = Object.values(checks).filter(Boolean).length;
+  bar.className   = 'strength-bar';
+  label.className = 'strength-label';
+  if (!val) { bar.className = 'strength-bar'; label.textContent = ''; return; }
+  if (score <= 2)      { bar.classList.add('weak');   label.classList.add('weak');   label.textContent = 'Too weak — add uppercase, numbers and symbols'; }
+  else if (score <= 3) { bar.classList.add('medium'); label.classList.add('medium'); label.textContent = 'Getting better — add more variety'; }
+  else if (score == 4) { bar.classList.add('medium'); label.classList.add('medium'); label.textContent = 'Almost there — add one more type'; }
+  else                 { bar.classList.add('strong'); label.classList.add('strong'); label.textContent = '✅ Strong password'; }
+}
+
+// ── PASSWORD GENERATOR ────────────────────────────────────────────────────────
+// Generates a password that ALWAYS passes the server-side policy:
+// uppercase + lowercase + number + symbol, 10 chars minimum
+function genPass() {
+  var uppers  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  var lowers  = 'abcdefghjkmnpqrstuvwxyz';
+  var numbers = '23456789';
+  var symbols = '@#!$';
+  var words   = ['Gvmc','Road','Seva','Vizag','Port','Corp'];
+  var word    = words[Math.floor(Math.random() * words.length)];
+  var num     = numbers[Math.floor(Math.random() * numbers.length)] +
+                numbers[Math.floor(Math.random() * numbers.length)] +
+                numbers[Math.floor(Math.random() * numbers.length)];
+  var sym     = symbols[Math.floor(Math.random() * symbols.length)];
+  // word already has uppercase first letter from array + lowercase rest
+  var pwd = word + sym + num;
+  var field = document.getElementById('passField');
+  field.value = pwd;
+  checkStrength(pwd);
+  field.select();
+}
+
+// ── FORM SUBMIT — prevent double submit ───────────────────────────────────────
+document.getElementById('setupForm').addEventListener('submit', function(e) {
+  var pass = document.getElementById('passField').value;
+  // Basic client-side validation before sending
+  if (!pass || pass.length < 8) {
+    e.preventDefault();
+    alert('Password must be at least 8 characters.');
+    return;
+  }
+  var hasUpper  = /[A-Z]/.test(pass);
+  var hasLower  = /[a-z]/.test(pass);
+  var hasNum    = /[0-9]/.test(pass);
+  var hasSym    = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/~`]/.test(pass);
+  if (!hasUpper || !hasLower || !hasNum || !hasSym) {
+    e.preventDefault();
+    alert('Password must contain:\n• Uppercase letter (A-Z)\n• Lowercase letter (a-z)\n• Number (0-9)\n• Symbol (!@#$% etc.)\n\nTap the 🎲 button to generate a valid password automatically.');
+    return;
+  }
+  // Prevent double submit
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating account... Please wait';
+});
+</script>
+</body>
+</html>

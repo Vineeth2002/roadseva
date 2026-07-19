@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva — Log Grievance</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; }
+
+        .header { background: #1a3a6b; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .header-left h1 { font-size: 18px; }
+        .header-sub { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 3px; }
+        .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .nav-link { color: white; text-decoration: none; padding: 5px 12px; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; font-size: 12px; white-space: nowrap; }
+        .nav-link:hover { background: rgba(255,255,255,0.12); }
+        .nav-logout { background: #c0392b; border-color: #c0392b; }
+
+        .page-wrap { max-width: 760px; margin: 28px auto; padding: 0 20px 48px; }
+
+        .page-title { font-size: 22px; font-weight: bold; color: #1a3a6b; margin-bottom: 4px; }
+        .page-sub { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+        .channel-banner { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+        .channel-card { flex: 1; min-width: 130px; background: white; border-radius: 10px; padding: 14px 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.07); border: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+        .channel-card:hover { border-color: #1a3a6b; background: #f0f4ff; }
+        .channel-card.selected { border-color: #1a3a6b; background: #e8f0fe; }
+        .channel-card .icon { font-size: 26px; margin-bottom: 6px; }
+        .channel-card .label { font-size: 13px; font-weight: bold; color: #222; }
+        .channel-card .sublabel { font-size: 11px; color: #888; margin-top: 2px; }
+
+        .form-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 16px; }
+        .form-card h3 { font-size: 14px; font-weight: bold; color: #1a3a6b; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #f0f4f8; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .form-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group.full { flex: 100%; min-width: 100%; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .form-group label .req { color: #e74c3c; margin-left: 2px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 11px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; background: #fafafa; transition: border-color 0.15s; font-family: Arial, sans-serif; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1a3a6b; background: white; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .field-hint { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+        /* Ward autocomplete */
+        .ward-wrap { position: relative; }
+        .ward-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid #1a3a6b; border-top: none; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .ward-option { padding: 8px 12px; font-size: 13px; cursor: pointer; }
+        .ward-option:hover { background: #f0f4ff; color: #1a3a6b; font-weight: bold; }
+
+        /* Damage type cards */
+        .damage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 6px; }
+        .damage-card { padding: 10px 8px; background: #f8faff; border: 2px solid #e8edf5; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .damage-card:hover { border-color: #1a3a6b; background: #edf2ff; }
+        .damage-card.selected { border-color: #1a3a6b; background: #e8f0fe; }
+        .damage-card .d-icon { font-size: 20px; margin-bottom: 4px; }
+        .damage-card .d-name { font-size: 11px; font-weight: bold; color: #333; }
+        .damage-card .d-tel { font-size: 10px; color: #888; margin-top: 1px; }
+        input[name="damage_type"] { display: none; }
+
+        /* Photo upload */
+        .photo-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: #fafafa; transition: all 0.15s; }
+        .photo-zone:hover { border-color: #1a3a6b; background: #f0f4ff; }
+        .photo-zone.has-file { border-color: #27ae60; background: #f0fff4; }
+        .photo-zone p { font-size: 13px; color: #888; margin-top: 6px; }
+        .photo-preview { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 10px; display: none; }
+        input[type="file"] { display: none; }
+
+        /* Alert messages */
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 500; }
+        .alert-success { background: #d4edda; color: #1e8449; border: 1px solid #a9dfbf; }
+        .alert-error   { background: #fde8e8; color: #c0392b; border: 1px solid #f5b7b1; }
+
+        .ref-box { display: inline-block; background: #1a3a6b; color: white; padding: 4px 14px; border-radius: 20px; font-family: monospace; font-size: 13px; margin-left: 8px; letter-spacing: 0.5px; }
+
+        .submit-btn { width: 100%; padding: 13px; background: #1a3a6b; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; letter-spacing: 0.5px; margin-top: 8px; }
+        .submit-btn:hover { background: #15305a; }
+        .submit-btn:active { transform: scale(0.99); }
+
+        .back-link { display: inline-block; color: #1a3a6b; text-decoration: none; font-size: 13px; margin-bottom: 16px; }
+        .back-link:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            .page-wrap { padding: 0 12px 40px; margin: 16px auto; }
+            .form-row { flex-direction: column; gap: 10px; }
+            .form-group { min-width: 100%; }
+            .channel-card { min-width: 100px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <h1>🏛️ RoadSeva — Log Grievance</h1>
+        <div class="header-sub">Logged in as: <strong style="color:white;">{{ staff.name }}</strong>
+          &nbsp;·&nbsp; {{ staff.role.replace('_',' ')|title }}
+        </div>
+    </div>
+    <div class="header-right">
+        <a href="/staff" class="nav-link">← Dashboard</a>
+        <a href="/logout" class="nav-link nav-logout">Logout</a>
+    </div>
+</div>
+<!-- Officer-only notice: explains purpose of this page clearly -->
+<div style="background:#fff8e1; border-bottom:2px solid #f39c12; padding:9px 24px; font-size:13px; color:#7d4e1f; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+  <span>📞 <strong>Manual Intake Page</strong> — Use this to log grievances received by phone (IVRS), Spandana portal, written letter, or walk-in.</span>
+  <span style="font-size:12px; color:#b7950b;">Complaints logged here appear instantly on your dashboard alongside online submissions.</span>
+</div>
+
+<div class="page-wrap">
+
+    <a href="/staff" class="back-link">← Back to Dashboard</a>
+
+    <div class="page-title">📋 Log Incoming Grievance</div>
+    <div class="page-sub">Use this form to log grievances received via IVRS (1800-4250-0009), Spandana, written letters, or walk-in visits. They will appear on the Grievance Management dashboard immediately alongside online submissions.</div>
+
+    {% if message %}
+    <div class="alert alert-success">
+        ✅ {{ message }}
+        {% if last_ref %}<span class="ref-box">{{ last_ref }}</span>{% endif %}
+        — <a href="/staff" style="color:#1e8449;font-weight:bold;">View on Dashboard</a>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form action="/staff-log" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+
+        <!-- CHANNEL SELECTION -->
+        <div class="form-card">
+            <h3>📡 How Did this grievance Arrive?</h3>
+            <div class="channel-banner">
+                <div class="channel-card" id="ch-phone" onclick="selectChannel('phone')">
+                    <div class="icon">📞</div>
+                    <div class="label">Phone Call</div>
+                    <div class="sublabel">IVRS / GVMC helpline call</div>
+                </div>
+                <div class="channel-card" id="ch-letter" onclick="selectChannel('letter')">
+                    <div class="icon">📄</div>
+                    <div class="label">Written Letter</div>
+                    <div class="sublabel">Written letter or petition</div>
+                </div>
+                <div class="channel-card" id="ch-walkin" onclick="selectChannel('walkin')">
+                    <div class="icon">🚶</div>
+                    <div class="label">Spandana / Walk-in</div>
+                    <div class="sublabel">Spandana or ward office grievance</div>
+                </div>
+                <div class="channel-card" id="ch-whatsapp" onclick="selectChannel('whatsapp')">
+                    <div class="icon">💬</div>
+                    <div class="label">WhatsApp</div>
+                    <div class="sublabel">WhatsApp to official number</div>
+                </div>
+            </div>
+            <input type="hidden" name="intake_channel" id="sourceInput" required>
+            <div id="sourceError" style="color:#e74c3c;font-size:12px;display:none;">Please select how the grievance arrived.</div>
+
+            <!-- Letter docket field — shown only for letter -->
+            <div id="docketRow" style="display:none; margin-top:10px;">
+                <div class="form-group">
+                    <label>Letter / Docket Grievance Number <span style="color:#888;font-weight:normal;">(optional)</span></label>
+                    <input type="text" name="intake_ref" placeholder="e.g. GVMC/2026/R&B/1024">
+                </div>
+            </div>
+        </div>
+
+        <!-- CITIZEN DETAILS -->
+        <div class="form-card">
+            <h3>👤 Citizen Details</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name <span class="req">*</span></label>
+                    <input type="text" name="citizen_name" placeholder="As given by citizen" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label>Mobile Number</label>
+                    <input type="text" name="citizen_phone" placeholder="10-digit number" maxlength="20" id="phoneInput">
+                    <div class="field-hint">Leave blank if citizen did not provide</div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="citizen_email" placeholder="Optional" maxlength="100">
+                </div>
+            </div>
+        </div>
+
+        <!-- LOCATION -->
+        <div class="form-card">
+            <h3>📍 Location Details</h3>
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>Ward <span class="req">*</span></label>
+                    <div class="ward-wrap">
+                        <input type="text" id="wardSearch" placeholder="Type ward name or area..." autocomplete="off"
+                               oninput="filterWards(this.value)" onfocus="showWards()" required>
+                        <input type="hidden" name="ward" id="wardHidden">
+                        <div class="ward-dropdown" id="wardDropdown"></div>
+                    </div>
+                    <div class="field-hint">Start typing — e.g. Gajuwaka, MVP Colony, Steel Plant</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAMAGE TYPE -->
+        <div class="form-card">
+            <h3>🛣️ Type of Damage</h3>
+            <input type="hidden" name="damage_type" id="damageTypeInput" required>
+            <div class="damage-grid">
+                <div class="damage-card" onclick="selectDamage('Pothole', this)">
+                    <div class="d-icon">🕳️</div>
+                    <div class="d-name">Pothole</div>
+                    <div class="d-tel">గుంత</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Road Damage', this)">
+                    <div class="d-icon">🛤️</div>
+                    <div class="d-name">Road Damage</div>
+                    <div class="d-tel">రోడ్డు నష్టం</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Footpath', this)">
+                    <div class="d-icon">🚶</div>
+                    <div class="d-name">Footpath</div>
+                    <div class="d-tel">నడకదారి</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Waterlogging', this)">
+                    <div class="d-icon">💧</div>
+                    <div class="d-name">Waterlogging</div>
+                    <div class="d-tel">నీరు నిలిచింది</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Street Light', this)">
+                    <div class="d-icon">💡</div>
+                    <div class="d-name">Street Light</div>
+                    <div class="d-tel">వీధి దీపం</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Median / Divider', this)">
+                    <div class="d-icon">🚧</div>
+                    <div class="d-name">Median / Divider</div>
+                    <div class="d-tel">మధ్య అడ్డంకి</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Road Signage', this)">
+                    <div class="d-icon">🪧</div>
+                    <div class="d-name">Road Signage</div>
+                    <div class="d-tel">రోడ్డు సైన్</div>
+                </div>
+                <div class="damage-card" onclick="selectDamage('Other', this)">
+                    <div class="d-icon">📌</div>
+                    <div class="d-name">Other</div>
+                    <div class="d-tel">ఇతర</div>
+                </div>
+            </div>
+            <div id="damageError" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none;">Please select a damage type.</div>
+        </div>
+
+        <!-- DESCRIPTION & PHOTO -->
+        <div class="form-card">
+            <h3>📝 Description & Photo</h3>
+            <div class="form-group full" style="margin-bottom:14px;">
+                <label>Description <span class="req">*</span></label>
+                <textarea name="description" placeholder="Describe the grievance as the citizen explained — location, landmark, nature of damage, how long it has persisted..." required maxlength="500"></textarea>
+                <div class="field-hint">Be as specific as possible — this is used for AI severity analysis</div>
+            </div>
+            <div class="form-group full">
+                <label>Photo <span style="color:#888;font-weight:normal;">(optional — attach if citizen provided one)</span></label>
+                <div class="photo-zone" id="photoZone" onclick="document.getElementById('photoInput').click()">
+                    <div style="font-size:28px;">📷</div>
+                    <p>Click to attach photo from letter or WhatsApp</p>
+                    <img id="photoPreview" class="photo-preview">
+                </div>
+                <input type="file" id="photoInput" name="photo" accept="image/*" onchange="previewPhoto(this)">
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn" onclick="return validateForm()">
+            📋 Log Grievance on Dashboard
+        </button>
+    </form>
+</div>
+
+<script>
+// ── Ward data ──────────────────────────────────────────────────────────────
+const WARDS = {{ wards|tojson }};
+
+function filterWards(q) {
+    const dd = document.getElementById('wardDropdown');
+    if (!q.trim()) { dd.style.display = 'none'; return; }
+    const matches = WARDS.filter(w => w.toLowerCase().includes(q.toLowerCase())).slice(0, 12);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(w =>
+        `<div class="ward-option" onclick="pickWard('${w.replace(/'/g,"\\'")}')">📍 ${w}</div>`
+    ).join('');
+    dd.style.display = 'block';
+}
+
+function showWards() {
+    const q = document.getElementById('wardSearch').value;
+    if (q) filterWards(q);
+}
+
+function pickWard(w) {
+    document.getElementById('wardSearch').value = w;
+    document.getElementById('wardHidden').value = w;
+    document.getElementById('wardDropdown').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.ward-wrap'))
+        document.getElementById('wardDropdown').style.display = 'none';
+});
+
+// ── Channel selection ──────────────────────────────────────────────────────
+function selectChannel(val) {
+    ['phone','letter','walkin','whatsapp'].forEach(c => {
+        document.getElementById('ch-' + c).classList.remove('selected');
+    });
+    document.getElementById('ch-' + val).classList.add('selected');
+    document.getElementById('sourceInput').value = val;
+    document.getElementById('sourceError').style.display = 'none';
+    document.getElementById('docketRow').style.display = val === 'letter' ? 'block' : 'none';
+}
+
+// ── Damage type ────────────────────────────────────────────────────────────
+function selectDamage(type, el) {
+    document.querySelectorAll('.damage-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('damageTypeInput').value = type;
+    document.getElementById('damageError').style.display = 'none';
+}
+
+// ── Photo preview ──────────────────────────────────────────────────────────
+function previewPhoto(input) {
+    const zone = document.getElementById('photoZone');
+    const preview = document.getElementById('photoPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            zone.classList.add('has-file');
+            zone.querySelector('p').textContent = '✅ ' + input.files[0].name;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// ── Validation ─────────────────────────────────────────────────────────────
+function validateForm() {
+    let ok = true;
+    if (!document.getElementById('sourceInput').value) {
+        document.getElementById('sourceError').style.display = 'block';
+        ok = false;
+    }
+    if (!document.getElementById('damageTypeInput').value) {
+        document.getElementById('damageError').style.display = 'block';
+        ok = false;
+    }
+    if (!document.getElementById('wardHidden').value) {
+        document.getElementById('wardSearch').style.borderColor = '#e74c3c';
+        ok = false;
+    }
+    if (!ok) window.scrollTo({top: 0, behavior: 'smooth'});
+    return ok;
+}
+
+// FIX: block Enter on ward search — prevents form submission before ward is selected
+document.getElementById('wardSearch').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const dd = document.getElementById('wardDropdown');
+    const first = dd.querySelector('.ward-option');
+    if (first) first.click();
+  }
+});
+</script>
+
+</body>
+</html>

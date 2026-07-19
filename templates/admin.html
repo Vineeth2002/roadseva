@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSeva — Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; }
+        .header {
+            background: #1a3a6b;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; gap: 12px; align-items: center; font-size: 13px; }
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 6px 14px;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .nav-link:hover { background: rgba(255,255,255,0.1); }
+        .container { max-width: 960px; margin: 24px auto; padding: 0 24px; }
+
+        .message-box {
+            background: #d4edda;
+            color: #27ae60;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .error-box {
+            background: #fde8e8;
+            color: #c0392b;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+        }
+        .card h3 {
+            font-size: 16px;
+            color: #1a3a6b;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .form-group { flex: 1; min-width: 150px; }
+        label {
+            display: block;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fafafa;
+        }
+        input:focus, select:focus { outline: none; border-color: #1a3a6b; }
+        .add-btn {
+            padding: 10px 24px;
+            background: #1a3a6b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .add-btn:hover { background: #15305a; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f0f4f8;
+            color: #555;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        td { padding: 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+        tr:hover td { background: #f8faff; }
+
+        .role-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .role-admin          { background: #e8eaf6; color: #3949ab; }
+        .role-commissioner   { background: #f3e5f5; color: #7b1fa2; }
+        .role-officer        { background: #e8f5e9; color: #2e7d32; }
+        .role-field_engineer { background: #e3f2fd; color: #1565c0; }
+        .role-viewer         { background: #fff3e0; color: #e65100; }
+
+        .status-active   { color: #27ae60; font-weight: bold; font-size: 13px; }
+        .status-inactive { color: #e74c3c; font-weight: bold; font-size: 13px; }
+
+        .toggle-btn { padding: 5px 12px; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; }
+        .toggle-active   { background: #fde8e8; color: #e74c3c; }
+        .toggle-inactive { background: #d4edda; color: #27ae60; }
+        .reset-btn { padding: 4px 10px; background: #e67e22; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; }
+
+        .must-change-badge { font-size: 10px; background: #fff3e0; color: #e65100; border-radius: 4px; padding: 2px 6px; margin-left: 6px; }
+
+        .section-nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .section-nav a { padding: 7px 16px; background: white; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; color: #1a3a6b; text-decoration: none; }
+        .section-nav a:hover { background: #f0f4f8; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏛️ RoadSeva — Admin Panel</h1>
+    <div class="header-right">
+        <span>👤 {{ staff.name }}</span>
+        <a href="/staff" class="nav-link">Staff Dashboard</a>
+        <a href="/team" class="nav-link">Team Management</a>
+        <a href="/account-log" class="nav-link">Account Log</a>
+        <a href="/logout" class="nav-link">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+
+    {% if message %}
+    <div class="message-box">✅ {{ message }}</div>
+    {% endif %}
+    {% if error %}
+    <div class="error-box">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <div class="section-nav">
+        <a href="/staff">📋 Staff Dashboard</a>
+        <a href="/analytics">📊 Analytics</a>
+        <a href="/map">🗺️ Live Map</a>
+        <a href="/team">👥 Team Management</a>
+        <a href="/account-log">📜 Account Log</a>
+    </div>
+
+    <!-- Add New Staff -->
+    <div class="card">
+        <h3>➕ Add New Staff Member</h3>
+        <form action="/admin/add-staff" method="post">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="name" placeholder="e.g. Ramesh Kumar" required>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="e.g. ramesh.kumar" required
+                           pattern="[a-zA-Z0-9._-]+" title="Letters, numbers, dots, hyphens only. No spaces.">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Password (min 8 chars, must include uppercase, number, special char)</label>
+                    <input type="password" name="password" placeholder="e.g. Gvmc@2024!" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select name="role">
+                        <option value="admin">Admin — Full system access</option>
+                        <option value="commissioner">Commissioner — City-wide dashboard, RQI</option>
+                        <option value="zonal_commissioner">Zonal Commissioner — Zone-scoped dashboard</option>
+                        <option value="ae">Assistant Engineer — Division-scoped, approves ward flags</option>
+                        <option value="grievance_officer">Grievance Officer — Triage queue, ward assignment</option>
+                        <option value="triage_officer">Triage Officer — Triage queue, ward assignment</option>
+                        <option value="was">Ward Amenities Secretary — Ward-level first responder</option>
+                        <option value="officer">Officer (legacy) — Assign + update tickets</option>
+                        <option value="field_engineer">Field Engineer — Only assigned tickets</option>
+                        <option value="viewer">Viewer — Read only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Phone Number (optional — needed for SLA alert SMS)</label>
+                    <input type="tel" name="phone" placeholder="e.g. 9876543210" maxlength="15">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Zone (required for Zonal Commissioner)</label>
+                    <input type="text" name="zone" placeholder="e.g. Zone 1">
+                </div>
+                <div class="form-group">
+                    <label>Division (required for Assistant Engineer)</label>
+                    <select name="division">
+                        <option value="">— none —</option>
+                        <option>Bheemunipatnam</option><option>Madhurawada</option>
+                        <option>East</option><option>South</option><option>West</option>
+                        <option>North</option><option>Gajuwaka</option>
+                        <option>Aganampudi</option><option>Anakapalli</option><option>Pendurthi</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ward List (comma-separated, required for WAS)</label>
+                    <input type="text" name="ward_list" placeholder="Paste exact ward name(s) from the 98-ward list, comma-separated">
+                </div>
+            </div>
+            <button type="submit" class="add-btn">➕ Add Staff Member</button>
+        </form>
+    </div>
+
+    <!-- Staff List -->
+    <div class="card">
+        <h3>👥 All Staff Members ({{ all_staff | length }} total)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in all_staff %}
+                <tr>
+                    <td>
+                        {{ s.name }}
+                        {% if s.must_change_password %}
+                        <span class="must-change-badge">⏳ Must change PW</span>
+                        {% endif %}
+                    </td>
+                    <td><code style="font-size:12px; color:#1a3a6b;">{{ s.username }}</code></td>
+                    <td>
+                        <span class="role-badge role-{{ s.role }}">
+                            {{ s.role.replace("_", " ").upper() }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if s.is_active %}
+                        <span class="status-active">● Active</span>
+                        {% else %}
+                        <span class="status-inactive">● Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px; color:#888;">{{ s.created_by or '—' }}</td>
+                    <td style="font-size:12px; color:#888;">{{ s.created_at[:10] if s.created_at else '—' }}</td>
+                    <td>
+                        {% if s.username != 'admin' %}
+                        <form action="/admin/toggle-staff" method="post" style="display:inline">
+                            <input type="hidden" name="staff_id" value="{{ s.id }}">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <button type="submit"
+                                class="toggle-btn {% if s.is_active %}toggle-active{% else %}toggle-inactive{% endif %}">
+                                {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </button>
+                        </form>
+                        <form action="/team/reset-password" method="post" style="display:inline; margin-left:6px;">
+                            <input type="hidden" name="staff_id" value="{{ s.id }}">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <button type="submit" class="reset-btn"
+                                    data-name="{{ s.name }}"
+                                    onclick="return confirm('Reset password for ' + this.dataset.name + '? A new random temporary password will be generated.')">
+                                🔑 Reset PW
+                            </button>
+                        </form>
+                        {% else %}
+                        <span style="color:#aaa; font-size:12px;">Protected — use /change-password</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

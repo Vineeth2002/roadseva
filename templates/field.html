@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RoadSeva — Field Dashboard</title>
+<style>
+:root {
+  --navy:#1a3a6b; --blue:#1e4fa0; --green:#27ae60; --red:#e74c3c;
+  --orange:#f39c12; --purple:#6f42c1; --bg:#f0f4f8;
+  --white:#fff; --border:#e0e6f0; --muted:#6b7a99;
+  --shadow:0 2px 10px rgba(26,58,107,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-height:100vh; }
+
+/* ── HEADER ── */
+.header {
+  background:var(--navy); color:white; padding:13px 16px;
+  display:flex; justify-content:space-between; align-items:center;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.header h1    { font-size:16px; }
+.header-sub   { font-size:11px; color:rgba(255,255,255,.65); margin-top:2px; }
+.header-right { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.nav-link { color:white; text-decoration:none; padding:5px 10px; border:1px solid rgba(255,255,255,.3); border-radius:6px; font-size:12px; }
+.nav-link:hover { background:rgba(255,255,255,.12); }
+.nav-logout { background:#c0392b; border-color:#c0392b; }
+
+/* ── NETWORK WARNING ── */
+.network-bar {
+  display:none; background:#fff3e0; border-bottom:2px solid var(--orange);
+  padding:7px 16px; font-size:12px; color:#92400e; text-align:center;
+}
+.network-bar.visible { display:block; }
+
+/* ── FIELD ENGINEER ROLE NOTICE ── */
+.role-notice {
+  background:#e8f5e9; border-bottom:2px solid var(--green);
+  padding:9px 16px; font-size:12px; color:#1e8449; text-align:center;
+}
+
+/* ── SUMMARY ── */
+.summary { display:flex; gap:0; background:var(--white); border-bottom:1px solid var(--border); }
+.sum-item { flex:1; text-align:center; padding:13px 8px; border-right:1px solid var(--border); }
+.sum-item:last-child { border-right:none; }
+.sum-num   { font-size:24px; font-weight:bold; line-height:1; }
+.sum-label { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:.5px; }
+
+/* ── REPORT CARD ── */
+.page-content { padding-bottom:72px; }
+.report-card {
+  background:var(--white); margin:10px 12px; border-radius:12px;
+  overflow:hidden; box-shadow:var(--shadow); border-left:5px solid var(--border);
+}
+.report-card.assigned   { border-left-color:var(--orange); }
+.report-card.inspecting { border-left-color:var(--purple); }
+.report-card.sla-breach { border-left-color:var(--red) !important; background:#fffafa !important; }
+
+.card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:flex-start; }
+.damage-name { font-size:16px; font-weight:bold; color:#222; }
+.rid-small   { font-size:11px; color:#aaa; margin-top:3px; font-family:monospace; }
+.status-badge { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap; }
+.badge-assigned   { background:#fef3cd; color:#d35400; }
+.badge-inspecting { background:#ede7f6; color:var(--purple); border:1px solid var(--purple); animation:pulse 1.5s infinite; }
+.overdue-badge { display:inline-block; background:var(--red); color:white; font-size:10px; font-weight:bold; padding:1px 7px; border-radius:10px; margin-left:5px; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+.card-body { padding:12px 14px; }
+.info-row  { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-bottom:7px; align-items:center; }
+
+.citizen-box { background:#f0f4ff; border-radius:7px; padding:7px 11px; font-size:13px; margin-bottom:9px; }
+
+.sev-strip { padding:7px 11px; border-radius:6px; font-size:13px; font-weight:bold; margin:7px 0; }
+.sev-critical { background:#fde8e8; color:#c0392b; border-left:4px solid var(--red); }
+.sev-high     { background:#fef3cd; color:#d35400; border-left:4px solid var(--orange); }
+.sev-medium   { background:#fff8e1; color:#b7950b; border-left:4px solid #f1c40f; }
+.sev-low      { background:#d4edda; color:#1e8449; border-left:4px solid var(--green); }
+.sev-unknown  { background:#f0f0f0; color:#888; border-left:4px solid #ccc; }
+
+.verified-strip { background:#e8f5e9; border-left:4px solid var(--green); padding:7px 11px; border-radius:6px; font-size:12px; color:#2e7d32; margin:5px 0; }
+
+.report-photo { width:100%; max-width:280px; height:170px; border-radius:8px; object-fit:cover; cursor:pointer; border:2px solid #eee; display:block; margin-bottom:4px; }
+.report-photo:hover { border-color:var(--navy); }
+.photo-hint { font-size:11px; color:var(--muted); margin-bottom:9px; }
+
+/* ── ACTION STRIP ── */
+.action-strip { display:flex; gap:7px; flex-wrap:wrap; padding:11px 14px; background:#fafafa; border-top:1px solid var(--border); }
+.btn { padding:8px 16px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:opacity .2s; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.btn-nav    { background:#3a86ff; }
+.btn-start  { background:var(--purple); }
+.btn-verify { background:var(--green); }
+.btn-note   { background:#8e44ad; }
+.btn-done   { background:var(--orange); }
+
+/* ── VERIFY FORM ── */
+.verify-panel { background:#f0fff4; border:1.5px solid #b7e4c7; border-radius:10px; padding:14px; margin-top:11px; }
+.verify-panel h3 { font-size:13px; color:#1e8449; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
+.verify-panel p  { font-size:12px; color:#2e7d32; margin-bottom:12px; line-height:1.5; }
+.v-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+@media(max-width:500px){ .v-grid { grid-template-columns:1fr; } }
+.v-group { display:flex; flex-direction:column; gap:4px; }
+.v-group label { font-size:12px; font-weight:bold; color:#555; }
+.v-group select, .v-group input { padding:8px 10px; border:1px solid #b7e4c7; border-radius:6px; font-size:13px; background:white; width:100%; }
+.upload-hint { font-size:11px; color:var(--muted); margin-top:3px; display:none; }
+.upload-hint.visible { display:block; }
+
+/* ── DAMAGE NOT FOUND PANEL ── */
+.not-found-panel {
+  background:#fff0f0; border:1.5px solid #fca5a5;
+  border-radius:10px; padding:13px 14px; margin:0 14px 0;
+}
+.not-found-panel h4 { font-size:13px; color:#b91c1c; margin-bottom:6px; font-weight:bold; }
+.not-found-panel p  { font-size:12px; color:#991b1b; margin-bottom:10px; line-height:1.5; }
+.not-found-form  { display:flex; gap:7px; flex-wrap:wrap; }
+.not-found-input { flex:1; min-width:180px; padding:8px 10px; border:1px solid #fca5a5; border-radius:6px; font-size:13px; background:white; }
+.btn-reject { background:#b91c1c; }
+
+/* ── REPAIR DONE STRIP ── */
+.repair-done-strip {
+  background:#fff8e1; border:1.5px solid var(--orange);
+  border-radius:10px; padding:13px 14px; margin-top:11px;
+}
+.repair-done-strip h4 { font-size:13px; color:#92400e; margin-bottom:7px; font-weight:bold; }
+.repair-done-strip p  { font-size:12px; color:#b45309; margin-bottom:10px; line-height:1.5; }
+.repair-done-form { display:flex; gap:7px; flex-wrap:wrap; }
+.repair-done-input { flex:1; min-width:180px; padding:8px 10px; border:1px solid #fcd34d; border-radius:6px; font-size:13px; background:white; font-family:Arial,sans-serif; }
+
+/* ── COMMENT FORM ── */
+.comment-form-strip { padding:8px 14px 12px; border-top:1px solid var(--border); background:#fafafa; display:flex; gap:7px; }
+.comment-input { flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px; background:white; min-width:0; }
+.comment-input:focus { outline:none; border-color:var(--purple); }
+
+/* ── ACTIVITY ── */
+.activity { padding:10px 14px 12px; border-top:1px solid #f0f0f0; }
+.activity-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; font-weight:bold; }
+.a-item { display:flex; gap:9px; font-size:12px; padding:5px 7px; background:#fafafa; border-radius:6px; margin-bottom:4px; }
+.a-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.dot-submitted           { background:#95a5a6; }
+.dot-status_change       { background:var(--red); }
+.dot-assigned            { background:var(--orange); }
+.dot-comment             { background:#8e44ad; }
+.dot-inspection_verified { background:var(--green); }
+.a-body { flex:1; color:#333; line-height:1.4; }
+.a-who { font-weight:bold; color:var(--navy); }
+.a-time { font-size:11px; color:#aaa; margin-top:2px; }
+.comment-item { background:#f9f4ff; border-radius:6px; padding:7px 11px; margin-top:4px; }
+.comment-text { font-size:13px; color:#333; }
+.comment-meta { font-size:11px; color:#aaa; margin-top:2px; }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:56px 20px; color:var(--muted); }
+.empty-icon { font-size:44px; margin-bottom:14px; }
+.empty h3   { font-size:18px; font-weight:bold; color:var(--green); margin-bottom:7px; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--white); border-top:1px solid var(--border);
+  display:flex; z-index:100; box-shadow:0 -2px 10px rgba(0,0,0,.08);
+}
+.bnav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:9px 4px; text-decoration:none;
+  color:var(--muted); font-size:10px; font-weight:500; gap:3px;
+}
+.bnav-item.active { color:var(--navy); }
+.bnav-icon { font-size:20px; }
+</style>
+</head>
+<body>
+
+<!-- Network warning — only shown on 2G -->
+<div class="network-bar" id="networkBar">
+  📶 Slow connection — forms may take longer to submit. Please wait after tapping Submit.
+</div>
+
+{% if request.query_params.get('error') %}
+<div style="background:#fde8e8; border-bottom:2px solid #e74c3c; padding:10px 16px; font-size:12px; color:#c0392b; display:flex; align-items:center; gap:8px;">
+  ⚠️ <strong>{{ request.query_params.get('error')|replace('+',' ') }}</strong>
+</div>
+{% endif %}
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>🔧 RoadSeva — Field Dashboard</h1>
+    <div class="header-sub">{{ staff.name }} · {{ role_labels.get(staff.role, staff.role) }}</div>
+  </div>
+  <div class="header-right">
+    <a href="/logout" class="nav-link nav-logout">Logout</a>
+  </div>
+</div>
+
+<!-- Role notice -->
+<div class="role-notice">
+  🔧 You are seeing only complaints assigned to <strong>you</strong>.
+  To report issues, contact your officer. Do not share your password.
+</div>
+
+<!-- SUMMARY STRIP -->
+<div class="summary">
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--orange)">{{ reports|selectattr('status','equalto','assigned')|list|length }}</div>
+    <div class="sum-label">Assigned</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--purple)">{{ reports|selectattr('status','equalto','inspecting')|list|length }}</div>
+    <div class="sum-label">On Site</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num" style="color:var(--red)">{{ reports|selectattr('severity','equalto','critical')|list|length }}</div>
+    <div class="sum-label">Critical</div>
+  </div>
+  <div class="sum-item">
+    <div class="sum-num">{{ reports|length }}</div>
+    <div class="sum-label">Total</div>
+  </div>
+</div>
+
+<div class="page-content">
+
+{% if reports %}
+  {% for r in reports %}
+  <div class="report-card {{ r.status }} {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}sla-breach{% endif %}">
+
+    <!-- Card header -->
+    <div class="card-header">
+      <div>
+        <div class="damage-name">
+          {{ r.verified_damage_type or r.damage_type }}
+          {% if r.verified_damage_type and r.verified_damage_type != r.damage_type %}
+          <span style="font-size:11px;color:var(--green);font-weight:normal;">(verified)</span>
+          {% endif %}
+          {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}
+          <span class="overdue-badge">⚠ OVERDUE</span>
+          {% endif %}
+        </div>
+        <div class="rid-small">{{ r.report_id }}</div>
+      </div>
+      <span class="status-badge badge-{{ r.status }}">
+        {% if r.status=='inspecting' %}🔵 ON SITE
+        {% elif r.status=='assigned' %}🟠 ASSIGNED
+        {% endif %}
+      </span>
+    </div>
+
+    <!-- Card body -->
+    <div class="card-body">
+      <div class="info-row">
+        <span>📍 {{ r.ward }}</span>
+        <span>🕐 {{ r.submitted_at[:16] }}</span>
+        {% if r.latitude and r.longitude %}
+        <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}&z=18"
+           target="_blank" class="btn btn-nav" style="padding:4px 11px;font-size:11px;">
+          🧭 Navigate
+        </a>
+        {% endif %}
+      </div>
+
+      <!-- Citizen info: field engineer sees NAME ONLY — phone is officer-level data -->
+      <div class="citizen-box">
+        👤 <strong>{{ r.citizen_name }}</strong>
+        {% if r.description %} &nbsp;·&nbsp; {{ r.description[:80] }}{% if r.description|length > 80 %}…{% endif %}{% endif %}
+      </div>
+
+      <!-- Severity -->
+      {% if r.severity and r.severity != 'unknown' %}
+      <div class="sev-strip sev-{{ r.severity }}">
+        {% if r.severity=='critical' %}🔴 CRITICAL — Immediate action required
+        {% elif r.severity=='high' %}🟠 HIGH — Urgent repair
+        {% elif r.severity=='medium' %}🟡 MEDIUM — Schedule repair
+        {% elif r.severity=='low' %}🟢 LOW — Routine{% endif %}
+        {% if r.urgency %} · {{ r.urgency }}{% endif %}
+        {% if r.severity_details %}<div style="font-size:12px;margin-top:4px;font-weight:normal;">ℹ️ {{ r.severity_details }}</div>{% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Already verified notice -->
+      {% if r.verified_by %}
+      <div class="verified-strip">
+        ✅ Already verified by <strong>{{ r.verified_by }}</strong> on {{ r.verified_at[:16] }}
+        — {{ r.verified_damage_type }}, condition: {{ r.site_condition }}
+      </div>
+      {% endif %}
+
+      <!-- Citizen photo -->
+      {% if r.photo_data %}
+        {% if r.photo_data.startswith('data:') %}
+        <img src="{{ r.photo_data }}" class="report-photo" title="Citizen photo">
+        {% else %}
+        <img src="data:image/jpeg;base64,{{ r.photo_data }}" class="report-photo" title="Citizen photo">
+        {% endif %}
+        <div class="photo-hint">📷 Citizen-submitted photo</div>
+      {% endif %}
+      {% if r.site_photo_data %}
+      <img src="{{ r.site_photo_data }}" class="report-photo" style="border-color:var(--green);" title="Your site photo">
+      <div class="photo-hint" style="color:var(--green);">✅ Your site verification photo</div>
+      {% endif %}
+    </div>
+
+    <!-- PRIMARY ACTIONS -->
+    <div class="action-strip">
+      {% if r.status == 'assigned' %}
+      <form action="/start-inspection" method="post" style="display:contents">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="btn btn-start">▶️ Start Inspection — I Am Here</button>
+      </form>
+      {% endif %}
+
+      {% if not r.latitude or not r.longitude %}
+      <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam')|urlencode }}"
+         target="_blank" class="btn btn-nav">
+        🧭 Navigate to Ward Area
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- VERIFY FORM — shown only when on site and not yet verified -->
+    {% if r.status == 'inspecting' and not r.verified_by %}
+    <div style="padding:0 14px;">
+      <div class="verify-panel">
+        <h3>🔍 Submit Site Verification</h3>
+        <p>Take a photo of the damage. Fill in what you actually see on site.
+           A site photo is required — without it the form will not submit.</p>
+        <form action="/verify-inspection" method="post" enctype="multipart/form-data"
+              onsubmit="return handleVerifySubmit(this,'{{ r.report_id }}')">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="v-grid">
+            <div class="v-group">
+              <label>Actual Damage (what you see) *</label>
+              <select name="verified_damage_type" required>
+                <option value="{{ r.damage_type }}" selected>{{ r.damage_type }} (as reported)</option>
+                <option value="Pothole">Pothole</option>
+                <option value="Road Damage">Road Damage</option>
+                <option value="Footpath">Footpath</option>
+                <option value="Waterlogging">Waterlogging</option>
+                <option value="Street Light">Street Light</option>
+                <option value="Median / Divider">Median / Divider</option>
+                <option value="Road Signage">Road Signage</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="v-group">
+              <label>Condition vs Citizen Photo *</label>
+              <select name="site_condition" required>
+                <option value="same">Same as photo</option>
+                <option value="worse">Worse than photo</option>
+                <option value="better">Better than photo</option>
+                <option value="not_found">Damage not found</option>
+              </select>
+            </div>
+            <div class="v-group">
+              <label>Site Photo * <span style="color:var(--red);font-weight:bold;">(Required)</span></label>
+              <input type="file" name="site_photo" id="sitePhoto-{{ r.report_id }}"
+                     accept="image/*" capture="environment" required
+                     onchange="onPhotoSelected(this,'{{ r.report_id }}')">
+              <div class="upload-hint" id="hint-{{ r.report_id }}"></div>
+            </div>
+            <div class="v-group">
+              <label>Your Notes (optional)</label>
+              <input type="text" name="inspection_notes"
+                     placeholder="e.g. Pothole 3ft, base exposed, needs cold mix"
+                     onkeydown="blockEnter(event)">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-verify" style="width:100%;justify-content:center;padding:11px;"
+                  id="verifyBtn-{{ r.report_id }}">
+            ✅ Submit Site Verification Report
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- DAMAGE NOT FOUND -->
+    {% if r.status == 'inspecting' and not r.verified_by %}
+    <div class="not-found-panel" style="margin-top:8px;">
+      <h4>❓ Damage Not Found On Site?</h4>
+      <p>If you reached the location and there is no damage — pothole already patched,
+         wrong address, or duplicate complaint — tap below. The complaint will go back
+         to Open and your officer will investigate.</p>
+      <form action="/reject-inspection" method="post" class="not-found-form"
+            onsubmit="return confirm('Confirm: You did not find any damage at this location?')">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="reject_note" class="not-found-input"
+               placeholder="What did you find? e.g. Already patched, wrong location..."
+               onkeydown="blockEnter(event)">
+        <button type="submit" class="btn btn-reject">❌ Damage Not Found</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- REPAIR DONE NOTIFICATION -->
+    {% if r.verified_by and r.status not in ('resolved','closed') %}
+    <div style="padding:0 14px;">
+      <div class="repair-done-strip">
+        <h4>🔔 Repair Done? Notify Your Officer</h4>
+        <p>Use this to let your officer know the repair is complete.
+           They will mark it resolved. Do not mark it resolved yourself.</p>
+        <form action="/add-comment" method="post" class="repair-done-form">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="text" name="comment" class="repair-done-input"
+                 value="✅ Repair complete — {{ r.damage_type }} at {{ r.ward }} fixed. Ready for officer to close."
+                 placeholder="Describe what was done..."
+                 onkeydown="blockEnter(event)">
+          <button type="submit" class="btn btn-done" style="white-space:nowrap;">
+            ✅ Notify Officer
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- FIELD NOTE -->
+    <div class="comment-form-strip">
+      <form action="/add-comment" method="post" style="display:flex;gap:7px;flex:1;">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="comment" class="comment-input"
+               placeholder="Add field note — e.g. Pothole confirmed, repair scheduled for tomorrow"
+               onkeydown="blockEnter(event)">
+        <button type="submit" class="btn btn-note" style="white-space:nowrap;">💬 Note</button>
+      </form>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="activity">
+      <div class="activity-title">📜 Complaint Trail</div>
+      <div class="a-item">
+        <div class="a-dot dot-submitted"></div>
+        <div class="a-body">
+          <span class="a-who">{{ r.citizen_name }}</span> filed complaint
+          <div class="a-time">{{ r.submitted_at[:16] }}</div>
+        </div>
+      </div>
+      {% if r.assigned_to %}
+      <div class="a-item">
+        <div class="a-dot dot-assigned"></div>
+        <div class="a-body">
+          Assigned to <span class="a-who">{{ r.assigned_to }}</span>
+          {% if r.assigned_officer %} by {{ r.assigned_officer }}{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if r.verified_by %}
+      <div class="a-item">
+        <div class="a-dot dot-inspection_verified"></div>
+        <div class="a-body">
+          <span class="a-who">{{ r.verified_by }}</span> verified on site
+          <div class="a-time">{{ r.verified_at[:16] }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% for c in all_comments.get(r.report_id, []) %}
+      <div class="comment-item">
+        <div class="comment-text">💬 {{ c.comment }}</div>
+        <div class="comment-meta">— <strong>{{ c.added_by }}</strong> · {{ c.added_at[:16] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="empty">
+  <div class="empty-icon">✅</div>
+  <h3>All Clear!</h3>
+  <p>No complaints assigned to you right now.<br>
+  Your officer will assign new complaints when they come in.</p>
+</div>
+{% endif %}
+
+</div><!-- /page-content -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="/field" class="bnav-item active">
+    <span class="bnav-icon">📋</span>My Jobs
+  </a>
+  <a href="/change-password" class="bnav-item">
+    <span class="bnav-icon">🔑</span>Password
+  </a>
+  <a href="/logout" class="bnav-item">
+    <span class="bnav-icon">🚪</span>Logout
+  </a>
+</nav>
+
+<script>
+// ── NETWORK DETECTION ─────────────────────────────────────────────────────────
+(function(){
+  var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!conn) return;
+  function check() {
+    var t = (conn.effectiveType || '').toLowerCase();
+    var slow = t==='2g' || t==='slow-2g' || (conn.downlink && conn.downlink < 1);
+    document.getElementById('networkBar').classList.toggle('visible', slow);
+  }
+  check();
+  if (conn.addEventListener) conn.addEventListener('change', check);
+})();
+
+// ── ENTER KEY BLOCK ───────────────────────────────────────────────────────────
+// FIX: prevents Enter on text inputs from accidentally submitting the wrong form
+// (e.g. typing a field note and pressing Enter should NOT fire the verify form)
+function blockEnter(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+  }
+}
+
+// ── PHOTO SELECTED FEEDBACK ───────────────────────────────────────────────────
+function onPhotoSelected(input, reportId) {
+  var hint = document.getElementById('hint-' + reportId);
+  if (hint && input.files[0]) {
+    var kb = Math.round(input.files[0].size / 1024);
+    hint.textContent = '📷 Photo selected (' + kb + 'KB) — will upload with form.';
+    hint.classList.add('visible');
+  }
+}
+
+// ── VERIFY SUBMIT — prevent double submit on slow networks ────────────────────
+function handleVerifySubmit(form, reportId) {
+  var photo = form.querySelector('[name=site_photo]');
+  if (!photo || !photo.files[0]) {
+    alert('Please take or upload a site photo before submitting.\nThis is required as proof of inspection.');
+    return false;
+  }
+  var btn = document.getElementById('verifyBtn-' + reportId);
+  if (btn && btn.disabled) return false;
+  if (btn) {
+    btn.disabled = true;
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var slow = conn && (conn.effectiveType==='2g' || (conn.downlink && conn.downlink < 1));
+    btn.textContent = slow ? '⏳ Uploading on slow network — do not close...' : '⏳ Uploading... Please wait';
+  }
+  return true;
+}
+</script>
+
+</body>
+</html>

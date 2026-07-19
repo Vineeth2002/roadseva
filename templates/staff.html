@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadSeva — Officer Dashboard</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
+
+/* ── HEADER ── */
+.header {
+  background:#1a3a6b; color:white; padding:13px 22px;
+  display:flex; justify-content:space-between; align-items:center;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.header-left h1 { font-size:17px; }
+.header-sub     { font-size:11px; color:rgba(255,255,255,.6); margin-top:2px; }
+.role-pill {
+  display:inline-block; padding:2px 9px; border-radius:10px;
+  font-size:10px; font-weight:bold; margin-left:7px;
+  text-transform:uppercase; vertical-align:middle;
+}
+.role-officer { background:#27ae60; color:white; }
+.role-viewer  { background:#95a5a6; color:white; }
+.role-admin   { background:#9b59b6; color:white; }
+.header-right { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.nav-link {
+  color:white; text-decoration:none; padding:5px 11px;
+  border:1px solid rgba(255,255,255,.3); border-radius:6px; font-size:12px;
+}
+.nav-link:hover { background:rgba(255,255,255,.1); }
+.nav-logout { background:#c0392b; border-color:#c0392b; }
+
+/* ── VIEWER BANNER ── */
+.viewer-banner {
+  background:#fff8e1; border-bottom:2px solid #f39c12;
+  padding:9px 22px; font-size:13px; color:#856404; text-align:center;
+}
+
+/* ── ACTIVE BANNER ── */
+.active-banner {
+  background:#e8f4fd; border-bottom:2px solid #3498db;
+  padding:9px 22px; font-size:13px; color:#1a5276;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:8px;
+}
+.active-banner a {
+  background:#1a3a6b; color:white; padding:4px 13px;
+  border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;
+}
+
+/* ── UNASSIGNED ALERT ── */
+.unassigned-alert {
+  background:#fff8e1; border-bottom:2px solid #f39c12;
+  padding:9px 22px; font-size:13px; color:#7d4e1f;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:8px;
+}
+.unassigned-alert a {
+  background:#f39c12; color:white; padding:4px 13px;
+  border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;
+}
+
+/* ── PRIORITY INBOX ── */
+.priority-inbox {
+  background:white; border-bottom:3px solid #1a3a6b;
+  padding:13px 22px;
+}
+.priority-inbox h3 {
+  font-size:11px; color:#888; text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:11px; font-weight:bold;
+}
+.inbox-grid { display:flex; gap:10px; flex-wrap:wrap; }
+.inbox-section { flex:1; min-width:240px; }
+.inbox-section h4 {
+  font-size:11px; font-weight:700; margin-bottom:7px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.inbox-section h4.needs-assign { color:#e74c3c; }
+.inbox-section h4.needs-close  { color:#27ae60; }
+.inbox-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 11px; border-radius:8px; margin-bottom:5px;
+  font-size:13px; cursor:pointer; transition:opacity .15s;
+}
+.inbox-item:hover { opacity:.85; }
+.inbox-item.assign-item { background:#fde8e8; border-left:3px solid #e74c3c; }
+.inbox-item.close-item  { background:#d4edda; border-left:3px solid #27ae60; }
+.inbox-item-left  { display:flex; flex-direction:column; gap:2px; }
+.inbox-item-id    { font-family:monospace; font-size:11px; color:#aaa; }
+.inbox-item-type  { font-weight:600; color:#222; }
+.inbox-item-ward  { font-size:11px; color:#888; }
+.inbox-item-right { font-size:11px; font-weight:bold; white-space:nowrap; }
+.inbox-item-right.red   { color:#e74c3c; }
+.inbox-item-right.green { color:#27ae60; }
+.inbox-empty { font-size:12px; color:#27ae60; padding:7px 11px; }
+.inbox-none  { font-size:12px; color:#aaa; padding:7px 0; }
+
+/* ── STATS STRIP ── */
+.stats {
+  display:flex; gap:10px; padding:14px 22px; flex-wrap:wrap;
+  background:#1e4080; border-bottom:3px solid #1a3a6b;
+}
+.stat-card {
+  background:rgba(255,255,255,.12); border-radius:10px;
+  padding:11px 16px; text-align:center; flex:1; min-width:85px;
+}
+.stat-card .number { font-size:26px; font-weight:bold; color:white; }
+.stat-card .label  { font-size:10px; color:rgba(255,255,255,.7); margin-top:2px; }
+.stat-card.red    .number { color:#ff8a80; }
+.stat-card.orange .number { color:#ffcc80; }
+.stat-card.purple .number { color:#ce93d8; }
+.stat-card.green  .number { color:#a5d6a7; }
+
+/* ── LIVE BAR ── */
+.live-bar {
+  background:#1e4080; padding:7px 22px;
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:12px; color:rgba(255,255,255,.7);
+}
+.live-dot { width:7px; height:7px; border-radius:50%; background:#27ae60;
+            display:inline-block; margin-right:5px; animation:blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.new-badge {
+  background:#e74c3c; color:white; padding:2px 8px;
+  border-radius:10px; font-size:11px; font-weight:bold; margin-left:6px;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  background:white; margin:14px 22px; border-radius:10px;
+  padding:13px 15px; box-shadow:0 2px 6px rgba(0,0,0,.07);
+}
+.filter-bar h3 { font-size:11px; color:#888; margin-bottom:9px; text-transform:uppercase; }
+.quick-filters { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:11px; }
+.qf {
+  padding:4px 11px; border-radius:18px; font-size:12px; font-weight:600;
+  text-decoration:none; border:1.5px solid transparent; transition:all .15s;
+}
+.qf-all      { background:#1a3a6b; color:white; }
+.qf-open     { background:#fde8e8; color:#c0392b; border-color:#f5c6c6; }
+.qf-critical { background:#e74c3c; color:white; }
+.qf-onsite   { background:#ede7f6; color:#6f42c1; border-color:#d1c4e9; }
+.qf-resolved { background:#d4edda; color:#1e8449; border-color:#b7d7be; }
+.qf-all2     { background:#eee; color:#555; }
+.filter-row  { display:flex; gap:7px; flex-wrap:wrap; align-items:flex-end; }
+.fg { flex:1; min-width:130px; }
+.fg label    { display:block; font-size:11px; color:#666; margin-bottom:3px; font-weight:bold; }
+.fg select, .fg input {
+  width:100%; padding:7px 8px; border:1px solid #ddd;
+  border-radius:6px; font-size:13px; background:#fafafa;
+}
+.fg select:focus, .fg input:focus { outline:none; border-color:#1a3a6b; }
+.btn-filter  { padding:7px 16px; background:#1a3a6b; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; }
+.btn-clear   { padding:7px 11px; background:#f0f4f8; color:#666; border:1px solid #ddd; border-radius:6px; font-size:13px; text-decoration:none; }
+.btn-export  { padding:7px 11px; background:#27ae60; color:white; border:none; border-radius:6px; font-size:13px; text-decoration:none; }
+.filter-result { font-size:12px; color:#888; margin-top:7px; }
+.filter-result span { color:#1a3a6b; font-weight:bold; }
+
+/* ── CONTAINER ── */
+.container { padding:0 22px 28px; }
+.view-header {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:10px;
+}
+.section-title { font-size:12px; font-weight:bold; color:#555; text-transform:uppercase; }
+.view-toggle {
+  display:flex; gap:0; background:#eee; border-radius:8px; padding:3px;
+}
+.view-btn {
+  padding:5px 13px; border:none; background:transparent; border-radius:6px;
+  font-size:12px; cursor:pointer; color:#666; font-weight:500;
+}
+.view-btn.active {
+  background:white; color:#1a3a6b; box-shadow:0 1px 4px rgba(0,0,0,.15);
+  font-weight:700;
+}
+
+/* ── TABLE VIEW ── */
+.table-view { display:none; }
+.table-view.visible { display:block; }
+.table-wrap {
+  overflow-x:auto; cursor:grab; user-select:none;
+  -webkit-overflow-scrolling:touch;
+}
+.table-wrap.dragging { cursor:grabbing; }
+.reports-table {
+  width:100%; min-width:1100px; border-collapse:collapse;
+  background:white; border-radius:10px; overflow:hidden;
+  box-shadow:0 2px 6px rgba(0,0,0,.07); font-size:13px;
+}
+.reports-table th {
+  background:#1a3a6b; color:white; padding:9px 11px;
+  text-align:left; font-size:10px; text-transform:uppercase; white-space:nowrap;
+}
+.reports-table td { padding:9px 11px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.reports-table tr:hover td { background:#f8faff; }
+.clickable-row { cursor:pointer; }
+.td-id   { font-family:monospace; font-size:11px; color:#888; white-space:nowrap; }
+.td-type { font-weight:600; color:#222; }
+.td-ward { color:#555; font-size:12px; }
+.td-time { color:#888; font-size:11px; white-space:nowrap; }
+.overdue-badge { display:inline-block; background:#e74c3c; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:8px; margin-left:5px; }
+.sla-badge { display:inline-block; background:#e74c3c; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:8px; }
+.mini-nav {
+  padding:3px 9px; border-radius:4px; font-size:11px;
+  text-decoration:none; color:white; background:#3a86ff; font-weight:600;
+}
+
+/* ── STATUS BADGES ── */
+.status-badge { padding:3px 9px; border-radius:10px; font-size:11px; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
+.badge-open       { background:#fde8e8; color:#c0392b; }
+.badge-assigned   { background:#fef3cd; color:#d35400; }
+.badge-inspecting { background:#ede7f6; color:#6f42c1; border:1px solid #6f42c1; }
+.badge-inspected  { background:#e0f7fa; color:#0277bd; }
+.badge-resolved   { background:#d4edda; color:#1e8449; }
+.badge-closed     { background:#f0f0f0; color:#888; }
+
+/* ── SEVERITY STRIP ── */
+.sev-strip { padding:7px 11px; border-radius:6px; font-size:13px; font-weight:bold; margin:7px 0; }
+.sev-critical { background:#fde8e8; color:#c0392b; border-left:4px solid #e74c3c; }
+.sev-high     { background:#fef3cd; color:#d35400; border-left:4px solid #f39c12; }
+.sev-medium   { background:#fff8e1; color:#b7950b; border-left:4px solid #f1c40f; }
+.sev-low      { background:#d4edda; color:#1e8449; border-left:4px solid #27ae60; }
+.sev-unknown  { background:#f0f0f0; color:#888; border-left:4px solid #ccc; }
+
+/* ── SOURCE BADGES ── */
+.src-badge { display:inline-block; padding:2px 7px; border-radius:8px; font-size:10px; font-weight:bold; margin-left:5px; vertical-align:middle; }
+.src-citizen_web { background:#e8f0fe; color:#1a3a6b; }
+.src-phone       { background:#fff8e1; color:#d35400; }
+.src-letter      { background:#f3e5f5; color:#7b1fa2; }
+.src-walkin, .src-spandana { background:#e8f5e9; color:#2e7d32; }
+.src-whatsapp    { background:#e8f5e9; color:#1b5e20; }
+
+/* ── CARD VIEW ── */
+.card-view { display:none; }
+.card-view.visible { display:block; }
+.report-card {
+  background:white; border-radius:10px; padding:15px; margin-bottom:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.07); border-left:5px solid #ddd;
+}
+.report-card.open       { border-left-color:#e74c3c; }
+.report-card.assigned   { border-left-color:#f39c12; }
+.report-card.inspecting { border-left-color:#6f42c1; }
+.report-card.inspected  { border-left-color:#17a2b8; }
+.report-card.resolved   { border-left-color:#27ae60; }
+.report-card.closed     { border-left-color:#95a5a6; }
+.report-card.sla-breach { border-left-color:#e74c3c !important; background:#fffafa !important; }
+
+.card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:7px; margin-bottom:6px; }
+.damage-type { font-weight:bold; font-size:15px; color:#222; }
+.report-id-small { font-size:11px; color:#aaa; margin-bottom:7px; font-family:monospace; }
+.report-info { font-size:13px; color:#666; margin-bottom:7px; }
+.report-info span { margin-right:12px; }
+.citizen-info { font-size:13px; color:#444; margin-bottom:7px; padding:7px 10px; background:#f0f4ff; border-radius:6px; }
+.citizen-info span { margin-right:12px; }
+.assigned-info { font-size:13px; color:#444; margin-bottom:7px; padding:7px 10px; background:#fff8e1; border-radius:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.description { font-size:13px; color:#444; margin-bottom:9px; padding:7px 10px; background:#f9f9f9; border-radius:6px; }
+.verified-strip { background:#e8f5e9; border-left:4px solid #27ae60; padding:7px 11px; border-radius:6px; font-size:12px; color:#2e7d32; margin:5px 0; }
+.sla-row { background:#fff5f5; border-left:3px solid #e74c3c; border-radius:4px; padding:5px 9px; font-size:12px; color:#c0392b; margin-bottom:7px; }
+
+/* ── PHOTOS ── */
+.report-photo { width:100%; max-width:300px; height:180px; border-radius:8px; margin-bottom:4px; object-fit:cover; display:block; cursor:pointer; border:2px solid #eee; }
+.report-photo:hover { border-color:#1a3a6b; }
+.photo-hint { font-size:11px; color:#aaa; margin-bottom:9px; }
+
+/* ── ACTIVITY ── */
+.activity-section { border-top:2px solid #f0f0f0; margin-top:11px; padding-top:11px; }
+.activity-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; font-weight:bold; }
+.a-item { display:flex; align-items:flex-start; gap:9px; font-size:12px; padding:5px 7px; border-radius:6px; background:#fafafa; margin-bottom:4px; }
+.a-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.dot-submitted           { background:#95a5a6; }
+.dot-status_change       { background:#e74c3c; }
+.dot-assigned            { background:#e67e22; }
+.dot-comment             { background:#8e44ad; }
+.dot-inspection_verified { background:#27ae60; }
+.a-body { flex:1; color:#333; line-height:1.4; }
+.a-who { font-weight:bold; color:#1a3a6b; }
+.a-time { font-size:11px; color:#aaa; margin-top:2px; }
+.comment-item { background:#f9f4ff; border-radius:6px; padding:7px 11px; margin-bottom:5px; }
+.comment-text { font-size:13px; color:#333; margin-bottom:2px; }
+.comment-meta { font-size:11px; color:#aaa; }
+
+/* ── ACTIONS (OFFICER ONLY) ── */
+.actions-panel { border-top:2px solid #eee; margin-top:11px; padding-top:11px; }
+.actions-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:9px; font-weight:bold; }
+.action-row { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:7px; }
+.action-form { display:flex; gap:5px; align-items:center; flex:1; min-width:190px; }
+.action-form select { flex:1; padding:6px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; }
+.action-btn { padding:6px 13px; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; white-space:nowrap; font-weight:600; }
+.btn-status  { background:#1a3a6b; }
+.btn-assign  { background:#e67e22; }
+.btn-comment { background:#8e44ad; }
+.btn-verify  { background:#27ae60; }
+.comment-form { display:flex; gap:7px; margin-top:7px; }
+.comment-input { flex:1; padding:7px 9px; border:1px solid #ddd; border-radius:6px; font-size:13px; background:#fafafa; }
+.comment-input:focus { outline:none; border-color:#8e44ad; }
+.viewer-note { font-size:12px; color:#aaa; font-style:italic; padding:7px 0; border-top:1px solid #f0f0f0; margin-top:9px; }
+
+/* ── SITE VERIFY FORM (officer can verify inspection) ── */
+.verify-panel { background:#f0fff4; border:1px solid #b7e4c7; border-radius:8px; padding:13px; margin-top:9px; }
+.verify-panel h4 { font-size:12px; color:#1e8449; text-transform:uppercase; letter-spacing:.5px; margin-bottom:9px; }
+.verify-row { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:7px; }
+.verify-group { flex:1; min-width:140px; }
+.verify-group label { font-size:11px; color:#555; display:block; margin-bottom:3px; font-weight:bold; }
+.verify-group select, .verify-group input { width:100%; padding:6px 7px; border:1px solid #b7e4c7; border-radius:5px; font-size:12px; background:white; }
+
+/* ── LIGHTBOX ── */
+.lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:11px; padding:18px; }
+.lightbox.open { display:flex; }
+.lightbox img { max-width:95vw; max-height:85vh; object-fit:contain; border-radius:8px; }
+.lightbox-close { color:white; font-size:13px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); padding:7px 18px; border-radius:6px; cursor:pointer; }
+
+/* ── SINGLE CARD OVERLAY ── */
+.sco { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow-y:auto; padding:18px; }
+.sco.open { display:block; }
+.sco-inner { max-width:680px; margin:0 auto; }
+.sco-close { position:sticky; top:0; z-index:10; background:#1a3a6b; color:white; border:none; padding:9px 18px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; margin-bottom:11px; display:block; width:100%; }
+
+/* ── NO REPORTS ── */
+.no-reports { text-align:center; padding:44px; color:#999; font-size:15px; }
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .header { flex-direction:column; align-items:flex-start; gap:7px; padding:11px 14px; }
+  .header-right { flex-wrap:wrap; gap:5px; }
+  .nav-link { padding:4px 7px; font-size:11px; }
+  .stats { padding:11px 14px; gap:7px; }
+  .stat-card .number { font-size:20px; }
+  .container { padding:0 11px 22px; }
+  .filter-row { flex-direction:column; }
+  .fg { min-width:100%; }
+  .card-top { flex-direction:column; gap:5px; }
+  .action-form { min-width:100%; }
+  .comment-form { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🏛️ RoadSeva
+      <span class="role-pill role-{{ staff.role }}">{{ staff.role.replace('_',' ') }}</span>
+    </h1>
+    <div class="header-sub">Logged in as: <strong style="color:white">{{ staff.name }}</strong>
+      &nbsp;·&nbsp; Officer Dashboard
+    </div>
+  </div>
+  <div class="header-right">
+    {% if staff.role in ('admin','ae','commissioner') %}
+    <a href="/staff-log" class="nav-link" style="background:#e67e22;border-color:#e67e22;">📋 Log Grievance</a>
+    {% endif %}
+    <a href="/team" class="nav-link">👥 Team</a>
+    <a href="/change-password" class="nav-link">🔑 Password</a>
+    <a href="/logout" class="nav-link nav-logout">Logout</a>
+  </div>
+</div>
+
+<!-- FLOW ERROR BANNER — shows when officer tries to skip steps -->
+{% if request.query_params.get('error') %}
+<div style="background:#fde8e8; border-bottom:2px solid #e74c3c; padding:10px 22px; font-size:13px; color:#c0392b; display:flex; align-items:center; gap:10px;">
+  ⚠️ <strong>{{ request.query_params.get('error')|replace('+',' ') }}</strong>
+  — Engineer must visit the site and submit their report first.
+</div>
+{% endif %}
+
+<!-- VIEWER BANNER -->
+{% if staff.role == 'viewer' %}
+<div class="viewer-banner">
+  👁️ You are in <strong>Read Only</strong> mode. You can see all grievances but cannot update, assign, or comment.
+</div>
+{% endif %}
+
+<!-- ACTIVE-ONLY BANNER -->
+{% if showing_active %}
+<div class="active-banner">
+  <span>✅ Showing <strong>active grievances only</strong> — Open, Assigned, On Site, Inspected.</span>
+  <a href="/staff?status=all">Show All Including Resolved</a>
+</div>
+{% endif %}
+
+<!-- UNASSIGNED ALERT — prompts ae to act -->
+{% if staff.role in ('ae','admin') %}
+{% set unassigned_count = all_reports|selectattr('status','equalto','open')|list|length %}
+{% if unassigned_count > 0 %}
+<div class="unassigned-alert">
+  <span>👋 <strong>Action needed:</strong>
+    {{ unassigned_count }} complaint{{ 's' if unassigned_count != 1 }}
+    {{ 'are' if unassigned_count != 1 else 'is' }} unassigned —
+    open each one and assign to one of your engineers.
+  </span>
+  <a href="/staff?status=open">View Open →</a>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- STATS STRIP -->
+<div class="stats">
+  <div class="stat-card red">
+    <div class="number" id="stat-open">{{ stat_open }}</div>
+    <div class="label">🔴 Open</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="number" id="stat-assigned">{{ stat_assigned }}</div>
+    <div class="label">🟠 Assigned</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="number" id="stat-inspecting">{{ stat_inspecting }}</div>
+    <div class="label">🔵 On Site</div>
+  </div>
+  <div class="stat-card green" style="background:rgba(39,174,96,.25);{% if stat_inspected > 0 %}outline:2px solid #27ae60;{% endif %}">
+    <div class="number" id="stat-inspected" style="color:#a5d6a7;">{{ stat_inspected }}</div>
+    <div class="label">✅ Ready to Close
+      {% if stat_inspected > 0 %}<span style="background:#27ae60;color:white;border-radius:8px;padding:1px 7px;font-size:10px;margin-left:4px;animation:blink 1.5s infinite;">ACTION</span>{% endif %}
+    </div>
+  </div>
+  <div class="stat-card green">
+    <div class="number" id="stat-resolved">{{ stat_resolved }}</div>
+    <div class="label">🟢 Redressed</div>
+  </div>
+  <div class="stat-card">
+    <div class="number" id="stat-total">{{ stat_total }}</div>
+    <div class="label">📋 Total</div>
+  </div>
+</div>
+
+<!-- PRIORITY INBOX — ae sees what needs action RIGHT NOW -->
+{% if staff.role in ('ae','admin','commissioner') %}
+<div class="priority-inbox">
+  <h3>⚡ Needs Your Action Now</h3>
+  <div class="inbox-grid">
+
+    <!-- LEFT: Unassigned — needs assignment -->
+    <div class="inbox-section">
+      <h4 class="needs-assign">🔴 Unassigned — Assign Engineer</h4>
+      {% set unassigned = all_reports | selectattr('status','equalto','open')
+                                      | rejectattr('assigned_to') | list %}
+      {% set unassigned_real = [] %}
+      {% for r in all_reports %}
+        {% if r.status == 'open' and (not r.assigned_to or r.assigned_to == '') %}
+          {% if unassigned_real.append(r) %}{% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if unassigned_real %}
+        {% for r in unassigned_real[:5] %}
+        <div class="inbox-item assign-item" onclick="openSingleCard('{{ r.report_id }}')">
+          <div class="inbox-item-left">
+            <span class="inbox-item-id">{{ r.report_id }}</span>
+            <span class="inbox-item-type">
+              {% if r.severity == 'critical' %}🔴 {% elif r.severity == 'high' %}🟠 {% endif %}
+              {{ r.damage_type }}
+            </span>
+            <span class="inbox-item-ward">📍 {{ r.ward }}</span>
+          </div>
+          <div class="inbox-item-right red">
+            Waiting<br>{{ r.submitted_at[:10] }}
+          </div>
+        </div>
+        {% endfor %}
+        {% if unassigned_real|length > 5 %}
+        <div class="inbox-none">+{{ unassigned_real|length - 5 }} more unassigned —
+          <a href="/staff?status=open" style="color:#e74c3c;">view all</a>
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="inbox-empty">✅ All complaints assigned</div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: Inspected — engineer done, officer needs to close -->
+    <div class="inbox-section">
+      <h4 class="needs-close">✅ Engineer Done — Ready to Close</h4>
+      {% set ready_close = [] %}
+      {% for r in all_reports %}
+        {% if r.status == 'inspected' %}
+          {% if ready_close.append(r) %}{% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if ready_close %}
+        {% for r in ready_close[:5] %}
+        <div class="inbox-item close-item" onclick="openSingleCard('{{ r.report_id }}')">
+          <div class="inbox-item-left">
+            <span class="inbox-item-id">{{ r.report_id }}</span>
+            <span class="inbox-item-type">{{ r.verified_damage_type or r.damage_type }}</span>
+            <span class="inbox-item-ward">📍 {{ r.ward }}
+              {% if r.assigned_to %} · 🔧 {{ r.assigned_to }}{% endif %}
+            </span>
+          </div>
+          <div class="inbox-item-right green">
+            Verified<br>{{ r.verified_at[:10] if r.verified_at else r.updated_at[:10] }}
+          </div>
+        </div>
+        {% endfor %}
+        {% if ready_close|length > 5 %}
+        <div class="inbox-none">+{{ ready_close|length - 5 }} more ready —
+          <a href="/staff?status=inspected" style="color:#27ae60;">view all</a>
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="inbox-empty">✅ No inspected reports pending closure</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+<!-- LIVE BAR -->
+<div class="live-bar">
+  <span><span class="live-dot"></span> Live — refreshes every 30s &nbsp;·&nbsp; Last: <span id="lastUpdated">just now</span></span>
+  <span id="newAlert" style="display:none;">
+    🔴 <strong id="newCount">0</strong> new <span class="new-badge">NEW</span>
+    <button onclick="location.reload()" style="margin-left:7px;background:#e74c3c;color:white;border:none;padding:3px 9px;border-radius:4px;cursor:pointer;font-size:11px;">Refresh</button>
+  </span>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <div class="quick-filters">
+    <a href="/staff"                   class="qf qf-all">🔵 Active</a>
+    <a href="/staff?status=open"       class="qf qf-open">🔴 Open</a>
+    <a href="/staff?severity=critical" class="qf qf-critical">🚨 Critical</a>
+    <a href="/staff?status=inspecting" class="qf qf-onsite">🔵 On Site</a>
+    <a href="/staff?status=resolved"   class="qf qf-resolved">🟢 Resolved</a>
+    <a href="/staff?status=all"        class="qf qf-all2">📋 All</a>
+  </div>
+  <h3>🔍 Filter Grievances</h3>
+  <form action="/staff" method="get">
+    <div class="filter-row">
+      <div class="fg">
+        <label>Status</label>
+        <select name="status">
+          <option value=""         {% if not filter_status %}selected{% endif %}>Active Only (default)</option>
+          <option value="all"      {% if filter_status=='all' %}selected{% endif %}>All</option>
+          <option value="open"     {% if filter_status=='open' %}selected{% endif %}>🔴 Open</option>
+          <option value="assigned" {% if filter_status=='assigned' %}selected{% endif %}>🟠 Assigned</option>
+          <option value="inspecting" {% if filter_status=='inspecting' %}selected{% endif %}>🔵 Inspecting</option>
+          <option value="inspected"  {% if filter_status=='inspected' %}selected{% endif %}>✅ Inspected</option>
+          <option value="resolved"   {% if filter_status=='resolved' %}selected{% endif %}>🟢 Resolved</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Ward</label>
+        <select name="ward">
+          <option value="all" {% if filter_ward=='all' %}selected{% endif %}>All Wards</option>
+          {% for w in ward_list %}
+          <option value="{{ w }}" {% if filter_ward==w %}selected{% endif %}>{{ w }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Damage Type</label>
+        <select name="damage_type">
+          <option value="all" {% if filter_damage=='all' %}selected{% endif %}>All Types</option>
+          <option value="Pothole"          {% if filter_damage=='Pothole' %}selected{% endif %}>Pothole</option>
+          <option value="Road Damage"      {% if filter_damage=='Road Damage' %}selected{% endif %}>Road Damage</option>
+          <option value="Footpath"         {% if filter_damage=='Footpath' %}selected{% endif %}>Footpath</option>
+          <option value="Waterlogging"     {% if filter_damage=='Waterlogging' %}selected{% endif %}>Waterlogging</option>
+          <option value="Street Light"     {% if filter_damage=='Street Light' %}selected{% endif %}>Street Light</option>
+          <option value="Median / Divider" {% if filter_damage=='Median / Divider' %}selected{% endif %}>Median</option>
+          <option value="Other"            {% if filter_damage=='Other' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Search</label>
+        <input type="text" name="search" placeholder="ID, ward, type..." value="{{ filter_search }}">
+      </div>
+      <button type="submit" class="btn-filter">Filter</button>
+      <a href="/staff" class="btn-clear">Clear</a>
+      <a href="/export" class="btn-export">📥 Export</a>
+    </div>
+    <div class="filter-result">
+      Showing <span>{{ reports|length }}</span> of {{ stat_total }} total
+      {% if filter_status or filter_ward or filter_severity or filter_search %}— filtered{% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+  <div class="view-header">
+    <div class="section-title">Grievances</div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btnTable" onclick="setView('table')">☰ List</button>
+      <button class="view-btn"        id="btnCard"  onclick="setView('card')">⊞ Cards</button>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div class="table-view visible" id="tableView">
+    <div class="table-wrap">
+    {% if reports %}
+    <table class="reports-table">
+      <thead>
+        <tr>
+          <th>Report ID</th>
+          <th>Type</th>
+          <th>Severity</th>
+          <th>Ward</th>
+          <th>Citizen</th>
+          <th>Status</th>
+          <th>Assigned Engineer</th>
+          <th>Last Action</th>
+          <th>Submitted</th>
+          <th>Channel</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in reports %}
+      {% set r_audits = all_audits.get(r.report_id, []) %}
+      {% set last_audit = r_audits[-1] if r_audits else none %}
+      <tr class="clickable-row" data-rid="{{ r.report_id }}">
+        <td class="td-id">
+          {{ r.report_id }}
+          {% if r.status not in ('resolved','closed') and r.submitted_at < sla_cutoff %}
+          <span class="sla-badge">⚠ OVERDUE</span>
+          {% endif %}
+        </td>
+        <td class="td-type">
+          {{ r.verified_damage_type or r.damage_type }}
+          {% if r.verified_damage_type and r.verified_damage_type != r.damage_type %}
+          <span style="color:#27ae60;font-size:10px;" title="Verified on site">✓</span>
+          {% endif %}
+          {% if r.severity == 'critical' %}<span style="color:#e74c3c;font-size:10px;"> 🔴</span>{% endif %}
+        </td>
+        <td>
+          {% if r.severity and r.severity != 'unknown' %}
+          <span class="status-badge {% if r.severity=='critical' %}badge-open{% elif r.severity=='high' %}badge-assigned{% elif r.severity=='medium' %}badge-inspecting{% else %}badge-resolved{% endif %}">
+            {{ r.severity|upper }}
+          </span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="td-ward">{{ r.ward }}</td>
+        <td>
+          <span style="font-size:13px;font-weight:500;">{{ r.citizen_name }}</span><br>
+          <span style="color:#888;font-size:11px;">{{ r.citizen_phone }}</span>
+        </td>
+        <td><span class="status-badge badge-{{ r.status }}">{{ r.status }}</span></td>
+        <td style="color:#e67e22;font-weight:600;font-size:12px;">
+          {{ r.assigned_to or '—' }}
+        </td>
+        <td>
+          {% if last_audit %}
+          <span style="font-size:11px;font-weight:600;color:#1a3a6b;">{{ last_audit.done_by }}</span><br>
+          <span style="font-size:10px;color:#aaa;">
+            {% if last_audit.action == 'status_change' %}{{ last_audit.old_value }} → {{ last_audit.new_value }}
+            {% elif last_audit.action == 'assigned' %}→ {{ last_audit.new_value[:20] }}
+            {% elif last_audit.action == 'inspection_verified' %}Verified on site
+            {% else %}{{ last_audit.action }}{% endif %}
+            · {{ last_audit.done_at[:16] }}
+          </span>
+          {% else %}
+          <span style="font-size:11px;color:#aaa;">Citizen submitted</span>
+          {% endif %}
+        </td>
+        <td class="td-time">{{ r.submitted_at[:16] }}</td>
+        <td>
+          {% set ch = r.intake_channel or 'citizen_web' %}
+          {% if ch in ('phone','ivrs') %}<span class="src-badge src-phone">📞</span>
+          {% elif ch == 'letter' %}<span class="src-badge src-letter">📄</span>
+          {% elif ch in ('walkin','spandana') %}<span class="src-badge src-walkin">🚶</span>
+          {% elif ch == 'whatsapp' %}<span class="src-badge src-whatsapp">💬</span>
+          {% else %}<span class="src-badge src-citizen_web">🌐</span>{% endif %}
+        </td>
+        <td>
+          <a onclick="openSingleCard('{{ r.report_id }}')" class="mini-nav" style="background:#1a3a6b;cursor:pointer;">👁</a>
+          {% if r.latitude and r.longitude %}
+          <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}&z=18" target="_blank" class="mini-nav" style="margin-left:3px;">🧭</a>
+          {% endif %}
+          {% if staff.role != 'viewer' %}
+          <form action="/update-status" method="post" style="display:inline;margin-left:3px;"
+                onsubmit="return checkResolve(this,'{{ r.report_id }}')">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="contractor_name" id="contractor-tbl-{{ r.report_id }}" value="">
+            <input type="hidden" name="next_url" value="{{ request.url }}">
+            <select name="new_status" style="padding:4px 6px;font-size:11px;border:1px solid #ddd;border-radius:4px;"
+                    onchange="handleTableStatusChange(this,'{{ r.report_id }}')">
+              {# Show only valid next status based on current status #}
+              {% if r.status == 'open' %}
+                <option value="open" selected>🔴 Open — Unassigned</option>
+              {% elif r.status == 'assigned' %}
+                <option value="assigned" selected>🟠 Assigned — Waiting for Engineer</option>
+                <option value="open">🔴 Re-open (wrong assignment)</option>
+              {% elif r.status == 'inspecting' %}
+                <option value="inspecting" selected>🔵 Engineer On Site</option>
+              {% elif r.status == 'inspected' %}
+                <option value="inspected" selected>📋 Report Submitted by Engineer</option>
+                <option value="resolved">🟢 Mark Work Done</option>
+              {% elif r.status in ('resolved','closed') %}
+                <option value="resolved" selected>🟢 Work Done</option>
+              {% endif %}
+            </select>
+          </form>
+          {% if staff.role in ('admin','ae','commissioner') and r.status == 'open' %}
+          <form action="/assign-report" method="post" style="display:inline;margin-left:3px;">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <select name="assigned_to" style="padding:4px 6px;font-size:11px;border:1px solid #ddd;border-radius:4px;">
+              <option value="">— Assign —</option>
+              {% for o in officers %}
+              <option value="{{ o.name }}">{{ o.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" style="padding:4px 6px;font-size:11px;">Assign</button>
+          </form>
+          {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="no-reports">✅ No active grievances. All complaints are resolved!</div>
+    {% endif %}
+    </div>
+  </div>
+
+  <!-- CARD VIEW -->
+  <div class="card-view" id="cardView">
+  {% if reports %}
+    {% for r in reports %}
+    <div class="report-card {{ r.status }} {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}sla-breach{% endif %}">
+
+      <div class="card-top">
+        <div class="damage-type">
+          {{ r.verified_damage_type or r.damage_type }}
+          {% if r.verified_damage_type and r.verified_damage_type != r.damage_type %}
+          <span style="font-size:11px;color:#27ae60;font-weight:normal;"> (verified from: {{ r.damage_type }})</span>
+          {% endif %}
+        </div>
+        <span class="status-badge badge-{{ r.status }}">
+          {% if r.status=='open' %}🔴 Open
+          {% elif r.status=='assigned' %}🟠 Assigned
+          {% elif r.status=='inspecting' %}🔵 On Site
+          {% elif r.status=='inspected' %}✅ Inspected
+          {% elif r.status=='resolved' %}🟢 Resolved
+          {% elif r.status=='closed' %}⬛ Closed
+          {% else %}{{ r.status }}{% endif %}
+        </span>
+      </div>
+
+      {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}
+      <div class="sla-row">⚠️ Overdue — submitted more than 7 days ago and still not resolved.</div>
+      {% endif %}
+
+      <div class="report-id-small">📋 {{ r.report_id }}
+        {% set ch = r.intake_channel or 'citizen_web' %}
+        {% if ch in ('phone','ivrs') %}<span class="src-badge src-phone">📞 Phone</span>
+        {% elif ch == 'letter' %}<span class="src-badge src-letter">📄 Letter</span>
+        {% elif ch in ('walkin','spandana') %}<span class="src-badge src-walkin">🚶 Spandana</span>
+        {% elif ch == 'whatsapp' %}<span class="src-badge src-whatsapp">💬 WhatsApp</span>
+        {% else %}<span class="src-badge src-citizen_web">🌐 Web</span>{% endif %}
+        {% if r.intake_ref %}<span style="font-size:10px;color:#aaa;"> · Ref: {{ r.intake_ref }}</span>{% endif %}
+      </div>
+
+      <div class="report-info">
+        <span>📍 {{ r.ward }}</span>
+        <span>🕐 {{ r.submitted_at[:16] }}</span>
+      </div>
+
+      <!-- Citizen details — visible to officer only (not field engineer) -->
+      <div class="citizen-info">
+        <span>👤 {{ r.citizen_name }}</span>
+        <span>📱 {{ r.citizen_phone }}</span>
+        {% if r.citizen_email %}<span>📧 {{ r.citizen_email }}</span>{% endif %}
+      </div>
+
+      <div class="assigned-info">
+        <span>🔧 Engineer: <strong>{% if r.assigned_to %}{{ r.assigned_to }}{% else %}⚠️ Not yet assigned{% endif %}</strong></span>
+        {% if r.assigned_officer %}<span style="font-size:11px;color:#888;">· by {{ r.assigned_officer }}</span>{% endif %}
+        {% if r.latitude and r.longitude %}
+        <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}&z=18" target="_blank"
+           style="background:#3a86ff;color:white;padding:4px 9px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600;">
+          🧭 Navigate
+        </a>
+        {% endif %}
+      </div>
+
+      {% if r.description %}<div class="description">{{ r.description }}</div>{% endif %}
+
+      {% if r.severity and r.severity != 'unknown' %}
+      <div class="sev-strip sev-{{ r.severity }}">
+        {% if r.severity == 'critical' %}🔴 CRITICAL — Immediate action
+        {% elif r.severity == 'high' %}🟠 HIGH — Urgent repair
+        {% elif r.severity == 'medium' %}🟡 MEDIUM — Schedule repair
+        {% elif r.severity == 'low' %}🟢 LOW — Routine{% endif %}
+        {% if r.urgency %} · {{ r.urgency }}{% endif %}
+        {% if r.severity_details %}<div style="font-size:12px;margin-top:4px;font-weight:normal;">ℹ️ {{ r.severity_details }}</div>{% endif %}
+      </div>
+      {% endif %}
+
+      {% if r.verified_damage_type %}
+      <div class="verified-strip">
+        ✅ Site verified by <strong>{{ r.verified_by }}</strong> on {{ r.verified_at[:16] }}
+        — Damage: <strong>{{ r.verified_damage_type }}</strong>
+        {% if r.site_condition %} · Condition: {{ r.site_condition }}{% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Photos -->
+      {% if r.photo_data %}
+        {% if r.photo_data.startswith('data:') %}
+        <img src="{{ r.photo_data }}" class="report-photo"
+             onclick="openLightbox('{{ r.photo_data }}','Citizen photo — {{ r.damage_type }}')" title="Click to enlarge">
+        {% else %}
+        <img src="data:image/jpeg;base64,{{ r.photo_data }}" class="report-photo"
+             onclick="openLightbox('data:image/jpeg;base64,{{ r.photo_data }}','Citizen photo — {{ r.damage_type }}')" title="Click to enlarge">
+        {% endif %}
+        <div class="photo-hint">📷 Citizen photo · click to enlarge</div>
+      {% endif %}
+      {% if r.site_photo_data %}
+      <img src="{{ r.site_photo_data }}" class="report-photo" style="border-color:#27ae60;"
+           onclick="openLightbox('{{ r.site_photo_data }}','Site verification photo')" title="Click to enlarge">
+      <div class="photo-hint" style="color:#27ae60;">✅ Site verification photo</div>
+      {% endif %}
+
+      <!-- Activity log -->
+      <div class="activity-section">
+        <div class="activity-title">📜 Grievance Trail</div>
+        <div class="a-item">
+          <div class="a-dot dot-submitted"></div>
+          <div class="a-body">
+            <span class="a-who">{{ r.citizen_name }}</span> submitted via
+            {% set ch = r.intake_channel or 'citizen_web' %}
+            {% if ch in ('phone','ivrs') %}📞 Phone{% elif ch == 'letter' %}📄 Letter
+            {% elif ch in ('walkin','spandana') %}🚶 Spandana{% elif ch == 'whatsapp' %}💬 WhatsApp
+            {% else %}🌐 Web Portal{% endif %}
+            <div class="a-time">{{ r.submitted_at[:16] }}</div>
+          </div>
+        </div>
+        {% for a in all_audits.get(r.report_id, []) %}
+        <div class="a-item">
+          <div class="a-dot dot-{{ a.action }}"></div>
+          <div class="a-body">
+            <span class="a-who">{{ a.done_by }}</span>
+            {% if a.action == 'status_change' %}changed status {{ a.old_value }} → <strong>{{ a.new_value }}</strong>
+            {% elif a.action == 'assigned' %}assigned engineer → <strong>{{ a.new_value[:30] }}</strong>
+            {% elif a.action == 'inspection_verified' %}verified on site — <strong>{{ a.new_value }}</strong>
+            {% else %}{{ a.action }}: {{ a.new_value[:40] }}{% endif %}
+            <div class="a-time">{{ a.done_at[:16] }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% for c in all_comments.get(r.report_id, []) %}
+        <div class="comment-item">
+          <div class="comment-text">💬 {{ c.comment }}</div>
+          <div class="comment-meta">— <strong>{{ c.added_by }}</strong> · {{ c.added_at[:16] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Actions — officer only, viewer cannot act -->
+      {% if staff.role == 'viewer' %}
+      <div class="viewer-note">👁️ Read-only access — contact your officer to make changes</div>
+      {% else %}
+      <div class="actions-panel">
+        <div class="actions-title">⚡ Officer Actions</div>
+        <div class="action-row">
+          <!-- Status update -->
+          <form action="/update-status" method="post" class="action-form"
+                onsubmit="return checkResolve(this,'{{ r.report_id }}')">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="contractor_name" id="contractor-{{ r.report_id }}" value="">
+            <input type="hidden" name="next_url" value="{{ request.url }}">
+            <select name="new_status" id="sel-{{ r.report_id }}">
+              {# Only show valid next status — enforce the flow #}
+              {% if r.status == 'open' %}
+                <option value="open" selected>🔴 Open — Assign engineer first</option>
+              {% elif r.status == 'assigned' %}
+                <option value="assigned" selected>🟠 Assigned — Waiting for engineer</option>
+                <option value="open">🔴 Re-open (wrong assignment)</option>
+              {% elif r.status == 'inspecting' %}
+                <option value="inspecting" selected>🔵 Engineer is on site now</option>
+              {% elif r.status == 'inspected' %}
+                <option value="inspected" selected>📋 Engineer submitted report</option>
+                <option value="resolved">🟢 Mark as Work Done</option>
+              {% elif r.status in ('resolved','closed') %}
+                <option value="resolved" selected>🟢 Work Done ✓</option>
+              {% endif %}
+            </select>
+            <button type="submit" class="action-btn btn-status">Update</button>
+          </form>
+          <!-- Assign — only while unassigned. Once assigned, this control
+               disappears; status moves forward via the engineer's own
+               actions, not repeated AE assignment. -->
+          {% if staff.role in ('admin','ae','commissioner') and r.status == 'open' %}
+          <form action="/assign-report" method="post" class="action-form">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <select name="assigned_to">
+              <option value="">— Assign Engineer —</option>
+              {% for o in officers %}
+              <option value="{{ o.name }}">{{ o.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="action-btn btn-assign">Assign</button>
+          </form>
+          {% elif r.status != 'open' %}
+          <span style="font-size:12px;color:#888;">🔧 Assigned — {{ r.assigned_to or 'engineer' }}</span>
+          {% endif %}
+        </div>
+        <!-- Comment -->
+        <form action="/add-comment" method="post" class="comment-form">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="text" name="comment" class="comment-input"
+                 placeholder="Add remark — e.g. Contractor called, repair starts Monday...">
+          <button type="submit" class="action-btn btn-comment">Add Remark</button>
+        </form>
+        <!-- Site verification — officer can verify if engineer has not done it -->
+        {% if (r.assigned_to == staff.name or staff.role == 'admin' or (staff.role == 'ae' and r.escalation_level|int >= 1)) and r.status in ('inspecting','assigned') and not r.verified_by %}
+        <div class="verify-panel">
+          <h4>🔍 Site Verification</h4>
+          <form action="/verify-inspection" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="report_id" value="{{ r.report_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="verify-row">
+              <div class="verify-group">
+                <label>Actual Damage Type</label>
+                <select name="verified_damage_type" required>
+                  <option value="{{ r.damage_type }}" selected>{{ r.damage_type }} (as reported)</option>
+                  <option value="Pothole">Pothole</option>
+                  <option value="Road Damage">Road Damage</option>
+                  <option value="Footpath">Footpath</option>
+                  <option value="Waterlogging">Waterlogging</option>
+                  <option value="Street Light">Street Light</option>
+                  <option value="Median / Divider">Median / Divider</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="verify-group">
+                <label>Site Condition</label>
+                <select name="site_condition">
+                  <option value="same">Same as photo</option>
+                  <option value="worse">Worse than photo</option>
+                  <option value="better">Better than photo</option>
+                  <option value="not_found">Damage not found</option>
+                </select>
+              </div>
+              <div class="verify-group">
+                <label>Site Photo <span style="color:#e74c3c;font-weight:bold;">*Required</span></label>
+                <input type="file" name="site_photo" accept="image/*" required>
+              </div>
+            </div>
+            <div class="verify-row">
+              <div class="verify-group" style="flex:2;">
+                <label>Notes</label>
+                <input type="text" name="inspection_notes" placeholder="e.g. Pothole 2ft, water filled">
+              </div>
+            </div>
+            {% if r.assigned_to != staff.name %}
+            <div class="verify-row">
+              <div class="verify-group" style="flex:2;">
+                <label style="color:#e74c3c;">⚠️ Supervisor Override — Reason *</label>
+                <input type="text" name="override_reason" required
+                       placeholder="e.g. WAS on leave, SLA breached, verifying on their behalf">
+              </div>
+            </div>
+            {% endif %}
+            <button type="submit" class="action-btn btn-verify" style="margin-top:7px;">✅ Submit Verification</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="no-reports">✅ No active grievances. All complaints are resolved!</div>
+  {% endif %}
+  </div>
+
+</div><!-- /container -->
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <img id="lightbox-img" src="" alt="Enlarged photo">
+  <button class="lightbox-close" onclick="closeLightbox()">✕ Close</button>
+</div>
+
+<!-- Single card overlay -->
+<div class="sco" id="scoOverlay">
+  <div class="sco-inner">
+    <button class="sco-close" onclick="closeSco()">← Back to List</button>
+    <div id="scoContent"></div>
+  </div>
+</div>
+
+<script>
+// ── VIEW TOGGLE ───────────────────────────────────────────────────────────────
+function setView(v) {
+  document.getElementById('tableView').classList.toggle('visible', v==='table');
+  document.getElementById('cardView').classList.toggle('visible', v==='card');
+  document.getElementById('btnTable').classList.toggle('active', v==='table');
+  document.getElementById('btnCard').classList.toggle('active', v==='card');
+  localStorage.setItem('staffView', v);
+}
+setView(localStorage.getItem('staffView') || 'table');
+
+// ── LIVE STATS ────────────────────────────────────────────────────────────────
+function checkForUpdates() {
+  fetch('/api/stats', { credentials: 'include' })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.error) return;
+      var map = {
+        'stat-open': data.open, 'stat-assigned': data.assigned,
+        'stat-inspecting': data.inspecting,
+        'stat-inspected': data.inspecting,
+        'stat-resolved': data.resolved,
+        'stat-total': data.total
+      };
+      Object.entries(map).forEach(function([id,val]){
+        var el = document.getElementById(id);
+        if (el && val !== undefined && String(el.textContent).trim() !== String(val))
+          el.textContent = val;
+      });
+      if (data.new_count > 0) {
+        document.getElementById('newAlert').style.display = 'inline-flex';
+        document.getElementById('newCount').textContent = data.new_count;
+      }
+      if (data.critical_open > 0) document.title = '🔴 ' + data.critical_open + ' Critical — RoadSeva';
+      document.getElementById('lastUpdated').textContent =
+        new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+    }).catch(function(){});
+}
+setInterval(checkForUpdates, 30000);
+
+// ── RESOLVE PROMPT (contractor name) ─────────────────────────────────────────
+function checkResolve(form, reportId) {
+  var sel = document.getElementById('sel-' + reportId);
+  if (sel && sel.value === 'resolved') {
+    var contractor = prompt('Enter contractor name who completed repair.\nLeave blank if GVMC direct work.', '');
+    if (contractor === null) return false;
+    var field = document.getElementById('contractor-' + reportId);
+    if (field) field.value = contractor || 'GVMC Direct';
+  }
+  return true;
+}
+function handleTableStatusChange(sel, reportId) {
+  if (sel.value === 'resolved') {
+    var contractor = prompt('Contractor name who completed repair? Leave blank for GVMC direct.', '');
+    if (contractor === null) { sel.value = sel.getAttribute('data-prev') || 'open'; return; }
+    var field = document.getElementById('contractor-tbl-' + reportId);
+    if (field) field.value = contractor || 'GVMC Direct';
+  }
+  sel.setAttribute('data-prev', sel.value);
+  sel.closest('form').submit();
+}
+
+// ── LIGHTBOX ──────────────────────────────────────────────────────────────────
+function openLightbox(src, caption) {
+  if (!src) return;
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(e) {
+  if (e && e.target !== document.getElementById('lightbox') &&
+      e.target !== document.querySelector('.lightbox-close')) return;
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeLightbox(); });
+
+// ── SINGLE CARD OVERLAY ───────────────────────────────────────────────────────
+function openSingleCard(reportId) {
+  var cv = document.getElementById('cardView');
+  if (!cv) return;
+  var cards = cv.querySelectorAll('.report-card');
+  var target = null;
+  cards.forEach(function(card){
+    var idEl = card.querySelector('.report-id-small');
+    if (idEl && idEl.textContent.includes(reportId)) target = card;
+  });
+  var content = document.getElementById('scoContent');
+  if (target) {
+    var clone = target.cloneNode(true);
+    clone.style.marginBottom = '0';
+    content.innerHTML = '';
+    content.appendChild(clone);
+  } else {
+    content.innerHTML = '<div style="background:white;border-radius:10px;padding:22px;text-align:center;color:#666;">' +
+      '<div style="font-size:30px;margin-bottom:10px;">🔍</div>' +
+      '<strong>' + reportId + '</strong><br>Switch to Cards view to see full details.</div>';
+  }
+  document.getElementById('scoOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSco() {
+  document.getElementById('scoOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('scoOverlay').addEventListener('click', function(e){
+  if (e.target === this) closeSco();
+});
+
+// ── TABLE DRAG-TO-SCROLL ──────────────────────────────────────────────────────
+(function(){
+  var wrap = document.querySelector('.table-wrap');
+  if (!wrap) return;
+  var x = 0, left = 0, down = false, moved = false;
+  wrap.addEventListener('mousedown', function(e){
+    var t = e.target;
+    if (t.tagName==='SELECT'||t.tagName==='INPUT'||t.tagName==='BUTTON'||t.tagName==='A'||t.closest('form,a,button,select')) return;
+    down=true; moved=false; x=e.pageX; left=wrap.scrollLeft;
+    wrap.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!down) return;
+    var dx = e.pageX - x;
+    if (Math.abs(dx) > 3) { moved=true; wrap.scrollLeft = left - dx; }
+  });
+  document.addEventListener('mouseup', function(e){
+    if (!down) return;
+    down=false; wrap.classList.remove('dragging');
+    if (!moved) {
+      var row = e.target.closest && e.target.closest('tr[data-rid]');
+      if (row) openSingleCard(row.dataset.rid);
+    }
+  });
+  // Touch
+  wrap.addEventListener('touchstart', function(e){ down=true; moved=false; x=e.touches[0].pageX; left=wrap.scrollLeft; }, {passive:true});
+  wrap.addEventListener('touchmove', function(e){ if(!down) return; var dx=e.touches[0].pageX-x; if(Math.abs(dx)>3){moved=true;wrap.scrollLeft=left-dx;} }, {passive:true});
+  wrap.addEventListener('touchend', function(){ down=false; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Grievance — RoadSeva GVMC Visakhapatnam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{--gov-blue:#1a3a6b;--gov-blue2:#1e4fa0;--saffron:#f47920;--green:#138808;--off-white:#f8f7f4;--light:#eef0f4;--text:#1a1a2e;--muted:#5a6478;--border:#d8dce8;--red:#ef4444;--shadow:0 2px 16px rgba(26,58,107,.10);}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+.tricolor{display:flex;height:4px}
+.tricolor span:nth-child(1){flex:1;background:#ff9933}
+.tricolor span:nth-child(2){flex:1;background:#fff;border-top:1px solid #eee;border-bottom:1px solid #eee}
+.tricolor span:nth-child(3){flex:1;background:#138808}
+.top-strip{background:var(--gov-blue);color:rgba(255,255,255,.8);font-size:12px;padding:5px 24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.top-strip a{color:rgba(255,255,255,.8);text-decoration:none}
+.header{background:#fff;border-bottom:3px solid var(--saffron);box-shadow:var(--shadow)}
+.header-inner{max-width:860px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
+.emblem{width:44px;height:44px;background:var(--gov-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:3px solid var(--saffron)}
+.hd-titles{flex:1}
+.hd-org{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.hd-name{font-family:'DM Serif Display',serif;font-size:17px;color:var(--gov-blue)}
+.hd-name span{color:var(--saffron)}
+.hd-back{color:var(--gov-blue);text-decoration:none;font-size:13px;font-weight:500;padding:7px 14px;border:1.5px solid var(--border);border-radius:6px}
+.hd-back:hover{background:var(--light)}
+.page-bar{background:var(--gov-blue);color:#fff;padding:20px 24px}
+.page-bar-inner{max-width:860px;margin:0 auto}
+.page-bar h1{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:4px}
+.page-bar-tel{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;opacity:.8}
+.search-section{background:#fff;border-bottom:1px solid var(--border);padding:28px 24px;box-shadow:var(--shadow)}
+.search-inner{max-width:860px;margin:0 auto}
+.search-tabs{display:flex;gap:0;margin-bottom:20px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content}
+.stab{padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:#fff;border:none;font-family:'DM Sans',sans-serif}
+.stab.active{background:var(--gov-blue);color:#fff}
+.stab:not(:last-child){border-right:1.5px solid var(--border)}
+.search-form{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;max-width:620px}
+.search-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.search-input{padding:13px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .2s;width:100%}
+.search-input:focus{border-color:var(--gov-blue2);box-shadow:0 0 0 3px rgba(30,79,160,.1)}
+.btn-search{background:var(--gov-blue);color:#fff;border:none;padding:13px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-search:hover{background:var(--gov-blue2)}
+.search-hint{font-size:12px;color:var(--muted);margin-top:7px}
+.staff-note{font-size:12px;color:var(--muted);margin-top:8px;background:var(--light);padding:8px 12px;border-radius:6px;display:inline-block}
+.main{max-width:860px;margin:0 auto;padding:28px 24px 60px}
+.alert-error{background:#fee2e2;border-left:4px solid var(--red);padding:13px 16px;border-radius:8px;font-size:14px;color:#991b1b;margin-bottom:20px;display:flex;gap:10px}
+
+/* ── LIVING COMPLAINT CARD ─────────────────────────────────────── */
+.complaint-card{background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px}
+
+/* Header */
+.cc-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cc-id{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gov-blue)}
+.cc-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.cc-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status-badge{padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;display:inline-flex;align-items:center;gap:5px}
+.st-open{background:#e8f0ff;color:#1e4fa0}
+.st-assigned{background:#fff3e0;color:#92400e}
+.st-inspecting{background:#fef9c3;color:#713f12}
+.st-inspected{background:#e0f2fe;color:#0369a1}
+.st-resolved{background:#dcfce7;color:#166534}
+.st-closed{background:#f3f4f6;color:#374151}
+.sev-badge{padding:4px 12px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.sev-critical{background:#fee2e2;color:#991b1b}
+.sev-high{background:#fff3e0;color:#92400e}
+.sev-medium{background:#fef9c3;color:#713f12}
+.sev-low{background:#dcfce7;color:#166534}
+.sev-unknown{background:#f3f4f6;color:#6b7280}
+
+/* Live status banner — most important, shown prominently */
+.status-now{padding:18px 24px;display:flex;align-items:flex-start;gap:14px;border-bottom:1px solid var(--border)}
+.status-now-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+.status-now-text{flex:1}
+.status-now-heading{font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px}
+.status-now-sub{font-size:13px;color:var(--muted);line-height:1.6}
+.status-now.open      {background:#f0f5ff}
+.status-now.assigned  {background:#fffbeb}
+.status-now.inspecting{background:#fefce8}
+.status-now.inspected {background:#f0f9ff}
+.status-now.resolved  {background:#f0fdf4}
+.status-now.closed    {background:#f9fafb}
+
+/* Timeline — vertical, with real timestamps from audit log */
+.timeline-section{padding:20px 24px;border-bottom:1px solid var(--border)}
+.tl-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.tl-list{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;position:relative;padding-bottom:0}
+.tl-item:not(:last-child){padding-bottom:20px}
+.tl-item:not(:last-child) .tl-line{position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--border)}
+.tl-dot-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;position:relative;z-index:1}
+.tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid var(--border);background:#fff;flex-shrink:0}
+.tl-dot.done   {background:var(--green);border-color:var(--green);color:#fff}
+.tl-dot.active {background:var(--gov-blue2);border-color:var(--gov-blue2);color:#fff;box-shadow:0 0 0 4px rgba(30,79,160,.12)}
+.tl-dot.pending{background:#fff;border-color:var(--border);color:var(--muted)}
+.tl-body{flex:1;padding-top:4px}
+.tl-label{font-size:14px;font-weight:600;color:var(--text)}
+.tl-label.pending{color:var(--muted);font-weight:400}
+.tl-when{font-size:12px;color:var(--muted);margin-top:2px}
+.tl-by{font-size:12px;color:var(--gov-blue2);margin-top:2px;font-weight:500}
+.tl-note{font-size:12px;color:var(--muted);margin-top:4px;background:var(--light);padding:6px 10px;border-radius:6px;line-height:1.5}
+
+/* What this means for citizen */
+.citizen-message{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;background:#fffbf0}
+.citizen-message-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.citizen-message-text{font-size:13px;color:#78350f;line-height:1.65}
+
+/* Details grid */
+.cc-body{padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;border-bottom:1px solid var(--border)}
+.cc-field{display:flex;flex-direction:column;gap:3px}
+.cc-field-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+.cc-field-val{font-size:14px;color:var(--text);font-weight:500;margin-top:1px}
+.cc-field.full{grid-column:1/-1}
+
+/* AI assessment */
+.ai-box{background:#f0f4ff;border:1px solid #c7d5f5;border-radius:10px;padding:14px 16px;grid-column:1/-1}
+.ai-box-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gov-blue2);margin-bottom:6px}
+.ai-box-text{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* Photo */
+.rc-photo{padding:0 24px 20px}
+.photo-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.photo-img{width:100%;max-height:260px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+
+/* Share / bookmark bar */
+.share-bar{padding:14px 24px;background:var(--light);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.share-bar-text{font-size:12px;color:var(--muted)}
+.share-bar-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn-share-small{font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--gov-blue);cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.btn-share-small:hover{background:var(--gov-blue);color:#fff;border-color:var(--gov-blue)}
+
+/* Empty / not found */
+.empty-state{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty-state-icon{font-size:52px;margin-bottom:16px}
+.empty-state h3{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gov-blue);margin-bottom:8px}
+.empty-state p{font-size:14px;line-height:1.7;max-width:420px;margin:0 auto}
+.not-found{background:#fff;border-radius:14px;border:1px solid var(--border);padding:48px 32px;text-align:center;box-shadow:var(--shadow)}
+.not-found-icon{font-size:48px;margin-bottom:16px}
+.not-found h3{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gov-blue);margin-bottom:8px}
+.not-found p{font-size:14px;color:var(--muted);line-height:1.7;max-width:400px;margin:0 auto 20px}
+.btn-try{background:var(--gov-blue);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;display:inline-block}
+.multiple-alert{background:#e8f4fd;border-left:4px solid var(--gov-blue2);padding:11px 14px;border-radius:6px;font-size:13px;color:#1e3a5f;margin-bottom:16px}
+
+.footer{background:var(--gov-blue);color:rgba(255,255,255,.75);padding:24px;text-align:center;margin-top:40px}
+.footer p{font-size:13px;margin-bottom:6px}
+.footer a{color:rgba(255,255,255,.75);text-decoration:none}
+.footer a:hover{color:#fff}
+
+@media(max-width:700px){
+  .cc-body{grid-template-columns:1fr}
+  .cc-field.full{grid-column:1}
+  .search-form{grid-template-columns:1fr}
+  .btn-search{width:100%}
+  .share-bar{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<div class="tricolor"><span></span><span></span><span></span></div>
+<div class="top-strip">
+  <span>🇮🇳 Greater Visakhapatnam Municipal Corporation — Road Grievance Portal</span>
+  <span>Helpline: <a href="tel:18004250009">1800-4250-0009</a></span>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="emblem">🏛️</div>
+    <div class="hd-titles">
+      <div class="hd-org">Greater Visakhapatnam Municipal Corporation</div>
+      <div class="hd-name">Road<span>Seva</span> — Track Grievance</div>
+    </div>
+    <a href="/" class="hd-back">← Home</a>
+  </div>
+</header>
+
+<div class="page-bar">
+  <div class="page-bar-inner">
+    <h1>Track your grievance</h1>
+    <div class="page-bar-tel">మీ ఫిర్యాదు స్థితిని తెలుసుకోండి</div>
+  </div>
+</div>
+
+<div class="search-section">
+  <div class="search-inner">
+
+    {% if is_staff %}
+    <div class="search-tabs">
+      <button class="stab {% if search_type != 'phone' %}active{% endif %}" onclick="switchTab('id')">🔍 By Grievance Number</button>
+      <button class="stab {% if search_type == 'phone' %}active{% endif %}" onclick="switchTab('phone')">📱 By Phone Number</button>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/track" id="track-form">
+      <input type="hidden" name="search_type" id="search_type_field" value="{{ search_type if search_type else 'id' }}">
+
+      <div id="search-by-id" style="{% if search_type == 'phone' %}display:none{% endif %}">
+        <div class="search-label">Grievance Number</div>
+        <div class="search-form">
+          <div>
+            <input class="search-input" name="report_id" id="report_id_input"
+              placeholder="e.g. GVMC-2603-A7KM2X"
+              value="{{ query if search_type != 'phone' and query else '' }}"
+              autocomplete="off" spellcheck="false">
+            <div class="search-hint">Enter the grievance number from your confirmation — format: GVMC-YYMM-XXXXXX</div>
+          </div>
+          <button type="submit" class="btn-search">Track →</button>
+        </div>
+      </div>
+
+      {% if is_staff %}
+      <div id="search-by-phone" style="{% if search_type != 'phone' %}display:none{% endif %}">
+        <div class="search-label">Citizen Phone Number</div>
+        <div class="search-form">
+          <div>
+            <input class="search-input" name="phone" id="phone_input"
+              placeholder="10-digit mobile number"
+              value="{{ query if search_type == 'phone' else '' }}"
+              type="tel" maxlength="15">
+            <div class="search-hint">Returns all complaints filed from this number</div>
+          </div>
+          <button type="submit" class="btn-search">Search →</button>
+        </div>
+        <div class="staff-note">🔒 Phone search is available to logged-in GVMC staff only</div>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+</div>
+
+<div class="main">
+
+  {% if error %}
+  <div class="alert-error">⚠️ <div>{{ error }}</div></div>
+  {% endif %}
+
+  {% if not searched %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🔍</div>
+    <h3>Enter Your Grievance Number</h3>
+    <p>Enter the grievance number you received when you submitted your complaint to see its current status and complete timeline.</p>
+    <p style="margin-top:12px;font-size:13px">
+      Your grievance number looks like:<br>
+      <strong style="color:var(--gov-blue);font-size:15px">GVMC-2603-A7KM2X</strong>
+    </p>
+    <p style="margin-top:16px;font-size:13px">
+      Don't have it? Call GVMC helpline <strong>1800-4250-0009</strong> with your registered mobile number.
+    </p>
+  </div>
+
+  {% elif searched and reports|length == 0 %}
+  <div class="not-found">
+    <div class="not-found-icon">🔎</div>
+    <h3>No Complaint Found</h3>
+    <p>We could not find a complaint matching <strong>{{ query }}</strong>. Please check the grievance number and try again.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">
+      Grievance numbers are in the format:<br>
+      <strong>GVMC-2603-A7KM2X</strong>
+    </p>
+    <a href="/citizen" class="btn-try" style="margin-right:10px">📋 File a New Complaint</a>
+    <a href="/track" class="btn-try" style="background:var(--off-white);color:var(--gov-blue);border:1.5px solid var(--border)">Try Again</a>
+  </div>
+
+  {% else %}
+
+  {% if reports|length > 1 %}
+  <div class="multiple-alert">Found <strong>{{ reports|length }}</strong> complaints associated with this search.</div>
+  {% endif %}
+
+  {% for r in reports %}
+  {% set status = r.status | lower %}
+
+  <div class="complaint-card">
+
+    <!-- ── HEADER ─────────────────────────────────── -->
+    <div class="cc-header">
+      <div>
+        <div class="cc-id">{{ r.report_id }}</div>
+        <div class="cc-meta">
+          Filed: {{ r.submitted_at[:16] if r.submitted_at else '—' }}
+          {% if r.updated_at %} &nbsp;·&nbsp; Last updated: {{ r.updated_at[:16] }}{% endif %}
+          &nbsp;·&nbsp; {{ r.ward or '' }}
+        </div>
+      </div>
+      <div class="cc-badges">
+        {% if status == 'open' %}<span class="status-badge st-open">📋 Received</span>
+        {% elif status == 'assigned' %}<span class="status-badge st-assigned">👷 Engineer Assigned</span>
+        {% elif status == 'inspecting' %}<span class="status-badge st-inspecting">🔍 On Site</span>
+        {% elif status == 'inspected' %}<span class="status-badge st-inspected">🔧 Inspection Done</span>
+        {% elif status == 'resolved' %}<span class="status-badge st-resolved">✅ Resolved</span>
+        {% elif status == 'closed' %}<span class="status-badge st-closed">🔒 Closed</span>
+        {% else %}<span class="status-badge st-open">{{ r.status | title }}</span>{% endif %}
+        {% if r.severity and r.severity != 'unknown' %}
+        <span class="sev-badge sev-{{ r.severity }}">{{ r.severity | title }} Priority</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── WHAT IS HAPPENING NOW ──────────────────── -->
+    <div class="status-now {{ status }}">
+      {% if status == 'open' %}
+      <div class="status-now-icon">⏳</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">Your complaint is in the GVMC queue</div>
+        <div class="status-now-sub">A Grievance Officer will review this and assign a field engineer. Your complaint is registered and will be acted upon based on its priority.</div>
+      </div>
+      {% elif status == 'assigned' %}
+      <div class="status-now-icon">👷</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">A field engineer has been assigned</div>
+        <div class="status-now-sub">{% if r.assigned_to %}<strong>{{ r.assigned_to }}</strong> has been assigned to inspect this location.{% else %}A field engineer has been assigned to inspect this location.{% endif %} They will visit the site and confirm the damage.</div>
+      </div>
+      {% elif status == 'inspecting' %}
+      <div class="status-now-icon">🔍</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">Engineer is currently on site</div>
+        <div class="status-now-sub">{% if r.assigned_to %}<strong>{{ r.assigned_to }}</strong> is{% else %}A field engineer is{% endif %} physically at the location right now, inspecting and documenting the damage.</div>
+      </div>
+      {% elif status == 'inspected' %}
+      <div class="status-now-icon">🔧</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">Inspection complete — repair being arranged</div>
+        <div class="status-now-sub">The engineer has inspected the site and confirmed the damage. A repair work order is being raised. Repair will be carried out as soon as possible.</div>
+      </div>
+      {% elif status == 'resolved' %}
+      <div class="status-now-icon">✅</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">Repair has been completed</div>
+        <div class="status-now-sub">GVMC has completed the repair work at this location. If you visit the site and find the issue persists or a new problem has appeared, please file a fresh complaint.</div>
+      </div>
+      {% elif status == 'closed' %}
+      <div class="status-now-icon">🔒</div>
+      <div class="status-now-text">
+        <div class="status-now-heading">This grievance has been closed</div>
+        <div class="status-now-sub">Thank you for helping improve roads in Visakhapatnam. If you have a new concern, please file a fresh complaint.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── WHAT THIS MEANS FOR YOU ────────────────── -->
+    {% if status == 'open' %}
+    <div class="citizen-message">
+      <div class="citizen-message-icon">💡</div>
+      <div class="citizen-message-text">
+        <strong>What you can do:</strong> Save your grievance number <strong>{{ r.report_id }}</strong> and bookmark this page. Come back anytime to see the latest status. You do not need to call the helpline — this page updates automatically as GVMC acts on your complaint.
+      </div>
+    </div>
+    {% elif status == 'resolved' %}
+    <div class="citizen-message">
+      <div class="citizen-message-icon">🙏</div>
+      <div class="citizen-message-text">
+        <strong>Thank you for reporting.</strong> Your complaint helped GVMC identify and fix a road problem in your ward. If the repair is not satisfactory or a new issue has appeared at this location, file a new complaint and mention this grievance number.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── COMPLETE TIMELINE ───────────────────────── -->
+    <div class="timeline-section">
+      <div class="tl-title">📜 Complete Timeline — What Has Happened So Far</div>
+      <div class="tl-list">
+
+        <!-- Step 1: Submitted -->
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot done">✓</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label">Complaint received by GVMC</div>
+            <div class="tl-when">{{ r.submitted_at[:16] if r.submitted_at else '' }}</div>
+            <div class="tl-note">Registered as {{ r.report_id }} · {{ r.damage_type }} · {{ r.ward }}</div>
+          </div>
+        </div>
+
+        <!-- Step 2: Assigned -->
+        {% if status in ['assigned','inspecting','inspected','resolved','closed'] %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot done">✓</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label">Engineer assigned</div>
+            {% if r.assigned_to %}<div class="tl-by">{{ r.assigned_to }}</div>{% endif %}
+            <div class="tl-note">A field engineer has been assigned to inspect this location</div>
+          </div>
+        </div>
+        {% elif status == 'open' %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot pending">👷</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label pending">Engineer assignment — pending</div>
+            <div class="tl-when">Waiting for officer to assign</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Step 3: On Site -->
+        {% if status in ['inspecting','inspected','resolved','closed'] %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot {% if status == 'inspecting' %}active{% else %}done{% endif %}">{% if status == 'inspecting' %}🔍{% else %}✓{% endif %}</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label">Engineer on site — inspection {% if status == 'inspecting' %}in progress{% else %}completed{% endif %}</div>
+            {% if r.verified_at %}<div class="tl-when">{{ r.verified_at[:16] }}</div>{% endif %}
+            {% if r.verified_damage_type %}
+            <div class="tl-note">Confirmed damage: <strong>{{ r.verified_damage_type }}</strong>{% if r.site_condition %} · Condition: {{ r.site_condition }}{% endif %}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% elif status in ['assigned'] %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot pending">🔍</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label pending">Site inspection — pending</div>
+            <div class="tl-when">Engineer will visit the location</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot pending">🔍</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label pending">Site inspection — pending</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Step 4: Resolved -->
+        {% if status in ['resolved','closed'] %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot done">✓</div>
+            {% if status == 'closed' %}<div class="tl-line"></div>{% endif %}
+          </div>
+          <div class="tl-body">
+            <div class="tl-label">Repair completed</div>
+            {% if r.updated_at %}<div class="tl-when">{{ r.updated_at[:16] }}</div>{% endif %}
+            {% if r.updated_by %}<div class="tl-by">Confirmed by {{ r.updated_by }}</div>{% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="tl-item">
+          <div class="tl-dot-wrap">
+            <div class="tl-dot pending">✅</div>
+          </div>
+          <div class="tl-body">
+            <div class="tl-label pending">Repair completion — pending</div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- ── COMPLAINT DETAILS ───────────────────────── -->
+    <div class="cc-body">
+      <div class="cc-field">
+        <span class="cc-field-label">Ward</span>
+        <span class="cc-field-val">{{ r.ward or '—' }}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-field-label">Damage Type</span>
+        <span class="cc-field-val">{{ r.verified_damage_type or r.damage_type or '—' }}</span>
+      </div>
+      {% if r.description %}
+      <div class="cc-field full">
+        <span class="cc-field-label">Description</span>
+        <span class="cc-field-val" style="font-weight:400;color:var(--muted)">{{ r.description }}</span>
+      </div>
+      {% endif %}
+      {% if r.latitude and r.longitude %}
+      <div class="cc-field">
+        <span class="cc-field-label">GPS Location</span>
+        <span class="cc-field-val">
+          <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" rel="noopener" style="color:var(--gov-blue2);text-decoration:none;font-size:13px">📍 View on Google Maps ↗</a>
+        </span>
+      </div>
+      {% endif %}
+      {% if is_staff and r.citizen_name %}
+      <div class="cc-field">
+        <span class="cc-field-label">Citizen Name</span>
+        <span class="cc-field-val">{{ r.citizen_name }}</span>
+      </div>
+      {% endif %}
+      {% if r.severity_details %}
+      <div class="ai-box">
+        <div class="ai-box-title">🤖 AI Damage Assessment</div>
+        <div class="ai-box-text">{{ r.severity_details }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── PHOTO ──────────────────────────────────── -->
+    {% if r.photo_data %}
+    <div class="rc-photo">
+      <div class="photo-label">Complaint Photo</div>
+      {% if r.photo_data.startswith('data:') %}
+      <img class="photo-img" src="{{ r.photo_data }}" alt="Road damage photo">
+      {% else %}
+      <img class="photo-img" src="data:image/jpeg;base64,{{ r.photo_data }}" alt="Road damage photo">
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── SHARE BAR ──────────────────────────────── -->
+    <div class="share-bar">
+      <div class="share-bar-text">📌 Bookmark this page or share it to check status anytime — no login needed</div>
+      <div class="share-bar-btns">
+        <button class="btn-share-small" onclick="shareComplaint('{{ r.report_id }}')">📤 Share Status</button>
+        <button class="btn-share-small" onclick="copyLink('{{ r.report_id }}')">🔗 Copy Link</button>
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+    <a href="/citizen" style="background:var(--saffron);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">📋 File Another Complaint</a>
+    <a href="/" style="background:#fff;color:var(--gov-blue);border:1.5px solid var(--border);padding:11px 22px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;">🏠 Back to Home</a>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<footer class="footer">
+  <p><a href="/">Home</a> &nbsp;|&nbsp; <a href="/citizen">File Complaint</a> &nbsp;|&nbsp; <a href="/about">Contact</a></p>
+  <p style="margin-top:8px;font-size:11px;opacity:.5">© 2026 Greater Visakhapatnam Municipal Corporation. RoadSeva — Smart City Initiative.</p>
+</footer>
+
+<script>
+function switchTab(type) {
+  document.getElementById('search_type_field').value = type;
+  document.getElementById('search-by-id').style.display = type==='id' ? 'block' : 'none';
+  const phoneDiv = document.getElementById('search-by-phone');
+  if (phoneDiv) phoneDiv.style.display = type==='phone' ? 'block' : 'none';
+  document.querySelectorAll('.stab').forEach((t,i)=>{
+    t.classList.toggle('active',(i===0&&type==='id')||(i===1&&type==='phone'));
+  });
+  const target = type==='id' ? document.getElementById('report_id_input') : document.getElementById('phone_input');
+  if (target) target.focus();
+}
+
+const refInput = document.getElementById('report_id_input');
+if (refInput) {
+  refInput.addEventListener('input', function(){
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos,pos);
+  });
+}
+
+function shareComplaint(id) {
+  const url = window.location.origin + '/track';
+  const txt = `GVMC Road Complaint Status\nGrievance: ${id}\nTrack live at: ${url}\n(Enter the grievance number to check status)`;
+  if (navigator.share) {
+    navigator.share({title:'GVMC RoadSeva Complaint',text:txt}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(txt).then(()=>alert('Status message copied — paste and share on WhatsApp or any app.'));
+  }
+}
+
+function copyLink(id) {
+  const url = window.location.origin + '/track?ref=' + id;
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('Link copied — anyone with this link can track the complaint status.');
+  }).catch(()=>{
+    const el = document.createElement('textarea');
+    el.value = url; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    alert('Link copied.');
+  });
+}
+</script>
+</body>
+</html>

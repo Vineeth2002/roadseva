@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Road Quality Index — RoadSeva GVMC</title>
+<style>
+:root {
+  --bg: #080f1a;
+  --navy: #0d1b2e;
+  --navy2: #122236;
+  --border: rgba(255,255,255,0.07);
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --muted2: #94a3b8;
+  --accent: #e8a020;
+  --accent2: #f0b840;
+  --green: #22c55e;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+
+/* Topbar */
+.topbar {
+  background:var(--navy);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  height:58px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.topbar-brand { font-size:1.1rem; font-weight:700; color:var(--accent); letter-spacing:1px; }
+.topbar-right { display:flex; align-items:center; gap:10px; }
+.nav-a { color:var(--muted2); text-decoration:none; font-size:.83rem; padding:5px 12px; border-radius:6px; transition:.15s; }
+.nav-a:hover { background:rgba(255,255,255,.05); color:var(--text); }
+.nav-a.active { color:var(--accent); background:rgba(232,160,32,.1); }
+.user-chip { background:var(--navy2); border:1px solid var(--border); border-radius:20px; padding:3px 14px; font-size:.8rem; }
+
+/* Confidential banner */
+.confidential {
+  background:linear-gradient(90deg, rgba(139,92,246,.12), rgba(139,92,246,.05));
+  border-bottom:1px solid rgba(139,92,246,.3);
+  padding:8px 28px;
+  display:flex; align-items:center; gap:10px;
+  font-size:.82rem; color:#c4b5fd;
+}
+.confidential strong { color:#a78bfa; }
+
+/* Page */
+.page { max-width:1200px; margin:0 auto; padding:28px 24px; }
+.page-header { margin-bottom:28px; }
+.page-header h1 { font-size:1.5rem; font-weight:700; color:var(--text); }
+.page-header p { font-size:.875rem; color:var(--muted2); margin-top:5px; }
+
+/* City score hero */
+.hero {
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:32px;
+  background:var(--navy);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:28px 32px;
+  margin-bottom:28px;
+  align-items:center;
+}
+@media(max-width:640px){ .hero { grid-template-columns:1fr; } }
+.score-ring {
+  width:130px; height:130px;
+  border-radius:50%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  border:5px solid;
+  flex-shrink:0;
+}
+.score-ring .score-num { font-size:2.4rem; font-weight:800; line-height:1; }
+.score-ring .score-label { font-size:.72rem; color:var(--muted2); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
+.hero-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:16px; }
+.hero-stat { }
+.hero-stat-val { font-size:1.6rem; font-weight:700; color:var(--text); }
+.hero-stat-lbl { font-size:.75rem; color:var(--muted); margin-top:3px; }
+.hero-stat-sub { font-size:.8rem; color:var(--muted2); margin-top:1px; }
+
+/* Grade pill */
+.grade {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px;
+  border-radius:6px;
+  font-size:.85rem; font-weight:800;
+  flex-shrink:0;
+}
+
+/* Cards */
+.section-title { font-size:.95rem; font-weight:700; color:var(--text); margin-bottom:16px; }
+.card { background:var(--navy); border:1px solid var(--border); border-radius:12px; padding:22px; margin-bottom:24px; }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.card-title { font-size:.95rem; font-weight:600; }
+.card-sub { font-size:.78rem; color:var(--muted); margin-top:2px; }
+
+/* Table */
+.tbl { width:100%; border-collapse:collapse; }
+.tbl th { text-align:left; font-size:.73rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; padding:8px 12px; border-bottom:1px solid var(--border); }
+.tbl td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,.04); font-size:.86rem; vertical-align:middle; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:rgba(255,255,255,.02); }
+
+/* Score bar */
+.score-bar-wrap { display:flex; align-items:center; gap:10px; min-width:160px; }
+.score-bar-bg { flex:1; height:7px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:4px; transition:width .4s; }
+.score-val { font-size:.82rem; font-weight:700; min-width:38px; text-align:right; }
+
+/* Grid 2 */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:840px){ .grid2 { grid-template-columns:1fr; } }
+
+/* Event card */
+.event-list { display:flex; flex-direction:column; gap:10px; }
+.event-item {
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-left:3px solid var(--red);
+  border-radius:8px;
+  padding:12px 16px;
+}
+.event-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.event-ids { font-size:.8rem; color:var(--accent); font-family:monospace; }
+.event-badge {
+  font-size:.72rem; font-weight:600;
+  background:rgba(239,68,68,.15); color:#fca5a5;
+  border:1px solid rgba(239,68,68,.3);
+  border-radius:12px; padding:2px 8px;
+}
+.event-details { display:flex; gap:16px; flex-wrap:wrap; }
+.event-detail { font-size:.8rem; color:var(--muted2); }
+.event-detail strong { color:var(--text); }
+
+/* Chart bars */
+.chart-bars { display:flex; align-items:flex-end; gap:8px; height:80px; padding-top:8px; }
+.bar-group { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+.bar-stack { display:flex; flex-direction:column-reverse; width:100%; gap:2px; height:60px; }
+.bar-seg { border-radius:2px 2px 0 0; min-height:2px; }
+.bar-label { font-size:.65rem; color:var(--muted); text-align:center; white-space:nowrap; }
+
+/* Empty */
+.empty { text-align:center; padding:32px; color:var(--muted); font-size:.88rem; }
+
+/* Damage table small */
+.damage-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.damage-row:last-child { border-bottom:none; }
+.damage-name { flex:1; font-size:.86rem; }
+.damage-stat { font-size:.8rem; color:var(--muted2); min-width:60px; text-align:right; }
+
+/* How it works */
+.explainer {
+  background:rgba(139,92,246,.06);
+  border:1px solid rgba(139,92,246,.2);
+  border-radius:10px;
+  padding:18px 22px;
+  margin-bottom:24px;
+}
+.explainer-title { font-size:.85rem; font-weight:700; color:#c4b5fd; margin-bottom:10px; }
+.explainer-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+.explainer-step { font-size:.8rem; color:var(--muted2); display:flex; gap:8px; }
+.explainer-step span:first-child { color:#a78bfa; font-weight:700; flex-shrink:0; }
+
+/* No data state */
+.no-data-hero {
+  background:var(--navy);
+  border:2px dashed rgba(255,255,255,.1);
+  border-radius:14px;
+  padding:48px;
+  text-align:center;
+  margin-bottom:28px;
+}
+.no-data-hero h2 { font-size:1.1rem; color:var(--muted2); margin-bottom:8px; }
+.no-data-hero p { font-size:.85rem; color:var(--muted); max-width:440px; margin:0 auto; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <span class="topbar-brand">🛣 RoadSeva</span>
+  <div class="topbar-right">
+    <a href="/commissioner" class="nav-a">Dashboard</a>
+    <a href="/rqi" class="nav-a active">Road Quality Index</a>
+    <a href="/analytics" class="nav-a">Analytics</a>
+    <a href="/team" class="nav-a">Team</a>
+    <a href="/change-password" class="nav-a">Password</a>
+    <span class="user-chip">{{ staff["name"] }}</span>
+    <a href="/logout" class="nav-a">Logout</a>
+  </div>
+</nav>
+
+<!-- Confidential strip -->
+<div class="confidential">
+  🔒 <strong>Commissioner Confidential</strong> — This data is visible only to you. Not shared with officers, engineers, or public.
+  &nbsp;|&nbsp; Warranty standard: <strong>{{ data.warranty_days }} days (CPWD)</strong>
+  &nbsp;|&nbsp; Breach radius: <strong>50 metres GPS</strong>
+</div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>Road Quality Index</h1>
+    <p>Tracks how long repairs last — surfaces wards and engineers where roads deteriorate fastest</p>
+  </div>
+
+  <!-- How it works -->
+  <div class="explainer">
+    <div class="explainer-title">🔍 How the RQI works</div>
+    <div class="explainer-grid">
+      <div class="explainer-step"><span>①</span> Every time a complaint is resolved, the system records the GPS location, who repaired it, and the date.</div>
+      <div class="explainer-step"><span>②</span> If a new complaint arrives within 50m of that location within {{ data.warranty_days }} days, it is automatically flagged as a warranty event.</div>
+      <div class="explainer-step"><span>③</span> The RQI score = repairs that lasted past warranty ÷ total tracked repairs × 100. Higher is better.</div>
+      <div class="explainer-step"><span>④</span> Use this data to ask questions about materials, methods, and workmanship — not to blame individuals.</div>
+    </div>
+  </div>
+
+  {% if data.total_repairs == 0 %}
+  <!-- No data yet -->
+  <div class="no-data-hero">
+    <div style="font-size:3rem; margin-bottom:12px;">📋</div>
+    <h2>No repair records yet</h2>
+    <p>The Road Quality Index starts tracking automatically once complaints are marked as <strong>Resolved</strong>.
+    When GPS is present in the complaint, new complaints at the same location within {{ data.warranty_days }} days
+    will be flagged as warranty events here.</p>
+  </div>
+
+  {% else %}
+
+  <!-- City-wide score hero -->
+  <div class="hero">
+    <div class="score-ring" style="border-color:{{ data.city_grade.color }}; color:{{ data.city_grade.color }};">
+      <span class="score-num" style="color:{{ data.city_grade.color }}">{{ data.city_score }}</span>
+      <span class="score-label">RQI Score</span>
+    </div>
+    <div>
+      <div style="font-size:1.1rem; font-weight:700; color:{{ data.city_grade.color }}; margin-bottom:16px;">
+        Grade {{ data.city_grade.grade }} — {{ data.city_grade.label }}
+        &nbsp;·&nbsp; <span style="font-size:.85rem; color:var(--muted2);">GVMC City-wide</span>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-val">{{ data.total_repairs }}</div>
+          <div class="hero-stat-lbl">Total Repairs Tracked</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val" style="color:{% if data.total_breaches > 0 %}var(--red){% else %}var(--green){% endif %}">{{ data.total_breaches }}</div>
+          <div class="hero-stat-lbl">Warranty Events</div>
+          <div class="hero-stat-sub">came back within {{ data.warranty_days }} days</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val" style="color:var(--blue)">{{ data.active_under_warranty }}</div>
+          <div class="hero-stat-lbl">Active Under Warranty</div>
+          <div class="hero-stat-sub">watching for re-complaints</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val" style="color:var(--orange)">{{ data.avg_durability_days }}</div>
+          <div class="hero-stat-lbl">Avg Durability (days)</div>
+          <div class="hero-stat-sub">for breached repairs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- Ward breakdown -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📍 Ward-level RQI Scores</div>
+          <div class="card-sub">Sorted by most warranty events</div>
+        </div>
+      </div>
+      {% if data.wards %}
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Ward</th>
+            <th>Grade</th>
+            <th>Score</th>
+            <th style="min-width:80px">Repairs</th>
+            <th>Events</th>
+            <th>Avg Days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in data.wards %}
+          <tr>
+            <td style="font-size:.82rem; max-width:160px;">{{ w.ward }}</td>
+            <td>
+              <div class="grade" style="background:{{ w.grade_color }}20; color:{{ w.grade_color }}; border:1px solid {{ w.grade_color }}40;">
+                {{ w.grade }}
+              </div>
+            </td>
+            <td>
+              <div class="score-bar-wrap">
+                <div class="score-bar-bg">
+                  <div class="score-bar-fill" style="width:{{ w.score }}%; background:{{ w.grade_color }};"></div>
+                </div>
+                <span class="score-val" style="color:{{ w.grade_color }}">{{ w.score }}</span>
+              </div>
+            </td>
+            <td style="color:var(--muted2)">{{ w.total_repairs }}</td>
+            <td>
+              {% if w.breaches > 0 %}
+                <span style="color:var(--red); font-weight:600;">{{ w.breaches }}</span>
+              {% else %}
+                <span style="color:var(--green)">0</span>
+              {% endif %}
+            </td>
+            <td style="color:var(--muted2); font-size:.82rem;">
+              {% if w.avg_durability > 0 %}{{ w.avg_durability }}d{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No ward data yet</div>
+      {% endif %}
+    </div>
+
+    <!-- Engineer breakdown -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">👷 Repair Quality by Engineer</div>
+          <div class="card-sub">Repair quality score per field engineer</div>
+        </div>
+      </div>
+      {% if data.engineers %}
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Engineer</th>
+            <th>Grade</th>
+            <th>Score</th>
+            <th>Repairs</th>
+            <th>Events</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in data.engineers %}
+          <tr>
+            <td style="font-size:.84rem;">{{ e.name }}</td>
+            <td>
+              <div class="grade" style="background:{{ e.grade_color }}20; color:{{ e.grade_color }}; border:1px solid {{ e.grade_color }}40;">
+                {{ e.grade }}
+              </div>
+            </td>
+            <td>
+              <div class="score-bar-wrap">
+                <div class="score-bar-bg">
+                  <div class="score-bar-fill" style="width:{{ e.score }}%; background:{{ e.grade_color }};"></div>
+                </div>
+                <span class="score-val" style="color:{{ e.grade_color }}">{{ e.score }}</span>
+              </div>
+            </td>
+            <td style="color:var(--muted2)">{{ e.total_repairs }}</td>
+            <td>
+              {% if e.breaches > 0 %}
+                <span style="color:var(--red); font-weight:600;">{{ e.breaches }}</span>
+              {% else %}
+                <span style="color:var(--green)">0</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No engineer data yet</div>
+      {% endif %}
+    </div>
+
+  </div><!-- /grid2 -->
+
+  <div class="grid2">
+
+    <!-- Damage type analysis -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🔧 Which Damage Types Come Back Most</div>
+          <div class="card-sub">Reveals materials or method gaps</div>
+        </div>
+      </div>
+      {% if data.damage_breach %}
+        {% for d in data.damage_breach %}
+        <div class="damage-row">
+          <div class="damage-name">{{ d.damage_type }}</div>
+          <div class="damage-stat">{{ d.total }} repairs</div>
+          <div class="damage-stat" style="color:{% if d.breached > 0 %}var(--red){% else %}var(--green){% endif %}">
+            {{ d.breached }} events
+          </div>
+          <div class="damage-stat" style="color:var(--muted)">
+            {% if d.total > 0 %}{{ "%.0f"|format(d.breached/d.total*100) }}%{% else %}—{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No data yet</div>
+      {% endif %}
+    </div>
+
+    <!-- Monthly trend -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📈 Monthly Trend</div>
+          <div class="card-sub">Repairs done vs warranty events per month</div>
+        </div>
+      </div>
+      {% if data.monthly %}
+      <div style="padding:8px 0;">
+        {% for m in data.monthly %}
+        <div style="display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.05);">
+          <span style="font-size:.8rem; color:var(--muted2); min-width:52px;">{{ m.month }}</span>
+          <div style="flex:1;">
+            <div style="display:flex; gap:4px; margin-bottom:3px;">
+              <div style="height:8px; background:var(--blue); border-radius:2px; width:{{ (m.repairs/([m.repairs,1]|max)*100)|int }}%; max-width:100%;"></div>
+            </div>
+            {% if m.breaches > 0 %}
+            <div style="display:flex; gap:4px;">
+              <div style="height:8px; background:var(--red); border-radius:2px; width:{{ (m.breaches/([m.repairs,1]|max)*100)|int }}%;"></div>
+            </div>
+            {% endif %}
+          </div>
+          <span style="font-size:.78rem; color:var(--muted2); min-width:80px; text-align:right;">
+            {{ m.repairs }}r / <span style="color:{% if m.breaches > 0 %}var(--red){% else %}var(--green){% endif %}">{{ m.breaches }}e</span>
+          </span>
+        </div>
+        {% endfor %}
+        <div style="font-size:.72rem; color:var(--muted); margin-top:8px; display:flex; gap:16px;">
+          <span>🔵 repairs done</span><span>🔴 warranty events</span>
+        </div>
+      </div>
+      {% else %}
+        <div class="empty">No monthly data yet</div>
+      {% endif %}
+    </div>
+
+  </div><!-- /grid2 -->
+
+  <!-- Recent warranty events -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">⚠️ Recent Warranty Events</div>
+        <div class="card-sub">Complaints that returned to a recently repaired location within {{ data.warranty_days }} days</div>
+      </div>
+    </div>
+    {% if data.recent_events %}
+    <div class="event-list">
+      {% for ev in data.recent_events %}
+      <div class="event-item">
+        <div class="event-header">
+          <span class="event-ids">{{ ev.original_report_id }} → {{ ev.new_report_id }}</span>
+          <span class="event-badge">Warranty Event</span>
+        </div>
+        <div class="event-details">
+          <div class="event-detail">📍 <strong>{{ ev.ward }}</strong></div>
+          <div class="event-detail">🔧 <strong>{{ ev.damage_type }}</strong></div>
+          <div class="event-detail">👷 <strong>{{ ev.repaired_by }}</strong></div>
+          <div class="event-detail">⏱ Lasted <strong style="color:var(--orange)">{{ ev.days_elapsed }} days</strong> of {{ ev.warranty_days }}-day warranty</div>
+          <div class="event-detail">📏 <strong>{{ ev.distance_meters }}m</strong> from original location</div>
+          <div class="event-detail">🗓 <strong>{{ ev.breach_detected_at[:10] }}</strong></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      🎉 No warranty events detected yet.<br>
+      <span style="font-size:.8rem;">This is a good sign — it means repaired roads are not returning as complaints within the warranty period.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% endif %}{# end if total_repairs == 0 #}
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>My Route — RoadSeva Field App</title>
+<style>
+:root{--blue:#1a3a6b;--blue2:#1e4fa0;--saffron:#f47920;--green:#138808;--red:#dc2626;--yellow:#d97706;--off:#f8f7f4;--border:#d8dce8;--muted:#5a6478;--text:#1a1a2e;--shadow:0 2px 12px rgba(26,58,107,.10)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--off);color:var(--text);min-height:100vh;padding-bottom:80px}
+.topbar{background:var(--blue);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-back{background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;text-decoration:none}
+.topbar-title{font-size:16px;font-weight:600}
+.topbar-sub{font-size:11px;opacity:.75;margin-top:1px}
+.badge-count{background:var(--saffron);color:#fff;border-radius:100px;padding:3px 10px;font-size:12px;font-weight:700}
+.summary{background:#fff;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;gap:0}
+.sum-item{flex:1;text-align:center;padding:0 8px;border-right:1px solid var(--border)}
+.sum-item:last-child{border-right:none}
+.sum-num{font-size:22px;font-weight:700;line-height:1}
+.sum-label{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+.sec-head{padding:14px 16px 8px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.rcard{background:#fff;margin:0 12px 10px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.rcard.critical{border-left:4px solid var(--red)}
+.rcard.high{border-left:4px solid var(--yellow)}
+.rcard.medium{border-left:4px solid #22c55e}
+.rcard.low,.rcard.unknown{border-left:4px solid #94a3b8}
+.rcard-header{padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rcard-id{font-size:12px;font-weight:700;color:var(--blue);font-family:monospace}
+.rcard-type{font-size:16px;font-weight:600;color:var(--text);margin-bottom:2px}
+.rcard-ward{font-size:13px;color:var(--muted)}
+.sev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.sev-dot.critical{background:var(--red)}
+.sev-dot.high{background:var(--yellow)}
+.sev-dot.medium{background:#22c55e}
+.sev-dot.low,.sev-dot.unknown{background:#94a3b8}
+.st-chip{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.st-assigned{background:#fff3e0;color:#92400e}
+.st-inspecting{background:#fef9c3;color:#713f12}
+.rcard-desc{font-size:13px;color:var(--muted);padding:0 16px 10px;line-height:1.55}
+.ai-box{background:#f0f4ff;border-top:1px solid #c7d5f5;padding:10px 16px;font-size:12px;color:#2a3f6f;line-height:1.55}
+.ai-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue2);margin-bottom:3px}
+.rcard-actions{padding:10px 12px;border-top:1px solid var(--border);display:grid;gap:8px;background:var(--off)}
+.btn-nav{background:var(--blue);color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%;font-family:inherit;transition:background .2s}
+.btn-nav:hover{background:var(--blue2)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-start{background:var(--saffron);color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;width:100%}
+.btn-start:hover{background:#e06810}
+.btn-complete-toggle{background:#fff;color:var(--blue);border:1.5px solid var(--border);padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;width:100%}
+.btn-complete-toggle:hover{background:var(--off)}
+.complete-form{display:none;padding:14px;border-top:1px solid var(--border);background:#fff}
+.complete-form.open{display:block}
+.cf-label{font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;margin-top:10px}
+.cf-label:first-child{margin-top:0}
+.cf-radio{display:flex;gap:16px;margin-bottom:4px}
+.cf-radio label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+.cf-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none}
+.cf-input:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(30,79,160,.1)}
+.cf-textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);resize:vertical;min-height:70px;outline:none;margin-top:4px}
+.cf-textarea:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(30,79,160,.1)}
+.btn-submit-cf{width:100%;background:var(--green);color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px}
+.inspecting-chip{background:#fef9c3;border-radius:8px;padding:11px;font-size:12px;font-weight:600;color:#713f12;text-align:center}
+.empty{text-align:center;padding:60px 24px}
+.empty-icon{font-size:52px;margin-bottom:16px}
+.empty h3{font-size:20px;font-weight:600;color:var(--blue);margin-bottom:8px}
+.empty p{font-size:14px;color:var(--muted);line-height:1.7;max-width:320px;margin:0 auto}
+.btn-field{display:inline-block;margin-top:20px;background:var(--blue);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none}
+.gps-note{background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin:10px 12px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;text-decoration:none;color:var(--muted);font-size:10px;font-weight:500;gap:3px;border:none;background:none;cursor:pointer;font-family:inherit}
+.bnav-item.active{color:var(--blue)}
+.bnav-icon{font-size:20px}
+</style>
+</head>
+<body>
+
+{% set total      = reports | length %}
+{% set crit_list  = reports | selectattr('severity','equalto','critical') | list %}
+{% set high_list  = reports | selectattr('severity','equalto','high')     | list %}
+{% set other_list = reports | rejectattr('severity','in',['critical','high']) | list %}
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="/field" class="topbar-back">←</a>
+    <div>
+      <div class="topbar-title">📍 My Route — Today's Jobs</div>
+      <div class="topbar-sub">{{ staff.name }} &nbsp;·&nbsp; Field Engineer</div>
+    </div>
+  </div>
+  <div class="badge-count">{{ total }} job{{ 's' if total != 1 else '' }}</div>
+</div>
+<!-- Role notice — reassures engineer they are in the right place -->
+<div style="background:#e8f5e9; border-bottom:2px solid #27ae60; padding:8px 16px; font-size:12px; color:#1e8449; text-align:center;">
+  🗺️ Showing your assigned jobs sorted by priority. Tap any job to navigate.
+</div>
+
+<!-- Summary strip -->
+<div class="summary">
+  <div class="sum-item"><div class="sum-num" style="color:var(--blue)">{{ total }}</div><div class="sum-label">Total</div></div>
+  <div class="sum-item"><div class="sum-num" style="color:var(--red)">{{ crit_list|length }}</div><div class="sum-label">Critical</div></div>
+  <div class="sum-item"><div class="sum-num" style="color:var(--yellow)">{{ high_list|length }}</div><div class="sum-label">High</div></div>
+  <div class="sum-item"><div class="sum-num" style="color:var(--green)">{{ other_list|length }}</div><div class="sum-label">Other</div></div>
+</div>
+
+{% if total == 0 %}
+<div class="empty">
+  <div class="empty-icon">✅</div>
+  <h3>All Clear!</h3>
+  <!-- FIX BUG 6: was "Check back after new complaints are concerned official you." — corrected grammar -->
+  <p>You have no assigned reports pending inspection. Check back after new complaints are assigned to you by your officer.</p>
+  <a href="/field" class="btn-field">← Back to Field Dashboard</a>
+</div>
+
+{% else %}
+
+<div class="gps-note">
+  <span style="font-size:16px;flex-shrink:0">💡</span>
+  <span>Ordered by priority — Critical first. Tap <strong>Navigate</strong> to open Google Maps. Complete each inspection before moving to the next.</span>
+</div>
+
+{% if crit_list %}
+<div class="sec-head">🔴 Critical — Act Immediately</div>
+{% for r in crit_list %}
+  {% set sev = r.severity | lower if r.severity else 'unknown' %}
+  {% set st  = r.status | lower if r.status else 'assigned' %}
+  <div class="rcard {{ sev }}">
+    <div class="rcard-header">
+      <div>
+        <div class="rcard-id">{{ r.report_id }}</div>
+        <div class="rcard-type">{{ r.damage_type or 'Road Issue' }}</div>
+        <div class="rcard-ward">📍 {{ r.ward or '—' }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="sev-dot {{ sev }}"></div>
+        {% if st == 'inspecting' %}<span class="st-chip st-inspecting">Inspecting</span>
+        {% else %}<span class="st-chip st-assigned">Assigned</span>{% endif %}
+      </div>
+    </div>
+    {% if r.description %}<div class="rcard-desc">{{ r.description }}</div>{% endif %}
+    {% if r.severity_details %}<div class="ai-box"><div class="ai-label">🤖 AI Assessment</div>{{ r.severity_details }}</div>{% endif %}
+    <div class="rcard-actions">
+      {% if r.latitude and r.longitude %}
+      <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to GPS Location</a>
+      {% else %}
+      <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam') | urlencode }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to Ward Area</a>
+      {% endif %}
+      <div class="btn-row">
+        {% if st != 'inspecting' %}
+        <form method="post" action="/start-inspection" style="display:contents">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn-start">▶ Start Inspection</button>
+        </form>
+        {% else %}
+        <div class="inspecting-chip">🔍 In Progress</div>
+        {% endif %}
+        <button type="button" class="btn-complete-toggle" onclick="toggleCF('{{ r.report_id }}')">✅ Complete</button>
+      </div>
+      <div class="complete-form" id="cf-{{ r.report_id }}">
+        <form method="post" action="/complete-inspection">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="cf-label">Damage confirmed on-site?</div>
+          <div class="cf-radio">
+            <label><input type="radio" name="damage_confirmed" value="yes" checked> Yes, confirmed</label>
+            <label><input type="radio" name="damage_confirmed" value="no"> Not found</label>
+          </div>
+          <div class="cf-label">Action taken</div>
+          <input class="cf-input" type="text" name="action_taken" placeholder="e.g. Work order raised, Temporary patch applied" onkeydown="if(event.key==='Enter')event.preventDefault()">          <div class="cf-label">Notes <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+          <textarea class="cf-textarea" name="inspection_note" placeholder="Site notes, materials needed, access issues..."></textarea>
+          <button type="submit" class="btn-submit-cf">✅ Submit Inspection Report</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+{% endif %}
+
+{% if high_list %}
+<div class="sec-head">🟡 High Priority</div>
+{% for r in high_list %}
+  {% set sev = r.severity | lower if r.severity else 'unknown' %}
+  {% set st  = r.status | lower if r.status else 'assigned' %}
+  <div class="rcard {{ sev }}">
+    <div class="rcard-header">
+      <div>
+        <div class="rcard-id">{{ r.report_id }}</div>
+        <div class="rcard-type">{{ r.damage_type or 'Road Issue' }}</div>
+        <div class="rcard-ward">📍 {{ r.ward or '—' }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="sev-dot {{ sev }}"></div>
+        {% if st == 'inspecting' %}<span class="st-chip st-inspecting">Inspecting</span>
+        {% else %}<span class="st-chip st-assigned">Assigned</span>{% endif %}
+      </div>
+    </div>
+    {% if r.description %}<div class="rcard-desc">{{ r.description }}</div>{% endif %}
+    {% if r.severity_details %}<div class="ai-box"><div class="ai-label">🤖 AI Assessment</div>{{ r.severity_details }}</div>{% endif %}
+    <div class="rcard-actions">
+      {% if r.latitude and r.longitude %}
+      <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to GPS Location</a>
+      {% else %}
+      <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam') | urlencode }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to Ward Area</a>
+      {% endif %}
+      <div class="btn-row">
+        {% if st != 'inspecting' %}
+        <form method="post" action="/start-inspection" style="display:contents">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn-start">▶ Start Inspection</button>
+        </form>
+        {% else %}
+        <div class="inspecting-chip">🔍 In Progress</div>
+        {% endif %}
+        <button type="button" class="btn-complete-toggle" onclick="toggleCF('{{ r.report_id }}')">✅ Complete</button>
+      </div>
+      <div class="complete-form" id="cf-{{ r.report_id }}">
+        <form method="post" action="/complete-inspection">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="cf-label">Damage confirmed on-site?</div>
+          <div class="cf-radio">
+            <label><input type="radio" name="damage_confirmed" value="yes" checked> Yes, confirmed</label>
+            <label><input type="radio" name="damage_confirmed" value="no"> Not found</label>
+          </div>
+          <div class="cf-label">Action taken</div>
+          <input class="cf-input" type="text" name="action_taken" placeholder="e.g. Work order raised, Temporary patch applied">
+          <div class="cf-label">Notes <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+          <textarea class="cf-textarea" name="inspection_note" placeholder="Site notes, materials needed, access issues..."></textarea>
+          <button type="submit" class="btn-submit-cf">✅ Submit Inspection Report</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+{% endif %}
+
+{% if other_list %}
+<div class="sec-head">🟢 Medium / Low Priority</div>
+{% for r in other_list %}
+  {% set sev = r.severity | lower if r.severity else 'unknown' %}
+  {% set st  = r.status | lower if r.status else 'assigned' %}
+  <div class="rcard {{ sev }}">
+    <div class="rcard-header">
+      <div>
+        <div class="rcard-id">{{ r.report_id }}</div>
+        <div class="rcard-type">{{ r.damage_type or 'Road Issue' }}</div>
+        <div class="rcard-ward">📍 {{ r.ward or '—' }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="sev-dot {{ sev }}"></div>
+        {% if st == 'inspecting' %}<span class="st-chip st-inspecting">Inspecting</span>
+        {% else %}<span class="st-chip st-assigned">Assigned</span>{% endif %}
+      </div>
+    </div>
+    {% if r.description %}<div class="rcard-desc">{{ r.description }}</div>{% endif %}
+    {% if r.severity_details %}<div class="ai-box"><div class="ai-label">🤖 AI Assessment</div>{{ r.severity_details }}</div>{% endif %}
+    <div class="rcard-actions">
+      {% if r.latitude and r.longitude %}
+      <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to GPS Location</a>
+      {% else %}
+      <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam') | urlencode }}" target="_blank" rel="noopener" class="btn-nav">🧭 Navigate to Ward Area</a>
+      {% endif %}
+      <div class="btn-row">
+        {% if st != 'inspecting' %}
+        <form method="post" action="/start-inspection" style="display:contents">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn-start">▶ Start Inspection</button>
+        </form>
+        {% else %}
+        <div class="inspecting-chip">🔍 In Progress</div>
+        {% endif %}
+        <button type="button" class="btn-complete-toggle" onclick="toggleCF('{{ r.report_id }}')">✅ Complete</button>
+      </div>
+      <div class="complete-form" id="cf-{{ r.report_id }}">
+        <form method="post" action="/complete-inspection">
+          <input type="hidden" name="report_id" value="{{ r.report_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="cf-label">Damage confirmed on-site?</div>
+          <div class="cf-radio">
+            <label><input type="radio" name="damage_confirmed" value="yes" checked> Yes, confirmed</label>
+            <label><input type="radio" name="damage_confirmed" value="no"> Not found</label>
+          </div>
+          <div class="cf-label">Action taken</div>
+          <input class="cf-input" type="text" name="action_taken" placeholder="e.g. Work order raised, Temporary patch applied">
+          <div class="cf-label">Notes <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+          <textarea class="cf-textarea" name="inspection_note" placeholder="Site notes, materials needed, access issues..."></textarea>
+          <button type="submit" class="btn-submit-cf">✅ Submit Inspection Report</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+{% endif %}
+
+{% endif %}
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="/field" class="bnav-item"><span class="bnav-icon">📋</span>Dashboard</a>
+  <a href="/route" class="bnav-item active"><span class="bnav-icon">🗺️</span>My Route</a>
+  <a href="/map" class="bnav-item"><span class="bnav-icon">📍</span>Map</a>
+  <a href="/logout" class="bnav-item"><span class="bnav-icon">🚪</span>Logout</a>
+</nav>
+
+<script>
+function toggleCF(rid) {
+  const el = document.getElementById('cf-' + rid);
+  if (!el) return;
+  el.classList.toggle('open');
+  if (el.classList.contains('open'))
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+</body>
+</html>
