@@ -49,22 +49,7 @@ DB_PATH      = "roadseva.db"
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _resolve_ipv4(url: str) -> str:
-    """Force IPv4 resolution to avoid Render/neon IPv6 issues."""
-    try:
-        import socket, re
-        host = re.search(r'@([^:/]+)', url)
-        if not host:
-            return ""
-        hostname = host.group(1)
-        results = socket.getaddrinfo(hostname, 5432, socket.AF_INET)
-        if results:
-            return results[0][4][0]
-    except Exception:
-        pass
-    return ""
-
-def _resolve_ipv4(url: str) -> str:
-    """Force IPv4 resolution to avoid Render/Supabase IPv6 issues."""
+    """Force IPv4 resolution to avoid Render/Neon IPv6 issues."""
     try:
         import socket, re
         host = re.search(r'@([^:/]+)', url)
