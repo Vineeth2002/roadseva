@@ -1,4 +1,4 @@
-name: Keep Supabase Alive
+name: Keep Neon Alive
 
 on:
   schedule:
@@ -9,7 +9,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase
+      - name: Ping Neon
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -20,6 +20,7 @@ jobs:
           cur = conn.cursor()
           cur.execute('SELECT COUNT(*) FROM reports')
           count = cur.fetchone()[0]
-          print(f'Supabase alive — {count} reports in DB')
+          print(f'Neon alive — {count} reports in DB')
           conn.close()
           "
+          

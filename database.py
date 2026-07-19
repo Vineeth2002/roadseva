@@ -49,7 +49,7 @@ DB_PATH      = "roadseva.db"
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _resolve_ipv4(url: str) -> str:
-    """Force IPv4 resolution to avoid Render/Supabase IPv6 issues."""
+    """Force IPv4 resolution to avoid Render/neon IPv6 issues."""
     try:
         import socket, re
         host = re.search(r'@([^:/]+)', url)
@@ -962,20 +962,34 @@ def get_reports_for_role(
         return results
 
     elif role == "ae":
-        # Scoped to their division
+        from wards import get_wards_for_division
         division = staff.get("division", "")
-        if division:
-            ward_list = get_wards_in_division(division)
-            if ward_list and not ward:
-                # Return all reports from this AE's division
-                return get_reports_for_division(division, status=status,
-                    severity=severity, search=search, damage_type=damage_type,
-                    limit=limit, offset=offset)
-        return get_all_reports(
-            status=status, ward=ward, severity=severity,
-            search=search, damage_type=damage_type,
-            limit=limit, offset=offset,
-        )
+        ward_names = get_wards_for_division(division) if division else []
+        if not ward_names:
+            # Division not set, or has no wards mapped — fail closed, not open.
+            return []
+        conn = get_conn(); c = conn.cursor()
+        conds  = [f"ward IN ({','.join(['?']*len(ward_names))})"]
+        params = list(ward_names)
+        if status == "active_only":
+            conds.append("status NOT IN ('resolved','closed','pending_triage')")
+        elif status and status != "all":
+            conds.append("status = ?"); params.append(status)
+        if ward:
+            conds.append("ward = ?"); params.append(ward)
+        if severity and severity != "all":
+            conds.append("severity = ?"); params.append(severity)
+        if damage_type and damage_type != "all":
+            conds.append("damage_type = ?"); params.append(damage_type)
+        if search:
+            conds.append("(report_id LIKE ? OR ward LIKE ? OR citizen_name LIKE ? OR description LIKE ?)")
+            s = f"%{search}%"; params.extend([s,s,s,s])
+        where = "WHERE " + " AND ".join(conds)
+        params.extend([limit, offset])
+        c.execute(_q(f"SELECT * FROM reports {where} ORDER BY submitted_at DESC LIMIT ? OFFSET ?"), params)
+        results = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return results
 
     elif role in ("viewer",):
         # Read-only, full access
