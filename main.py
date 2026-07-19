@@ -783,9 +783,12 @@ async def work_done_upload(request: Request,
 @app.get("/track", response_class=HTMLResponse)
 async def track_get(request: Request,
     report_id:   str = "",
+    ref:         str = "",
     phone:       str = "",
     search_type: str = "id"):
     staff, _ = require_login(request)
+
+    report_id = report_id or ref
 
     if report_id:
         query = report_id.strip().upper()
