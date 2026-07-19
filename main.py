@@ -388,14 +388,6 @@ async def submit(
             file_path   = os.path.join("uploads", filename)
             os.makedirs("uploads", exist_ok=True)
             with open(file_path, "wb") as f: f.write(clean_bytes)
-            # Upload to Cloudinary for persistent storage
-            try:
-                from storage import upload_photo
-                cloud_url = upload_photo(clean_bytes, report_id, ext)
-                if cloud_url:
-                    photo_data = cloud_url
-            except Exception as e:
-                print(f"[submit] Cloudinary upload error: {e}")
         except Exception as e:
             print(f"[submit] compressed photo error: {e}")
             clean_bytes = b""; ext = "jpg"; file_path = ""

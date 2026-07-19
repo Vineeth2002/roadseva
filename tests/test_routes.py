@@ -167,10 +167,23 @@ class TestCitizenReview:
         assert response.status_code == 404
 
     def test_review_page_loads_for_resolved_complaint(self, client, sample_report_id):
-        """Review page should load once complaint is resolved."""
+        """Review page should load once complaint is resolved AND a valid token is used."""
+        database.update_report_status(sample_report_id, "resolved", "Test Engineer")
+        token = database.create_citizen_review_token(sample_report_id)
+        response = client.get(f"/citizen-review/{sample_report_id}?token={token}")
+        assert response.status_code == 200
+
+    def test_review_page_404_without_token_even_if_resolved(self, client, sample_report_id):
+        """Confirms the security fix: resolved status alone is not enough — token is required."""
         database.update_report_status(sample_report_id, "resolved", "Test Engineer")
         response = client.get(f"/citizen-review/{sample_report_id}")
-        assert response.status_code == 200
+        assert response.status_code == 404
+
+    def test_review_page_404_with_wrong_token(self, client, sample_report_id):
+        """A token that doesn't match this report_id must not grant access."""
+        database.update_report_status(sample_report_id, "resolved", "Test Engineer")
+        response = client.get(f"/citizen-review/{sample_report_id}?token=not-a-real-token")
+        assert response.status_code == 404
 
     def test_review_page_404_for_nonexistent_id(self, client):
         response = client.get("/citizen-review/GVMC-9999-XXXXXX")

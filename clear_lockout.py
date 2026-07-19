@@ -1,7 +1,7 @@
 """
 clear_lockout.py — Clears failed login attempts before a demo
 Run if login is failing or locked out.
-Command: D:\Anaconda\python.exe clear_lockout.py
+Command: D:\\Anaconda\\python.exe clear_lockout.py
 """
 
 import sqlite3
