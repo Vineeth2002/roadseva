@@ -7,7 +7,8 @@ contact_log.txt
 clear_flags.py
 training_data/
 data/
-recover.pypasswords.txt 
-COMMANDS.txt 
-DB_QUERIES.txt 
-DEMO_RUNBOOK.txt 
+recover.py
+passwords.txt
+COMMANDS.txt
+DB_QUERIES.txt
+DEMO_RUNBOOK.txt
