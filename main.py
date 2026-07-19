@@ -1773,7 +1773,7 @@ async def health_watchdog():
 async def health_ready():
     try:
         conn = database.get_conn(); conn.close()
-        return {"status": "ok"}
+        return {"status": "ready"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 

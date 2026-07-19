@@ -254,11 +254,11 @@ class TestAddReport:
         assert len(rows) >= 1, f"No audit log entry for {rid}"
 
     def test_sla_expiry_set_on_submit(self):
-        """sla_expiry_time must be set to ~48h from submission."""
+        """sla_due_at must be set to ~48h from submission."""
         rid = self._make_report()
         report = database.get_report_by_id(rid)
-        assert report["sla_expiry_time"] is not None, "sla_expiry_time not set"
-        expiry = datetime.strptime(report["sla_expiry_time"], "%Y-%m-%d %H:%M:%S")
+        assert report["sla_due_at"] is not None, "sla_due_at not set"
+        expiry = datetime.strptime(report["sla_due_at"], "%Y-%m-%d %H:%M:%S")
         submitted = datetime.strptime(report["submitted_at"], "%Y-%m-%d %H:%M:%S")
         diff_hours = (expiry - submitted).total_seconds() / 3600
         assert 47 < diff_hours < 49, f"SLA expiry not ~48h: got {diff_hours:.1f}h"
@@ -362,16 +362,18 @@ class TestISTTimezone:
         dt = datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         assert dt is not None
 
-    def test_now_ist_naive_is_naive(self):
-        """_now_ist_naive() must return timezone-naive datetime."""
-        result = database._now_ist_naive()
-        assert result.tzinfo is None, "Must be naive datetime for arithmetic comparisons"
+    def test_now_returns_naive_parseable_string(self):
+        """now() must return a plain string parseable back into a naive datetime."""
+        result = database.now()
+        parsed = datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
+        assert parsed.tzinfo is None, "Parsed result must be naive for arithmetic comparisons"
 
-    def test_ist_constant_is_utc_plus_5_30(self):
-        """IST module constant must be UTC+5:30."""
-        offset = database.IST.utcoffset(datetime.now())
-        expected = timedelta(hours=5, minutes=30)
-        assert offset == expected, f"IST offset wrong: {offset}"
+    def test_now_uses_ist_offset(self):
+        """now() must reflect IST (UTC+5:30), not UTC or naive local time."""
+        ist = timezone(timedelta(hours=5, minutes=30))
+        expected_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M")
+        actual_str = database.now()[:16]
+        assert actual_str == expected_str, f"now() not using IST: got {actual_str}, expected {expected_str}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

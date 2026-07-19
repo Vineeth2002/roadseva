@@ -176,7 +176,11 @@ def validate_password_strength(password: str) -> tuple:
         return False, "Must contain a special character (!@#$% etc.)"
     if len(set(password)) < 4:
         return False, "Password is too repetitive"
-    if password.lower() in BLOCKED_PASSWORDS:
+    pw_lower = password.lower()
+    if pw_lower in BLOCKED_PASSWORDS:
+        return False, "This password is too common"
+    _BRAND_SUBSTRINGS = {"roadseva", "vizag", "visakha", "andhra"}
+    if any(brand in pw_lower for brand in _BRAND_SUBSTRINGS):
         return False, "This password is too common"
     return True, ""
 
@@ -784,6 +788,11 @@ def add_report(
         photo_data, initial_status, ts, ts,
         intake_channel, intake_ref, sla_due,
     ))
+    c.execute(_q(
+        "INSERT INTO audit_log "
+        "(report_id,action,old_value,new_value,done_by,done_at) "
+        "VALUES (?,?,?,?,?,?)"
+    ), (rid, "submitted", "", f"citizen submission via {intake_channel}", "citizen", ts))
     conn.commit(); conn.close()
     return rid
 

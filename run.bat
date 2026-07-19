@@ -1,8 +1,9 @@
-#D:\Anaconda\python.exe -m uvicorn main:app --reload
-#D:\Anaconda\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 cd C:\RoadSeva
 D:\Anaconda\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload --env-file .env
+
+#test cases check everything is working fine
+D:\Anaconda\python.exe -m pytest tests/ -v
 
 #for every files created or edited or saved in the project, run the following commands to update the github repository  
 git add .
