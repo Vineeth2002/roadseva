@@ -1463,8 +1463,8 @@ async def team_get(request: Request, message: str="", error: str=""):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] not in ("commissioner","zonal_commissioner","ae","admin"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "commissioner", "zonal_commissioner", "ae", "admin"):
+        return permissions.redirect_home(staff)
     team_members = database.get_team_members(
         staff["role"], staff["username"], staff.get("id"))
     creatable    = database.ROLE_CAN_CREATE.get(staff["role"], set())
@@ -1640,8 +1640,8 @@ async def account_log(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] not in ("admin","commissioner"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "admin", "commissioner"):
+        return permissions.redirect_home(staff)
     log = database.get_staff_audit_log(200)
     return templates.TemplateResponse("account_log.html", {
         "request": request, "staff": staff, "log": log})
