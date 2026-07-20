@@ -1055,8 +1055,8 @@ async def assign_report(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/staff?error=csrf", status_code=302)
 
-    if staff["role"] not in ("admin","commissioner","zonal_commissioner","ae","officer"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
 
     ok, msg = database.assign_report(report_id, assigned_to, staff["name"],
                             assigned_officer=staff["name"])
@@ -1569,6 +1569,8 @@ async def staff_log_post(request: Request,
     csrf:           str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
+    if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/staff-log?error=Session+expired", status_code=302)
