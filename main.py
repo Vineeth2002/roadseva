@@ -42,6 +42,7 @@ FIXES APPLIED (FIX 1–10):
 """
 
 import os, io, csv, base64, urllib.parse
+import permissions
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
@@ -671,8 +672,8 @@ async def disputed_reviews(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if staff["role"] not in ("commissioner","admin","zonal_commissioner","ae"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "commissioner", "admin", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
 
     division = staff.get("zone","") if staff["role"] in ("ae","zonal_commissioner") else None
     reports  = database.get_disputed_reports_for_review(division_name=division)
@@ -694,8 +695,8 @@ async def resolve_dispute(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/disputed-reviews?error=csrf", status_code=302)
 
-    if staff["role"] not in ("commissioner","admin","zonal_commissioner","ae","officer"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "commissioner", "admin", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
 
     note, _ = sanitize_input(note)
 

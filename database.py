@@ -2554,9 +2554,14 @@ def get_commissioner_data(ward_filter: list = None) -> dict:
 
     ward_sql, ward_params = "", ()
     if ward_filter is not None:
-        placeholders = ",".join(["?"] * len(ward_filter))
-        ward_sql = f" AND ward IN ({placeholders})"
-        ward_params = tuple(ward_filter)
+        if ward_filter:
+            placeholders = ",".join(["?"] * len(ward_filter))
+            ward_sql = f" AND ward IN ({placeholders})"
+            ward_params = tuple(ward_filter)
+        else:
+            # Zone configured but resolves to zero wards — fail closed
+            # with a condition that's always false, not invalid SQL.
+            ward_sql = " AND 1=0"
 
     def cnt(sql, params=()):
         c.execute(_q(sql), params); return dict(c.fetchone())["cnt"] or 0
