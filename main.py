@@ -1547,8 +1547,8 @@ async def staff_log_get(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] not in ("admin","commissioner","zonal_commissioner","ae","officer"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     return templates.TemplateResponse("staff_log.html", {
         "request": request, "staff": staff,
