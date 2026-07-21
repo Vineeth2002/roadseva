@@ -346,8 +346,8 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
       <span class="role-pill role-{{ staff.role }}">{{ staff.role.replace('_',' ') }}</span>
     </h1>
     <div class="header-sub">Logged in as: <strong style="color:white">{{ staff.name }}</strong>
-      &nbsp;·&nbsp; Officer Dashboard
-    </div>
+  &nbsp;·&nbsp; {{ role_labels.get(staff.role, staff.role) if role_labels is defined else staff.role.replace('_',' ').title() }}
+  </div>
   </div>
   <div class="header-right">
     {% if staff.role in ('admin','ae','commissioner') %}

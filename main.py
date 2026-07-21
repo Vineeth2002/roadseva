@@ -991,13 +991,13 @@ async def staff_dashboard(request: Request,
         "page": page, "csrf": generate_csrf_token(token),
         "ward_names": WARD_NAMES, "showing_active": not status,
         "sla_cutoff": sla_cutoff, "page_size": page_size,
+        "role_labels": ROLE_LABELS,
         "stat_open":       sum(1 for r in all_reports if r.get("status")=="open"),
         "stat_assigned":   sum(1 for r in all_reports if r.get("status")=="assigned"),
         "stat_inspecting": sum(1 for r in all_reports if r.get("status")=="inspecting"),
         "stat_inspected":  sum(1 for r in all_reports if r.get("status")=="inspected"),
         "stat_resolved":   sum(1 for r in all_reports if r.get("status") in ("resolved","closed")),
         "stat_total":      len(all_reports)})
-
 
 # ── UPDATE STATUS ──────────────────────────────────────────────────────────────
 
