@@ -1602,14 +1602,13 @@ async def rqi_page(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] not in ("commissioner","admin","zonal_commissioner"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
     rqi_raw = database.get_rqi_data()
     database.mark_rqi_seen()
     data = _build_rqi_data(rqi_raw["events"])
     return templates.TemplateResponse("rqi.html", {
         "request": request, "staff": staff, "data": data})
-
 
 # ── WARDS ──────────────────────────────────────────────────────────────────────
 
