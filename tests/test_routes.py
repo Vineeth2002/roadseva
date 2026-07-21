@@ -223,4 +223,3 @@ class TestSecurityHeaders:
     def test_csp_present(self, client):
         response = client.get("/")
         assert "Content-Security-Policy" in response.headers
-        

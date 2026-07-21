@@ -78,7 +78,7 @@ def get_conn():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
-    
+
 def now() -> str:
     ist = timezone(timedelta(hours=5, minutes=30))
     return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
@@ -3168,7 +3168,7 @@ def create_repair_record(
     add_repair_record(report_id, contractor_name,
                       r.get("latitude"), r.get("longitude"),
                       recorded_by, warranty_months)
-    
+
 def get_ae_for_division(division: str) -> dict | None:
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT * FROM staff WHERE role='ae' AND division=? AND is_active=1 LIMIT 1"), (division,))
