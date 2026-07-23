@@ -1,0 +1,10 @@
+[33m2730332[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m permissions.py migration: rqi_page
+[33m8878fab[m strip trailing whitespace, fix recurring ruff W293
+[33mc1217d3[m pass role_labels into staff dashboard context, show correct role name instead of hardcoded Officer Dashboard
+[33md2b5947[m add missing role check to staff_log_get()
+[33mb56e679[m update main.py
+[33mb5cf775[m update
+[33maa64950[m fix ward IN () SQL syntax error for unconfigured zones, permissions.py migration
+[33ma60cd74[m update
+[33mdfe8e46[m fix /track?ref= param not being read, citizens' post-submission links now work
+[33me18fc9d[m fix ruff lint errors: undefined name, escape sequences, trailing whitespace, token-gated review tests

@@ -37,17 +37,14 @@ STAFF_ROLES         = {"ae", "viewer"}
 FIELD_ROLES          = {"field_engineer", "was"}
 TRIAGE_ROLES         = {"grievance_officer", "triage_officer"}
 
-
 def home_for(role: str) -> str:
     """Where to redirect a role after login / on access-denied."""
     return ROLE_HOME.get(role, "/staff")
-
 
 def redirect_home(staff: dict) -> RedirectResponse:
     """Shorthand for the extremely common 'not allowed, send them home' pattern."""
     role = staff.get("role") if staff else None
     return RedirectResponse(home_for(role), status_code=302)
-
 
 def check_role(staff: dict, *allowed_roles) -> bool:
     """
@@ -65,3 +62,22 @@ def check_role(staff: dict, *allowed_roles) -> bool:
     if not staff:
         return False
     return staff.get("role") in allowed_roles
+
+def deny_role(staff: dict, *denied_roles) -> bool:
+    """
+    Returns True if staff's role IS in denied_roles — the inverse of
+    check_role(). For routes open to everyone except a specific set
+    (e.g. analytics: everyone but field roles), rather than forcing
+    a deny-list route into an allow-list shape.
+
+    Usage:
+        OLD:
+            if staff["role"] in FIELD_ROLES:
+                return RedirectResponse("/field", status_code=302)
+        NEW:
+            if permissions.deny_role(staff, *permissions.FIELD_ROLES):
+                return RedirectResponse("/field", status_code=302)
+    """
+    if not staff:
+        return False
+    return staff.get("role") in denied_roles

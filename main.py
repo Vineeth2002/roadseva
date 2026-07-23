@@ -951,11 +951,11 @@ async def staff_dashboard(request: Request,
     if not staff:  return RedirectResponse("/login", status_code=302)
     if mc:         return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if staff["role"] in FIELD_ROLES:
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
-    if staff["role"] in COMMISSIONER_ROLES:
+    if permissions.deny_role(staff, *permissions.COMMISSIONER_ROLES):
         return RedirectResponse("/commissioner", status_code=302)
-    if staff["role"] in TRIAGE_ROLES:
+    if permissions.deny_role(staff, *permissions.TRIAGE_ROLES):
         return RedirectResponse("/triage", status_code=302)
 
     page_size  = page_size if page_size in (10,20,50,100) else 50
@@ -1016,7 +1016,7 @@ async def update_status(request: Request,
 
     if staff["role"] == "viewer":
         return RedirectResponse("/staff", status_code=302)
-    if staff["role"] in FIELD_ROLES and new_status in ("resolved","closed","open","assigned"):
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES) and new_status in ("resolved","closed","open","assigned"):
         return RedirectResponse("/field", status_code=302)
     if staff["role"] == "ae":
         report = database.get_report_by_id(report_id)
@@ -1036,7 +1036,7 @@ async def update_status(request: Request,
         except Exception as e:
             print(f"[rqi] repair record error: {e}")
 
-    if staff["role"] in FIELD_ROLES:
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
     safe_next = next_url if next_url and next_url.startswith("/staff") else "/staff"
     return RedirectResponse(safe_next, status_code=302)
@@ -1321,12 +1321,11 @@ async def analytics(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] in FIELD_ROLES:
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
     data = database.get_analytics_data()
     return templates.TemplateResponse("analytics.html", {
         "request": request, "staff": staff, "data": data, "now_ist": _now_ist()})
-
 
 # ── MAP ────────────────────────────────────────────────────────────────────────
 
@@ -1335,13 +1334,12 @@ async def map_page(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
-    if staff["role"] in FIELD_ROLES:
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
     reports     = database.get_all_reports(limit=500)
     geo_reports = [r for r in reports if r.get("latitude") and r.get("longitude")]
     return templates.TemplateResponse("map.html", {
         "request": request, "staff": staff, "reports": geo_reports})
-
 
 # ── EXPORT CSV ─────────────────────────────────────────────────────────────────
 
@@ -1349,7 +1347,7 @@ async def map_page(request: Request):
 async def export_csv(request: Request):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
-    if staff["role"] in FIELD_ROLES:
+    if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
     reports = database.get_all_reports(limit=10000)
     output  = io.StringIO()
@@ -1379,7 +1377,6 @@ async def export_csv(request: Request):
     return StreamingResponse(iter([output.getvalue()]), media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=roadseva_export_{ts}.csv"})
 
-
 # ── EXPORT TRAINING DATA ───────────────────────────────────────────────────────
 
 @app.get("/export/training-data")
@@ -1398,7 +1395,6 @@ async def export_training_data(request: Request):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     return StreamingResponse(iter([content]), media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=roadseva_training_{ts}.csv"})
-
 
 # ── ADMIN PANEL ────────────────────────────────────────────────────────────────
 
@@ -1454,7 +1450,6 @@ async def admin_toggle_staff(request: Request,
         return RedirectResponse("/admin", status_code=302)
     database.toggle_staff_active(staff_id, staff["name"])
     return RedirectResponse("/admin", status_code=302)
-
 
 # ── TEAM MANAGEMENT ────────────────────────────────────────────────────────────
 
@@ -1539,7 +1534,6 @@ async def team_toggle(request: Request,
         return RedirectResponse(f"/team?message=Account+{result}", status_code=302)
     return RedirectResponse(f"/team?error={result}", status_code=302)
 
-
 # ── STAFF LOG ──────────────────────────────────────────────────────────────────
 
 @app.get("/staff-log", response_class=HTMLResponse)
@@ -1594,7 +1588,6 @@ async def staff_log_post(request: Request,
         "message": "Complaint logged successfully.", "error": "",
         "report_id": report_id})
 
-
 # ── RQI ────────────────────────────────────────────────────────────────────────
 
 @app.get("/rqi", response_class=HTMLResponse)
@@ -1633,7 +1626,6 @@ async def ward_public(request: Request, ward_name: str):
     return templates.TemplateResponse("ward_public.html", {
         "request": request, "staff": staff, "data": data, "ward": ward_name})
 
-
 # ── ACCOUNT LOG ────────────────────────────────────────────────────────────────
 
 @app.get("/account-log", response_class=HTMLResponse)
@@ -1646,7 +1638,6 @@ async def account_log(request: Request):
     log = database.get_staff_audit_log(200)
     return templates.TemplateResponse("account_log.html", {
         "request": request, "staff": staff, "log": log})
-
 
 # ── CREDENTIAL CARD ────────────────────────────────────────────────────────────
 
@@ -1666,7 +1657,6 @@ async def credential_card(request: Request, staff_id: int):
         "created_by": target.get("created_by") or staff["name"],
         "issued_at":  (target.get("created_at") or database.now())[:10],
         "temp_password": "", "first_run": "0"})
-
 
 # ── SETUP WIZARD ───────────────────────────────────────────────────────────────
 
@@ -1714,7 +1704,6 @@ async def setup_post(request: Request,
         "org": org_name, "created_by": "IT Setup Wizard",
         "issued_at": database.now()[:10],
         "temp_password": commissioner_password, "first_run": "1"})
-
 
 # ── PRIVACY / HEALTH ───────────────────────────────────────────────────────────
 
