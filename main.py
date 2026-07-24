@@ -953,10 +953,9 @@ async def staff_dashboard(request: Request,
 
     if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
-    has_deep_link = bool(status or ward or severity or search or damage_type)
-    if permissions.deny_role(staff, *permissions.COMMISSIONER_ROLES) and not has_deep_link:
+    if permissions.deny_role(staff, "commissioner", "zonal_commissioner"):
         return RedirectResponse("/commissioner", status_code=302)
-    if permissions.deny_role(staff, *permissions.TRIAGE_ROLES) and not has_deep_link:
+    if permissions.deny_role(staff, *permissions.TRIAGE_ROLES):
         return RedirectResponse("/triage", status_code=302)
 
     page_size  = page_size if page_size in (10,20,50,100) else 50
