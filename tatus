@@ -1,5 +1,0 @@
-[33m9adf18e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m permissions.py migration: staff_dashboard, analytics, map_page, export_csv deny-list conversions
-[33m2730332[m permissions.py migration: rqi_page
-[33m8878fab[m strip trailing whitespace, fix recurring ruff W293
-[33mc1217d3[m pass role_labels into staff dashboard context, show correct role name instead of hardcoded Officer Dashboard
-[33md2b5947[m add missing role check to staff_log_get()
