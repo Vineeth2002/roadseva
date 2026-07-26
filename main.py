@@ -953,6 +953,8 @@ async def staff_dashboard(request: Request,
 
     if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
+    if permissions.deny_role(staff, "commissioner", "zonal_commissioner"):
+        return RedirectResponse("/commissioner", status_code=302)
     if permissions.deny_role(staff, *permissions.TRIAGE_ROLES):
         return RedirectResponse("/triage", status_code=302)
 
