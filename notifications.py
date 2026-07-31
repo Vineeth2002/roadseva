@@ -299,6 +299,7 @@ def notify_citizen(
     email:     str  = "",
     ward:      str  = "",
     lang:      str  = "en",
+    review_url: str = "",
 ) -> dict:
     """
     Send notification to citizen for a given event.

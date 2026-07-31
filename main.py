@@ -46,7 +46,7 @@ import permissions
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
-from attrs import inspect
+#from attrs import inspect  # not in requirements.txt, never used
 
 from fastapi import FastAPI, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, JSONResponse
@@ -434,6 +434,7 @@ async def submit(
             phone     = citizen_phone,
             email     = citizen_email,
             ward      = ward or "Pending assignment",
+
         )
     except Exception as e:
         print(f"[submit] notify_citizen error: {e}")
@@ -768,6 +769,7 @@ async def work_done_upload(request: Request,
                     phone     = report.get("citizen_phone",""),
                     email     = report.get("citizen_email",""),
                     ward      = report.get("ward",""),
+                    review_url = review_url,
                 )
         except Exception as e:
             print(f"[work_done] notify_citizen error: {e}")
@@ -1643,7 +1645,7 @@ async def account_log(request: Request):
 async def credential_card(request: Request, staff_id: int):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
-    if staff["role"] not in ("admin","commissioner","zonal_commissioner","ae","officer"):
+    if staff["role"] not in ("admin","commissioner","zonal_commissioner","ae"):
         return RedirectResponse("/staff", status_code=302)
     target = database.get_staff_by_id(staff_id)
     if not target: return RedirectResponse("/team", status_code=302)

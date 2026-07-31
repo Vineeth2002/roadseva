@@ -994,14 +994,46 @@ def get_reports_for_role(
         )
 
     elif role in ("was",):
-        # WAS sees only their ward(s)
-        ward_str = staff.get("ward_list", "") or staff.get("zone", "")
-        was_ward = ward or (ward_str.split(",")[0].strip() if ward_str else None)
-        return get_all_reports(
-            status=status, ward=was_ward, severity=severity,
-            search=search, damage_type=damage_type,
-            limit=limit, offset=offset,
-        )
+        ward_str = staff.get("ward_list", "") or ""
+        was_wards = [w.strip() for w in ward_str.split(",") if w.strip()]
+        if ward:
+            return get_all_reports(
+                status=status, ward=ward, severity=severity,
+                search=search, damage_type=damage_type,
+                limit=limit, offset=offset,
+            )
+        if not was_wards:
+            return []
+        if len(was_wards) == 1:
+            return get_all_reports(
+                status=status, ward=was_wards[0], severity=severity,
+                search=search, damage_type=damage_type,
+                limit=limit, offset=offset,
+            )
+        conn = get_conn(); c = conn.cursor()
+        conds  = [f"ward IN ({','.join(['?']*len(was_wards))})"]
+        params = list(was_wards)
+        if status == "active_only":
+            conds.append("status NOT IN ('resolved','closed','pending_triage')")
+        elif status and status != "all":
+            conds.append("status = ?"); params.append(status)
+        if severity and severity != "all":
+            conds.append("severity = ?"); params.append(severity)
+        if damage_type and damage_type != "all":
+            conds.append("damage_type = ?"); params.append(damage_type)
+        if search:
+            conds.append(
+                "(report_id LIKE ? OR ward LIKE ? OR citizen_name LIKE ? OR description LIKE ?)"
+            )
+            s = f"%{search}%"; params.extend([s,s,s,s])
+        where = "WHERE " + " AND ".join(conds)
+        params.extend([limit, offset])
+        c.execute(_q(
+            f"SELECT * FROM reports {where} ORDER BY submitted_at DESC LIMIT ? OFFSET ?"
+        ), params)
+        results = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return results
 
     elif role == "field_engineer":
         # Legacy pilot role — only assigned to them
@@ -1156,7 +1188,7 @@ def mark_work_done(report_id: str, work_done_photo: str, done_by: str):
     ts = now()
     c.execute(_q(
         "UPDATE reports SET work_done_photo=?, work_done_at=?, "
-        "status='inspected', updated_at=?, updated_by=? "
+        "status='resolved', updated_at=?, updated_by=? "
         "WHERE report_id=?"
     ), (work_done_photo, ts, ts, done_by, report_id))
     c.execute(_q(
@@ -1281,14 +1313,14 @@ def get_pending_ward_flags(division: str = "") -> list:
     AE sees flags for their division. Admin/commissioner sees all.
     """
     conn = get_conn(); c = conn.cursor()
-    c.execute("""
-        SELECT r.*, wrl.requested_ward, wrl.id as flag_id
-        FROM reports r
-        JOIN ward_reassignment_log wrl ON wrl.report_id = r.report_id
-        WHERE r.ward_flag_status = 'pending'
-          AND wrl.decision = 'pending'
-        ORDER BY r.ward_flag_at ASC
-    """)
+    c.execute(_q("""
+    SELECT r.*, wrl.requested_ward, wrl.id as flag_id
+    FROM reports r
+    JOIN ward_reassignment_log wrl ON wrl.report_id = r.report_id
+    WHERE r.ward_flag_status = 'pending'
+      AND wrl.decision = 'pending'
+    ORDER BY r.ward_flag_at ASC
+    """))
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -1307,13 +1339,13 @@ def approve_ward_reassignment(
     conn = get_conn(); c = conn.cursor()
 
     # Get the pending flag
-    c.execute("""
-        SELECT wrl.*, r.ward as current_ward
-        FROM ward_reassignment_log wrl
-        JOIN reports r ON wrl.report_id = r.report_id
-        WHERE wrl.report_id = ? AND wrl.decision = 'pending'
-        ORDER BY wrl.flagged_at DESC LIMIT 1
-    """, (report_id,))
+    c.execute(_q("""
+    SELECT wrl.*, r.ward as current_ward
+    FROM ward_reassignment_log wrl
+    JOIN reports r ON wrl.report_id = r.report_id
+    WHERE wrl.report_id = ? AND wrl.decision = 'pending'
+    ORDER BY wrl.flagged_at DESC LIMIT 1
+    """), (report_id,))
     flag = c.fetchone()
     if not flag:
         conn.close(); return False, "No pending flag found"
