@@ -107,12 +107,6 @@ COOKIE_NAME    = "session_token"
 COOKIE_MAX_AGE = 8 * 3600
 WARRANTY_DAYS  = 180
 
-COMMISSIONER_ROLES = {"commissioner", "admin", "zonal_commissioner"}
-STAFF_ROLES        = {"ae", "viewer"}
-FIELD_ROLES        = {"field_engineer", "was"}
-TRIAGE_ROLES       = {"grievance_officer", "triage_officer"}
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     database.init_db()
@@ -560,8 +554,8 @@ async def triage_dashboard(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if staff["role"] not in TRIAGE_ROLES | {"admin", "commissioner"}:
-        return RedirectResponse(ROLE_HOME.get(staff["role"], "/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, "admin", "commissioner"):
+        return permissions.redirect_home(staff)
 
     reports = database.get_pending_triage_reports(limit=100)
     token   = request.cookies.get(COOKIE_NAME, "")
@@ -571,7 +565,6 @@ async def triage_dashboard(request: Request):
         "csrf": generate_csrf_token(token),
         "wards": WARD_NAMES,
     })
-
 
 @app.post("/assign-ward", response_class=HTMLResponse)
 async def assign_ward(request: Request,
@@ -585,8 +578,8 @@ async def assign_ward(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/triage?error=csrf", status_code=302)
 
-    if staff["role"] not in TRIAGE_ROLES | {"admin", "commissioner"}:
-        return RedirectResponse(ROLE_HOME.get(staff["role"], "/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, "admin", "commissioner"):
+        return permissions.redirect_home(staff)
 
     ward, _ = sanitize_input(ward)
     ok, msg = database.assign_ward_from_triage(report_id, ward, staff["name"])
@@ -612,8 +605,8 @@ async def flag_incorrect_ward(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field?error=csrf", status_code=302)
 
-    if staff["role"] not in FIELD_ROLES | {"admin"}:
-        return RedirectResponse(ROLE_HOME.get(staff["role"], "/field"), status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES, "admin"):
+        return permissions.redirect_home(staff)
 
     requested_ward, _ = sanitize_input(requested_ward)
     reason, _         = sanitize_input(reason)
@@ -644,8 +637,8 @@ async def approve_ward_flag(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/staff?error=csrf", status_code=302)
 
-    if staff["role"] not in ("ae", "admin", "commissioner", "zonal_commissioner"):
-        return RedirectResponse(ROLE_HOME.get(staff["role"], "/staff"), status_code=302)
+    if not permissions.check_role(staff, "ae", "admin", "commissioner", "zonal_commissioner"):
+        return permissions.redirect_home(staff)
 
     reason, _ = sanitize_input(reason)
     approved  = decision == "approve"
@@ -729,8 +722,8 @@ async def work_done_upload(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field?error=csrf", status_code=302)
 
-    if staff["role"] not in FIELD_ROLES:
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/field"), status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
 
     try:
         photo_bytes = await work_done_photo.read()
@@ -1097,8 +1090,8 @@ async def field_dashboard(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if staff["role"] not in FIELD_ROLES:
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
 
     all_active = database.get_all_reports(
         status="active_only", assigned_to=staff["name"], limit=200)
@@ -1200,8 +1193,8 @@ async def reject_inspection(request: Request,
     csrf:        str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
-    if staff["role"] not in FIELD_ROLES:
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
@@ -1279,8 +1272,8 @@ async def commissioner(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if staff["role"] not in COMMISSIONER_ROLES:
-        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not permissions.check_role(staff, *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
 
     ward_filter = None
     if staff["role"] == "zonal_commissioner":
@@ -1307,12 +1300,11 @@ async def api_stats(request: Request):
     role     = staff.get("role","")
     division = staff.get("zone","")
 
-    if role in FIELD_ROLES:
+    if role in permissions.FIELD_ROLES:
         return database.get_live_stats_for_role(staff["name"], role)
     elif role in ("ae","zonal_commissioner") and division:
         return database.get_live_stats_for_role(staff["name"], role, division=division)
     return database.get_live_stats()
-
 
 # ── ANALYTICS ─────────────────────────────────────────────────────────────────
 
