@@ -591,6 +591,10 @@ def _safe_add_columns(c, conn):
             ("satisfaction_reviewed_at","TEXT DEFAULT ''"),
             ("work_done_photo",     "TEXT DEFAULT ''"),
             ("work_done_at",        "TEXT DEFAULT ''"),
+            ("verify_lat",      "REAL DEFAULT NULL"),
+            ("verify_lng",      "REAL DEFAULT NULL"),
+            ("work_done_lat",   "REAL DEFAULT NULL"),
+            ("work_done_lng",   "REAL DEFAULT NULL"),
         ],
     }
     for table, cols in new_cols.items():
