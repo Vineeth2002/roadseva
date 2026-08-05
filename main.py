@@ -554,7 +554,7 @@ async def triage_dashboard(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
 
-    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, "admin", "commissioner"):
+    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, *permissions.COMMISSIONER_ROLES):
         return permissions.redirect_home(staff)
 
     reports = database.get_pending_triage_reports(limit=100)
@@ -715,6 +715,9 @@ async def resolve_dispute(request: Request,
 async def work_done_upload(request: Request,
     report_id:       str = Form(...),
     work_done_photo: UploadFile = File(...),
+    work_done_lat:   str = Form(default=""),
+    work_done_lng:   str = Form(default=""),
+    work_note:       str = Form(default=""),
     csrf:            str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
@@ -739,8 +742,24 @@ async def work_done_upload(request: Request,
         except Exception as e:
             print(f"[work_done] Cloudinary error: {e}")
             photo_data = f"data:image/{inspect['ext']};base64,{base64.b64encode(inspect['clean_bytes']).decode()}"
-        database.save_work_done_photo(report_id, photo_data, staff["name"])
-        database.update_report_status(report_id, "resolved", staff["name"])
+        lat = None; lng = None
+        try:
+            if work_done_lat and work_done_lng:
+                lat = float(work_done_lat)
+                lng = float(work_done_lng)
+        except (ValueError, TypeError):
+            pass
+
+        database.mark_work_done(
+            report_id,
+            photo_data,
+            staff["name"],
+            work_done_lat = lat,
+            work_done_lng = lng,
+        )
+        if work_note:
+            work_note, _ = sanitize_input(work_note)
+            database.add_comment(report_id, f"🔨 Work done: {work_note}", staff["name"])
         database.add_comment(report_id,
             f"✅ Work completed by {staff['name']}. Photo uploaded. Pending citizen verification.",
             staff["name"])
@@ -1095,7 +1114,7 @@ async def field_dashboard(request: Request):
 
     all_active = database.get_all_reports(
         status="active_only", assigned_to=staff["name"], limit=200)
-    active = [r for r in all_active if r["status"] in ("assigned","inspecting")]
+    active = [r for r in all_active if r["status"] in ("assigned","inspecting","inspected")]
 
     sev_order = {"critical":0,"high":1,"medium":2,"low":3,"unknown":4}
     active.sort(key=lambda r: sev_order.get(r.get("severity","unknown"),4))
@@ -1124,7 +1143,6 @@ async def route_page(request: Request):
     if not staff: return RedirectResponse("/login", status_code=302)
     return RedirectResponse("/field", status_code=302)
 
-
 # ── START INSPECTION ───────────────────────────────────────────────────────────
 
 @app.post("/start-inspection", response_class=HTMLResponse)
@@ -1132,6 +1150,8 @@ async def start_inspection(request: Request,
     report_id: str = Form(...), csrf: str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
@@ -1139,7 +1159,99 @@ async def start_inspection(request: Request,
     return RedirectResponse("/field", status_code=302)
 
 
-# ── COMPLETE INSPECTION ────────────────────────────────────────────────────────
+# ── WAS VERIFY DAMAGE — STEP 2 (before photo + damage type correction) ─────────
+# WAS is physically on site. Corrects damage type, uploads before photo.
+# This is the primary AI training point — ground truth from a field officer.
+
+@app.post("/was-verify-damage", response_class=HTMLResponse)
+async def was_verify_damage_post(
+    request:              Request,
+    report_id:            str        = Form(...),
+    verified_damage_type: str        = Form(...),
+    site_condition:       str        = Form(...),
+    site_photo:           UploadFile = File(...),
+    inspection_notes:     str        = Form(default=""),
+    verify_lat:           str        = Form(default=""),
+    verify_lng:           str        = Form(default=""),
+    csrf:                 str        = Form(default=""),
+):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
+    token = request.cookies.get(COOKIE_NAME,"")
+    if not verify_csrf_token(token, csrf):
+        return RedirectResponse("/field?error=Session+expired", status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/field?error=Report+not+found", status_code=302)
+    if report.get("status") != "inspecting":
+        return RedirectResponse("/field?error=Complaint+not+in+inspecting+status", status_code=302)
+
+    # Read and validate photo
+    raw = await site_photo.read()
+    if not raw:
+        return RedirectResponse("/field?error=Before+photo+is+required", status_code=302)
+
+    try:
+        safe_fn, _ = sanitize_filename(site_photo.filename or "before.jpg")
+        inspect    = deep_inspect_photo(raw, safe_fn)
+        if not inspect["safe"]:
+            return RedirectResponse(
+                f"/field?error=Photo+rejected:+{inspect['error'][:50]}", status_code=302
+            )
+    except ValueError as e:
+        return RedirectResponse(
+            f"/field?error={urllib.parse.quote(str(e))}", status_code=302
+        )
+
+    # Upload to Cloudinary or base64 fallback
+    photo_data = ""
+    try:
+        from storage import upload_to_cloudinary
+        cloud_url  = upload_to_cloudinary(inspect["clean_bytes"], report_id + "_before")
+        photo_data = cloud_url if cloud_url else (
+            f"data:image/{inspect['ext']};base64,"
+            + base64.b64encode(inspect["clean_bytes"]).decode()
+        )
+    except Exception as e:
+        print(f"[was_verify] Cloudinary error: {e}")
+        photo_data = (
+            f"data:image/{inspect['ext']};base64,"
+            + base64.b64encode(inspect["clean_bytes"]).decode()
+        )
+
+    # Parse GPS coordinates
+    lat = None; lng = None
+    try:
+        if verify_lat and verify_lng:
+            lat = float(verify_lat)
+            lng = float(verify_lng)
+    except (ValueError, TypeError):
+        pass
+
+    ok = database.was_verify_damage(
+        report_id            = report_id,
+        verified_damage_type = verified_damage_type,
+        site_condition       = site_condition,
+        before_photo_data    = photo_data,
+        verified_by          = staff["name"],
+        notes                = inspection_notes,
+        verify_lat           = lat,
+        verify_lng           = lng,
+    )
+
+    if not ok:
+        return RedirectResponse("/field?error=Verification+failed", status_code=302)
+
+    return RedirectResponse("/field?verified=1", status_code=302)
+
+
+# ── COMPLETE INSPECTION (legacy — kept for backward compatibility) ──────────────
+# This route is no longer called from field.html.
+# WAS now uses /was-verify-damage (step 2) and /work-done-upload (step 3).
+# Kept here so existing bookmarks or old form submissions don't 404.
 
 @app.post("/complete-inspection", response_class=HTMLResponse)
 async def complete_inspection(request: Request,
@@ -1154,7 +1266,7 @@ async def complete_inspection(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
 
-    new_status = "inspected" if damage_confirmed=="yes" else "open"
+    new_status = "inspected" if damage_confirmed == "yes" else "open"
     database.update_report_status(report_id, new_status, staff["name"])
 
     note_parts = []
@@ -1168,21 +1280,22 @@ async def complete_inspection(request: Request,
         try:
             report = database.get_report_by_id(report_id)
             if report:
-                database.log_training_label(
-                    report_id        = report_id,
-                    ward             = report.get("ward",""),
-                    reported_type    = report.get("damage_type",""),
-                    verified_type    = action_taken or report.get("damage_type",""),
-                    verified_by      = staff["name"],
-                    division         = report.get("division_name",""),
-                    auto_assigned    = bool(report.get("assigned_to","")),
-                    escalation_count = int(report.get("escalation_count",0) or 0),
+                database.save_training_sample(
+                    report_id            = report_id,
+                    ward                 = report.get("ward",""),
+                    citizen_damage_type  = report.get("damage_type",""),
+                    verified_damage_type = action_taken or report.get("damage_type",""),
+                    severity             = report.get("severity","unknown"),
+                    site_condition       = "same",
+                    verified_by          = staff["name"],
+                    verified_at          = database.now(),
+                    photo_data           = "",
+                    is_override          = False,
                 )
         except Exception as e:
             print(f"[training] complete-inspection error: {e}")
 
-    return RedirectResponse("/route", status_code=302)
-
+    return RedirectResponse("/field", status_code=302)
 
 # ── REJECT INSPECTION ──────────────────────────────────────────────────────────
 
@@ -1259,6 +1372,10 @@ async def verify_inspection(request: Request,
         site_condition, site_photo_data, staff["name"], inspection_notes,
         is_override=is_override, override_reason=override_reason)
     database.update_report_status(report_id, "inspected", staff["name"])
+
+    if not permissions.check_role(staff, "ae", "admin", "commissioner",
+                                  "zonal_commissioner", *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
 
     referer = request.headers.get("referer","")
     return RedirectResponse("/staff" if "/staff" in referer else "/field", status_code=302)
@@ -1637,8 +1754,8 @@ async def account_log(request: Request):
 async def credential_card(request: Request, staff_id: int):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
-    if staff["role"] not in ("admin","commissioner","zonal_commissioner","ae"):
-        return RedirectResponse("/staff", status_code=302)
+    if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
+        return permissions.redirect_home(staff)
     target = database.get_staff_by_id(staff_id)
     if not target: return RedirectResponse("/team", status_code=302)
     return templates.TemplateResponse("credential_card.html", {
