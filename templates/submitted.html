@@ -141,7 +141,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
       {% if severity and severity != 'unknown' %}
       <div class="severity-row">
         <span class="sev-badge sev-{{ severity }}">
-          {% if severity == 'critical' %}🔴{% elif severity == 'high' %}🟡{% elif severity == 'medium' %}🟢{% else %}⚪{% endif %}
+          {% if severity == 'critical' %}🔴{% elif severity == 'high' %}🟠{% elif severity == 'medium' %}🟡{% else %}⚪{% endif %}
           {{ severity | title }}
         </span>
         <div class="sev-text">
@@ -167,16 +167,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
         <div class="tl-item">
           <div class="tl-dot active" style="color:#fff;font-size:14px">🏛️</div>
           <div class="tl-content">
-            <div class="tl-label">GVMC Reviews &amp; Assigns</div>
-            <div class="tl-desc">The officer reviews and assigns a field inspector for inspection.</div>
-            <div class="tl-time">{% if severity == 'critical' %}Within 24 hours{% elif severity == 'high' %}Within 1–2 working days{% else %}Within 2–3 working days{% endif %}</div>
+            <div class="tl-label">Assigned to Ward Officer</div>
+            <div class="tl-desc">Your complaint has been automatically assigned to the Ward Amenities Secretary for your area.</div>
+            <div class="tl-time">Already done — officer notified</div>
           </div>
         </div>
         <div class="tl-item">
           <div class="tl-dot" style="font-size:14px">👷</div>
           <div class="tl-content">
-            <div class="tl-label">Field Inspector Inspects</div>
-            <div class="tl-desc">Engineer visits the location, confirms the damage, and raises a repair work order.</div>
+            <div class="tl-label">Ward Officer Visits &amp; Repairs</div>
+            <div class="tl-desc">The Ward Amenities Secretary visits the site, verifies the damage, arranges repair crew and materials, and fixes the road.</div>
             <div class="tl-time">{% if severity == 'critical' %}Within 2–3 days{% elif severity == 'high' %}Within 3–5 days{% else %}Within 5–7 working days{% endif %}</div>
           </div>
         </div>
@@ -201,8 +201,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
           <span>Use the <strong>Track Grievance</strong> button below to check current status using your grievance number.</span>
         </div>
         <div class="next-item">
-          <span class="ni-icon">📞</span>
-          <span>If you do not receive an update within the expected time, call <strong>1800-4250-0009</strong> (Toll Free).</span>
+          <span class="ni-icon">📸</span>
+          <span>When repair is complete, you will receive an SMS with a link to view <strong>before and after photos</strong> of the repair — taken by the field officer at your location.</span>
+        </div>
+        <div class="next-item">
+          <span class="ni-icon">⭐</span>
+          <span>You will also be asked to <strong>confirm the repair was done properly</strong>. If you are not satisfied, your complaint will be escalated to a senior officer automatically.</span>
         </div>
 
         {% if rqi_breach %}

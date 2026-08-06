@@ -14,7 +14,6 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-height:100vh; }
 
-/* ── HEADER ── */
 .header {
   background:var(--navy); color:white; padding:13px 16px;
   display:flex; justify-content:space-between; align-items:center;
@@ -22,39 +21,46 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 }
 .header h1    { font-size:16px; }
 .header-sub   { font-size:11px; color:rgba(255,255,255,.65); margin-top:2px; }
-.header-right { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.nav-link { color:white; text-decoration:none; padding:5px 10px; border:1px solid rgba(255,255,255,.3); border-radius:6px; font-size:12px; }
-.nav-link:hover { background:rgba(255,255,255,.12); }
-.nav-logout { background:#c0392b; border-color:#c0392b; }
+.header-right { display:flex; gap:6px; align-items:center; }
+.nav-link     { color:white; text-decoration:none; padding:5px 10px; border:1px solid rgba(255,255,255,.3); border-radius:6px; font-size:12px; }
+.nav-logout   { background:#c0392b; border-color:#c0392b; }
 
-/* ── NETWORK WARNING ── */
-.network-bar {
-  display:none; background:#fff3e0; border-bottom:2px solid var(--orange);
-  padding:7px 16px; font-size:12px; color:#92400e; text-align:center;
-}
+.network-bar { display:none; background:#fff3e0; border-bottom:2px solid var(--orange); padding:7px 16px; font-size:12px; color:#92400e; text-align:center; }
 .network-bar.visible { display:block; }
 
-/* ── FIELD ENGINEER ROLE NOTICE ── */
-.role-notice {
-  background:#e8f5e9; border-bottom:2px solid var(--green);
-  padding:9px 16px; font-size:12px; color:#1e8449; text-align:center;
-}
+.error-bar { background:#fde8e8; border-bottom:2px solid #e74c3c; padding:10px 16px; font-size:12px; color:#c0392b; display:flex; align-items:center; gap:8px; }
+
+.role-notice { background:#e8f5e9; border-bottom:2px solid var(--green); padding:9px 16px; font-size:12px; color:#1e8449; text-align:center; }
 
 /* ── SUMMARY ── */
-.summary { display:flex; gap:0; background:var(--white); border-bottom:1px solid var(--border); }
+.summary { display:flex; background:var(--white); border-bottom:1px solid var(--border); }
 .sum-item { flex:1; text-align:center; padding:13px 8px; border-right:1px solid var(--border); }
 .sum-item:last-child { border-right:none; }
-.sum-num   { font-size:24px; font-weight:bold; line-height:1; }
+.sum-num   { font-size:22px; font-weight:bold; line-height:1; }
 .sum-label { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:.5px; }
 
+/* ── WORKFLOW STEPS LEGEND ── */
+.workflow-legend {
+  background:#f8f9ff; border-bottom:1px solid var(--border);
+  padding:8px 14px; display:flex; gap:0; overflow-x:auto;
+}
+.wf-step {
+  display:flex; align-items:center; gap:4px;
+  font-size:11px; color:var(--muted); white-space:nowrap;
+  padding:4px 8px; border-radius:20px;
+}
+.wf-step.active { background:var(--navy); color:white; }
+.wf-arrow { color:#ccc; font-size:14px; padding:0 2px; }
+
 /* ── REPORT CARD ── */
-.page-content { padding-bottom:72px; }
+.page-content { padding-bottom:80px; }
 .report-card {
   background:var(--white); margin:10px 12px; border-radius:12px;
   overflow:hidden; box-shadow:var(--shadow); border-left:5px solid var(--border);
 }
 .report-card.assigned   { border-left-color:var(--orange); }
 .report-card.inspecting { border-left-color:var(--purple); }
+.report-card.inspected  { border-left-color:var(--blue); }
 .report-card.sla-breach { border-left-color:var(--red) !important; background:#fffafa !important; }
 
 .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:flex-start; }
@@ -63,12 +69,23 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 .status-badge { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap; }
 .badge-assigned   { background:#fef3cd; color:#d35400; }
 .badge-inspecting { background:#ede7f6; color:var(--purple); border:1px solid var(--purple); animation:pulse 1.5s infinite; }
-.overdue-badge { display:inline-block; background:var(--red); color:white; font-size:10px; font-weight:bold; padding:1px 7px; border-radius:10px; margin-left:5px; }
+.badge-inspected  { background:#e3f2fd; color:var(--blue); border:1px solid var(--blue); }
+.overdue-badge    { display:inline-block; background:var(--red); color:white; font-size:10px; font-weight:bold; padding:1px 7px; border-radius:10px; margin-left:5px; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 
-.card-body { padding:12px 14px; }
-.info-row  { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-bottom:7px; align-items:center; }
+/* ── STEP PROGRESS BAR inside card ── */
+.step-bar {
+  display:flex; background:#f8f8f8; border-bottom:1px solid #eee;
+  padding:8px 14px; gap:0;
+}
+.step { flex:1; text-align:center; font-size:10px; padding:5px 4px; color:#bbb; position:relative; }
+.step.done  { color:var(--green); font-weight:bold; }
+.step.current { color:var(--navy); font-weight:bold; background:#e8f0ff; border-radius:6px; }
+.step::after { content:'→'; position:absolute; right:-5px; top:50%; transform:translateY(-50%); color:#ddd; font-size:12px; }
+.step:last-child::after { display:none; }
 
+.card-body { padding:12px 14px; }
+.info-row  { display:flex; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-bottom:7px; align-items:center; }
 .citizen-box { background:#f0f4ff; border-radius:7px; padding:7px 11px; font-size:13px; margin-bottom:9px; }
 
 .sev-strip { padding:7px 11px; border-radius:6px; font-size:13px; font-weight:bold; margin:7px 0; }
@@ -78,83 +95,114 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 .sev-low      { background:#d4edda; color:#1e8449; border-left:4px solid var(--green); }
 .sev-unknown  { background:#f0f0f0; color:#888; border-left:4px solid #ccc; }
 
-.verified-strip { background:#e8f5e9; border-left:4px solid var(--green); padding:7px 11px; border-radius:6px; font-size:12px; color:#2e7d32; margin:5px 0; }
+.photo-pair { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.photo-col  { display:flex; flex-direction:column; align-items:flex-start; gap:4px; flex:1; min-width:120px; }
+.photo-label { font-size:11px; font-weight:bold; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+.report-photo { width:100%; max-width:220px; height:150px; border-radius:8px; object-fit:cover; cursor:pointer; border:2px solid #eee; display:block; }
+.report-photo.citizen-photo { border-color:#95a5a6; }
+.report-photo.before-photo  { border-color:var(--orange); }
+.report-photo.after-photo   { border-color:var(--green); }
+.report-photo:hover { opacity:.9; }
 
-.report-photo { width:100%; max-width:280px; height:170px; border-radius:8px; object-fit:cover; cursor:pointer; border:2px solid #eee; display:block; margin-bottom:4px; }
-.report-photo:hover { border-color:var(--navy); }
-.photo-hint { font-size:11px; color:var(--muted); margin-bottom:9px; }
+/* ── GPS STAMP ── */
+.gps-stamp {
+  background:#f0fff4; border:1px solid #b7e4c7; border-radius:6px;
+  padding:5px 9px; font-size:11px; color:#1e8449; margin-bottom:8px;
+  display:flex; align-items:center; gap:5px;
+}
+.gps-stamp.warning { background:#fff3e0; border-color:#fcd34d; color:#92400e; }
 
 /* ── ACTION STRIP ── */
 .action-strip { display:flex; gap:7px; flex-wrap:wrap; padding:11px 14px; background:#fafafa; border-top:1px solid var(--border); }
-.btn { padding:8px 16px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:opacity .2s; }
+.btn { padding:8px 14px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:opacity .2s; }
 .btn:disabled { opacity:.5; cursor:not-allowed; }
 .btn-nav    { background:#3a86ff; }
 .btn-start  { background:var(--purple); }
-.btn-verify { background:var(--green); }
 .btn-note   { background:#8e44ad; }
-.btn-done   { background:var(--orange); }
 
-/* ── VERIFY FORM ── */
-.verify-panel { background:#f0fff4; border:1.5px solid #b7e4c7; border-radius:10px; padding:14px; margin-top:11px; }
-.verify-panel h3 { font-size:13px; color:#1e8449; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
-.verify-panel p  { font-size:12px; color:#2e7d32; margin-bottom:12px; line-height:1.5; }
-.v-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-@media(max-width:500px){ .v-grid { grid-template-columns:1fr; } }
-.v-group { display:flex; flex-direction:column; gap:4px; }
-.v-group label { font-size:12px; font-weight:bold; color:#555; }
-.v-group select, .v-group input { padding:8px 10px; border:1px solid #b7e4c7; border-radius:6px; font-size:13px; background:white; width:100%; }
-.upload-hint { font-size:11px; color:var(--muted); margin-top:3px; display:none; }
-.upload-hint.visible { display:block; }
-
-/* ── DAMAGE NOT FOUND PANEL ── */
-.not-found-panel {
-  background:#fff0f0; border:1.5px solid #fca5a5;
-  border-radius:10px; padding:13px 14px; margin:0 14px 0;
+/* ── STEP PANELS ── */
+.step-panel {
+  margin:0 14px 12px;
+  border-radius:10px; padding:14px; border:2px solid;
 }
-.not-found-panel h4 { font-size:13px; color:#b91c1c; margin-bottom:6px; font-weight:bold; }
-.not-found-panel p  { font-size:12px; color:#991b1b; margin-bottom:10px; line-height:1.5; }
-.not-found-form  { display:flex; gap:7px; flex-wrap:wrap; }
-.not-found-input { flex:1; min-width:180px; padding:8px 10px; border:1px solid #fca5a5; border-radius:6px; font-size:13px; background:white; }
-.btn-reject { background:#b91c1c; }
+.panel-before-photo { background:#fff8f0; border-color:#fcd34d; }
+.panel-work-done    { background:#f0fff4; border-color:#b7e4c7; }
+.panel-ward-flag    { background:#fff0f0; border-color:#fca5a5; }
+.panel-not-found    { background:#fff0f0; border-color:#fca5a5; }
 
-/* ── REPAIR DONE STRIP ── */
-.repair-done-strip {
-  background:#fff8e1; border:1.5px solid var(--orange);
-  border-radius:10px; padding:13px 14px; margin-top:11px;
+.panel-title { font-size:13px; font-weight:bold; margin-bottom:5px; }
+.panel-desc  { font-size:12px; line-height:1.5; margin-bottom:12px; }
+.panel-before-photo .panel-title { color:#92400e; }
+.panel-work-done    .panel-title { color:#1e8449; }
+.panel-ward-flag    .panel-title { color:#b91c1c; }
+.panel-not-found    .panel-title { color:#b91c1c; }
+.panel-before-photo .panel-desc  { color:#b45309; }
+.panel-work-done    .panel-desc  { color:#2e7d32; }
+.panel-ward-flag    .panel-desc  { color:#991b1b; }
+.panel-not-found    .panel-desc  { color:#991b1b; }
+
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+@media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
+.f-group { display:flex; flex-direction:column; gap:4px; }
+.f-group label { font-size:12px; font-weight:bold; color:#555; }
+.f-group select,
+.f-group input[type=text],
+.f-group textarea { padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px; background:white; width:100%; font-family:Arial,sans-serif; }
+.f-group input[type=file] { padding:6px; border:1px dashed #aaa; border-radius:6px; background:white; width:100%; font-size:12px; }
+.f-group input[type=hidden] {}
+
+.gps-capture { background:#e8f5e9; border-radius:6px; padding:8px 10px; font-size:12px; color:#1e8449; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.gps-capture.error { background:#fde8e8; color:#c0392b; }
+
+.upload-preview { max-width:100%; max-height:120px; border-radius:6px; margin-top:5px; display:none; }
+.upload-hint { font-size:11px; color:var(--muted); margin-top:3px; }
+
+.submit-full { width:100%; padding:12px; justify-content:center; font-size:14px; margin-top:4px; }
+.btn-orange { background:var(--orange); }
+.btn-green  { background:var(--green); }
+.btn-red    { background:#b91c1c; }
+.btn-blue   { background:var(--blue); }
+
+/* verified banner */
+.verified-banner {
+  background:#e8f5e9; border-left:4px solid var(--green);
+  padding:8px 14px; font-size:12px; color:#2e7d32; margin:0 14px 8px;
+  border-radius:0 6px 6px 0;
 }
-.repair-done-strip h4 { font-size:13px; color:#92400e; margin-bottom:7px; font-weight:bold; }
-.repair-done-strip p  { font-size:12px; color:#b45309; margin-bottom:10px; line-height:1.5; }
-.repair-done-form { display:flex; gap:7px; flex-wrap:wrap; }
-.repair-done-input { flex:1; min-width:180px; padding:8px 10px; border:1px solid #fcd34d; border-radius:6px; font-size:13px; background:white; font-family:Arial,sans-serif; }
+.work-done-banner {
+  background:#e3f2fd; border-left:4px solid var(--blue);
+  padding:8px 14px; font-size:12px; color:var(--blue); margin:0 14px 8px;
+  border-radius:0 6px 6px 0;
+}
 
-/* ── COMMENT FORM ── */
-.comment-form-strip { padding:8px 14px 12px; border-top:1px solid var(--border); background:#fafafa; display:flex; gap:7px; }
+/* comment strip */
+.comment-strip { padding:8px 14px 12px; border-top:1px solid var(--border); background:#fafafa; display:flex; gap:7px; }
 .comment-input { flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px; background:white; min-width:0; }
-.comment-input:focus { outline:none; border-color:var(--purple); }
 
-/* ── ACTIVITY ── */
+/* activity */
 .activity { padding:10px 14px 12px; border-top:1px solid #f0f0f0; }
 .activity-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; font-weight:bold; }
 .a-item { display:flex; gap:9px; font-size:12px; padding:5px 7px; background:#fafafa; border-radius:6px; margin-bottom:4px; }
-.a-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.a-dot  { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
 .dot-submitted           { background:#95a5a6; }
 .dot-status_change       { background:var(--red); }
 .dot-assigned            { background:var(--orange); }
 .dot-comment             { background:#8e44ad; }
 .dot-inspection_verified { background:var(--green); }
+.dot-work_done           { background:var(--blue); }
 .a-body { flex:1; color:#333; line-height:1.4; }
-.a-who { font-weight:bold; color:var(--navy); }
+.a-who  { font-weight:bold; color:var(--navy); }
 .a-time { font-size:11px; color:#aaa; margin-top:2px; }
 .comment-item { background:#f9f4ff; border-radius:6px; padding:7px 11px; margin-top:4px; }
 .comment-text { font-size:13px; color:#333; }
 .comment-meta { font-size:11px; color:#aaa; margin-top:2px; }
 
-/* ── EMPTY ── */
+/* empty */
 .empty { text-align:center; padding:56px 20px; color:var(--muted); }
 .empty-icon { font-size:44px; margin-bottom:14px; }
 .empty h3   { font-size:18px; font-weight:bold; color:var(--green); margin-bottom:7px; }
 
-/* ── BOTTOM NAV ── */
+/* bottom nav */
 .bottom-nav {
   position:fixed; bottom:0; left:0; right:0;
   background:var(--white); border-top:1px solid var(--border);
@@ -171,21 +219,19 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 </head>
 <body>
 
-<!-- Network warning — only shown on 2G -->
 <div class="network-bar" id="networkBar">
-  📶 Slow connection — forms may take longer to submit. Please wait after tapping Submit.
+  📶 Slow connection — forms may take longer. Do not close the app after submitting.
 </div>
 
 {% if request.query_params.get('error') %}
-<div style="background:#fde8e8; border-bottom:2px solid #e74c3c; padding:10px 16px; font-size:12px; color:#c0392b; display:flex; align-items:center; gap:8px;">
+<div class="error-bar">
   ⚠️ <strong>{{ request.query_params.get('error')|replace('+',' ') }}</strong>
 </div>
 {% endif %}
 
-<!-- HEADER -->
 <div class="header">
   <div>
-    <h1>🔧 RoadSeva — Field Dashboard</h1>
+    <h1>🔧 RoadSeva — Field</h1>
     <div class="header-sub">{{ staff.name }} · {{ role_labels.get(staff.role, staff.role) }}</div>
   </div>
   <div class="header-right">
@@ -193,29 +239,27 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
   </div>
 </div>
 
-<!-- Role notice -->
 <div class="role-notice">
-  🔧 You are seeing only complaints assigned to <strong>you</strong>.
-  To report issues, contact your officer. Do not share your password.
+  🔧 Showing complaints assigned to <strong>you</strong>. Each complaint has 3 steps: Verify → Fix → Upload After Photo.
 </div>
 
-<!-- SUMMARY STRIP -->
+<!-- SUMMARY -->
 <div class="summary">
   <div class="sum-item">
     <div class="sum-num" style="color:var(--orange)">{{ reports|selectattr('status','equalto','assigned')|list|length }}</div>
-    <div class="sum-label">Assigned</div>
+    <div class="sum-label">New</div>
   </div>
   <div class="sum-item">
     <div class="sum-num" style="color:var(--purple)">{{ reports|selectattr('status','equalto','inspecting')|list|length }}</div>
     <div class="sum-label">On Site</div>
   </div>
   <div class="sum-item">
-    <div class="sum-num" style="color:var(--red)">{{ reports|selectattr('severity','equalto','critical')|list|length }}</div>
-    <div class="sum-label">Critical</div>
+    <div class="sum-num" style="color:var(--blue)">{{ reports|selectattr('status','equalto','inspected')|list|length }}</div>
+    <div class="sum-label">Verified</div>
   </div>
   <div class="sum-item">
-    <div class="sum-num">{{ reports|length }}</div>
-    <div class="sum-label">Total</div>
+    <div class="sum-num" style="color:var(--red)">{{ reports|selectattr('severity','equalto','critical')|list|length }}</div>
+    <div class="sum-label">Critical</div>
   </div>
 </div>
 
@@ -223,207 +267,373 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 
 {% if reports %}
   {% for r in reports %}
-  <div class="report-card {{ r.status }} {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}sla-breach{% endif %}">
 
-    <!-- Card header -->
+  {% set is_overdue = r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}
+
+  <div class="report-card {{ r.status }}{% if is_overdue %} sla-breach{% endif %}">
+
+    <!-- STEP PROGRESS BAR -->
+    <div class="step-bar">
+      <div class="step {% if r.status in ('assigned','inspecting','inspected') %}done{% endif %}">
+        📍 Assigned
+      </div>
+      <div class="step
+        {% if r.status == 'inspecting' %}current
+        {% elif r.status == 'inspected' %}done
+        {% endif %}">
+        🔍 Verify
+      </div>
+      <div class="step
+        {% if r.status == 'inspected' %}current{% endif %}">
+        🔨 Fix & Photo
+      </div>
+      <div class="step">
+        ✅ Done
+      </div>
+    </div>
+
+    <!-- CARD HEADER -->
     <div class="card-header">
       <div>
         <div class="damage-name">
           {{ r.verified_damage_type or r.damage_type }}
           {% if r.verified_damage_type and r.verified_damage_type != r.damage_type %}
-          <span style="font-size:11px;color:var(--green);font-weight:normal;">(verified)</span>
+            <span style="font-size:11px;color:var(--green);font-weight:normal;">✓ corrected</span>
           {% endif %}
-          {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}
-          <span class="overdue-badge">⚠ OVERDUE</span>
+          {% if is_overdue %}
+            <span class="overdue-badge">⚠ OVERDUE</span>
           {% endif %}
         </div>
-        <div class="rid-small">{{ r.report_id }}</div>
+        <div class="rid-small">{{ r.report_id }} · {{ r.ward }}</div>
       </div>
       <span class="status-badge badge-{{ r.status }}">
-        {% if r.status=='inspecting' %}🔵 ON SITE
-        {% elif r.status=='assigned' %}🟠 ASSIGNED
+        {% if r.status == 'inspecting' %}🔵 ON SITE
+        {% elif r.status == 'assigned' %}🟠 NEW
+        {% elif r.status == 'inspected' %}🔵 VERIFIED
         {% endif %}
       </span>
     </div>
 
-    <!-- Card body -->
+    <!-- CARD BODY -->
     <div class="card-body">
+
       <div class="info-row">
-        <span>📍 {{ r.ward }}</span>
         <span>🕐 {{ r.submitted_at[:16] }}</span>
         {% if r.latitude and r.longitude %}
         <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}&z=18"
-           target="_blank" class="btn btn-nav" style="padding:4px 11px;font-size:11px;">
-          🧭 Navigate
+           target="_blank" class="btn btn-nav" style="padding:4px 10px;font-size:11px;">
+          🧭 Navigate to GPS Pin
+        </a>
+        {% else %}
+        <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam')|urlencode }}"
+           target="_blank" class="btn btn-nav" style="padding:4px 10px;font-size:11px;">
+          🧭 Navigate to Ward
         </a>
         {% endif %}
       </div>
 
-      <!-- Citizen info: field engineer sees NAME ONLY — phone is officer-level data -->
+      {% if not r.latitude or not r.longitude %}
+      <div class="gps-stamp warning">
+        ⚠️ No GPS — citizen submitted without location. Use ward navigation above.
+      </div>
+      {% else %}
+      <div class="gps-stamp">
+        📍 GPS: {{ "%.5f"|format(r.latitude) }}, {{ "%.5f"|format(r.longitude) }} — tap Navigate above
+      </div>
+      {% endif %}
+
+      <!-- Citizen info — name only, no phone at field level -->
       <div class="citizen-box">
         👤 <strong>{{ r.citizen_name }}</strong>
-        {% if r.description %} &nbsp;·&nbsp; {{ r.description[:80] }}{% if r.description|length > 80 %}…{% endif %}{% endif %}
+        {% if r.location_text %} · {{ r.location_text[:80] }}{% endif %}
+        {% if r.description %} · {{ r.description[:80] }}{% endif %}
       </div>
 
       <!-- Severity -->
       {% if r.severity and r.severity != 'unknown' %}
       <div class="sev-strip sev-{{ r.severity }}">
-        {% if r.severity=='critical' %}🔴 CRITICAL — Immediate action required
-        {% elif r.severity=='high' %}🟠 HIGH — Urgent repair
-        {% elif r.severity=='medium' %}🟡 MEDIUM — Schedule repair
-        {% elif r.severity=='low' %}🟢 LOW — Routine{% endif %}
-        {% if r.urgency %} · {{ r.urgency }}{% endif %}
-        {% if r.severity_details %}<div style="font-size:12px;margin-top:4px;font-weight:normal;">ℹ️ {{ r.severity_details }}</div>{% endif %}
-      </div>
-      {% endif %}
-
-      <!-- Already verified notice -->
-      {% if r.verified_by %}
-      <div class="verified-strip">
-        ✅ Already verified by <strong>{{ r.verified_by }}</strong> on {{ r.verified_at[:16] }}
-        — {{ r.verified_damage_type }}, condition: {{ r.site_condition }}
-      </div>
-      {% endif %}
-
-      <!-- Citizen photo -->
-      {% if r.photo_data %}
-        {% if r.photo_data.startswith('data:') %}
-        <img src="{{ r.photo_data }}" class="report-photo" title="Citizen photo">
-        {% else %}
-        <img src="data:image/jpeg;base64,{{ r.photo_data }}" class="report-photo" title="Citizen photo">
+        {% if r.severity == 'critical' %}🔴 CRITICAL — Immediate action required
+        {% elif r.severity == 'high' %}🟠 HIGH — Urgent repair needed
+        {% elif r.severity == 'medium' %}🟡 MEDIUM — Schedule repair soon
+        {% elif r.severity == 'low' %}🟢 LOW — Routine maintenance
         {% endif %}
-        <div class="photo-hint">📷 Citizen-submitted photo</div>
+        {% if r.urgency %} · {{ r.urgency }}{% endif %}
+        {% if r.severity_details %}
+        <div style="font-size:12px;margin-top:4px;font-weight:normal;">ℹ️ {{ r.severity_details }}</div>
+        {% endif %}
+      </div>
       {% endif %}
-      {% if r.site_photo_data %}
-      <img src="{{ r.site_photo_data }}" class="report-photo" style="border-color:var(--green);" title="Your site photo">
-      <div class="photo-hint" style="color:var(--green);">✅ Your site verification photo</div>
-      {% endif %}
-    </div>
 
-    <!-- PRIMARY ACTIONS -->
+      <!-- PHOTO EVIDENCE SECTION — all 3 photos side by side when available -->
+      <div class="photo-pair">
+        {% if r.photo_data %}
+        <div class="photo-col">
+          <div class="photo-label">📷 Citizen Photo</div>
+          {% if r.photo_data.startswith('data:') or r.photo_data.startswith('http') %}
+          <img src="{{ r.photo_data }}" class="report-photo citizen-photo"
+               onclick="openPhoto(this.src, 'Citizen submitted photo')"
+               title="Tap to enlarge">
+          {% endif %}
+          <div class="upload-hint">Submitted by citizen at time of complaint</div>
+        </div>
+        {% endif %}
+
+        {% if r.site_photo_data %}
+        <div class="photo-col">
+          <div class="photo-label">🔍 Before Fix Photo</div>
+          <img src="{{ r.site_photo_data }}" class="report-photo before-photo"
+               onclick="openPhoto(this.src, 'WAS site verification photo — before fix')"
+               title="Tap to enlarge">
+          <div class="upload-hint">Verified by {{ r.verified_by }} · {{ r.verified_at[:10] if r.verified_at else '' }}</div>
+        </div>
+        {% endif %}
+
+        {% if r.work_done_photo %}
+        <div class="photo-col">
+          <div class="photo-label">✅ After Fix Photo</div>
+          <img src="{{ r.work_done_photo }}" class="report-photo after-photo"
+               onclick="openPhoto(this.src, 'After repair photo — work done')"
+               title="Tap to enlarge">
+          <div class="upload-hint">Work done — pending citizen confirmation</div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div><!-- /card-body -->
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         STEP 1 — START INSPECTION (status: assigned)
+         WAS clicks this when they reach the site
+    ═══════════════════════════════════════════════════════════════ -->
+    {% if r.status == 'assigned' %}
     <div class="action-strip">
-      {% if r.status == 'assigned' %}
       <form action="/start-inspection" method="post" style="display:contents">
         <input type="hidden" name="report_id" value="{{ r.report_id }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <button type="submit" class="btn btn-start">▶️ Start Inspection — I Am Here</button>
+        <button type="submit" class="btn btn-start" style="flex:1;justify-content:center;padding:11px;">
+          ▶️ I Have Reached the Site — Start Inspection
+        </button>
       </form>
-      {% endif %}
-
-      {% if not r.latitude or not r.longitude %}
-      <a href="https://www.google.com/maps/search/{{ (r.ward ~ ' Visakhapatnam')|urlencode }}"
-         target="_blank" class="btn btn-nav">
-        🧭 Navigate to Ward Area
-      </a>
-      {% endif %}
-    </div>
-
-    <!-- VERIFY FORM — shown only when on site and not yet verified -->
-    {% if r.status == 'inspecting' and not r.verified_by %}
-    <div style="padding:0 14px;">
-      <div class="verify-panel">
-        <h3>🔍 Submit Site Verification</h3>
-        <p>Take a photo of the damage. Fill in what you actually see on site.
-           A site photo is required — without it the form will not submit.</p>
-        <form action="/verify-inspection" method="post" enctype="multipart/form-data"
-              onsubmit="return handleVerifySubmit(this,'{{ r.report_id }}')">
-          <input type="hidden" name="report_id" value="{{ r.report_id }}">
-          <input type="hidden" name="csrf" value="{{ csrf }}">
-          <div class="v-grid">
-            <div class="v-group">
-              <label>Actual Damage (what you see) *</label>
-              <select name="verified_damage_type" required>
-                <option value="{{ r.damage_type }}" selected>{{ r.damage_type }} (as reported)</option>
-                <option value="Pothole">Pothole</option>
-                <option value="Road Damage">Road Damage</option>
-                <option value="Footpath">Footpath</option>
-                <option value="Waterlogging">Waterlogging</option>
-                <option value="Street Light">Street Light</option>
-                <option value="Median / Divider">Median / Divider</option>
-                <option value="Road Signage">Road Signage</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="v-group">
-              <label>Condition vs Citizen Photo *</label>
-              <select name="site_condition" required>
-                <option value="same">Same as photo</option>
-                <option value="worse">Worse than photo</option>
-                <option value="better">Better than photo</option>
-                <option value="not_found">Damage not found</option>
-              </select>
-            </div>
-            <div class="v-group">
-              <label>Site Photo * <span style="color:var(--red);font-weight:bold;">(Required)</span></label>
-              <input type="file" name="site_photo" id="sitePhoto-{{ r.report_id }}"
-                     accept="image/*" capture="environment" required
-                     onchange="onPhotoSelected(this,'{{ r.report_id }}')">
-              <div class="upload-hint" id="hint-{{ r.report_id }}"></div>
-            </div>
-            <div class="v-group">
-              <label>Your Notes (optional)</label>
-              <input type="text" name="inspection_notes"
-                     placeholder="e.g. Pothole 3ft, base exposed, needs cold mix"
-                     onkeydown="blockEnter(event)">
-            </div>
-          </div>
-          <button type="submit" class="btn btn-verify" style="width:100%;justify-content:center;padding:11px;"
-                  id="verifyBtn-{{ r.report_id }}">
-            ✅ Submit Site Verification Report
-          </button>
-        </form>
-      </div>
     </div>
     {% endif %}
 
-    <!-- DAMAGE NOT FOUND -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         STEP 2 — VERIFY DAMAGE + BEFORE PHOTO (status: inspecting)
+         WAS looks at damage, corrects type, uploads before photo
+         THIS IS THE AI TRAINING POINT
+    ═══════════════════════════════════════════════════════════════ -->
     {% if r.status == 'inspecting' and not r.verified_by %}
-    <div class="not-found-panel" style="margin-top:8px;">
-      <h4>❓ Damage Not Found On Site?</h4>
-      <p>If you reached the location and there is no damage — pothole already patched,
-         wrong address, or duplicate complaint — tap below. The complaint will go back
-         to Open and your officer will investigate.</p>
-      <form action="/reject-inspection" method="post" class="not-found-form"
-            onsubmit="return confirm('Confirm: You did not find any damage at this location?')">
+
+    <div class="step-panel panel-before-photo">
+      <div class="panel-title">🔍 Step 2 — Verify Damage & Upload Before Photo</div>
+      <div class="panel-desc">
+        Look at the damage carefully. If citizen reported "Pothole" but you see "Road Damage", correct it below.
+        Take a clear photo of the current damage from above.
+        <strong>This photo and your correction trains our AI model.</strong>
+        GPS location will be captured automatically when you submit.
+      </div>
+
+      <div class="gps-capture" id="gpsCapture-{{ r.report_id }}">
+        📍 Tap "Submit Verification" — your GPS will be captured automatically
+      </div>
+
+      <form action="/verify-inspection" method="post" enctype="multipart/form-data"
+            id="verifyForm-{{ r.report_id }}"
+            onsubmit="return handleVerifySubmit(this, '{{ r.report_id }}')">
         <input type="hidden" name="report_id" value="{{ r.report_id }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <input type="text" name="reject_note" class="not-found-input"
-               placeholder="What did you find? e.g. Already patched, wrong location..."
-               onkeydown="blockEnter(event)">
-        <button type="submit" class="btn btn-reject">❌ Damage Not Found</button>
+        <input type="hidden" name="verify_lat" id="vLat-{{ r.report_id }}" value="">
+        <input type="hidden" name="verify_lng" id="vLng-{{ r.report_id }}" value="">
+
+        <div class="form-grid">
+          <div class="f-group">
+            <label>What you actually see on site *</label>
+            <select name="verified_damage_type" required>
+              <option value="{{ r.damage_type }}" selected>{{ r.damage_type }} (as reported)</option>
+              <option value="Pothole">Pothole</option>
+              <option value="Road Damage">Road Damage</option>
+              <option value="Road Cave-in">Road Cave-in</option>
+              <option value="Footpath Damage">Footpath Damage</option>
+              <option value="Waterlogging">Waterlogging</option>
+              <option value="Street Light">Street Light</option>
+              <option value="Median / Divider">Median / Divider</option>
+              <option value="Road Signage">Road Signage</option>
+              <option value="Drain / Manhole">Drain / Manhole</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="f-group">
+            <label>Current condition vs citizen photo *</label>
+            <select name="site_condition" required>
+              <option value="same">Same as citizen photo</option>
+              <option value="worse">Worse — damage has increased</option>
+              <option value="better">Better — partially repaired already</option>
+              <option value="not_found">Damage not found at location</option>
+            </select>
+          </div>
+
+          <div class="f-group">
+            <label>Before photo — current damage *
+              <span style="color:var(--red);font-weight:bold;">(Required)</span>
+            </label>
+            <input type="file" name="site_photo"
+                   id="beforePhoto-{{ r.report_id }}"
+                   accept="image/*" capture="environment" required
+                   onchange="previewPhoto(this,'beforePreview-{{ r.report_id }}','beforeHint-{{ r.report_id }}')">
+            <img id="beforePreview-{{ r.report_id }}" class="upload-preview">
+            <div class="upload-hint" id="beforeHint-{{ r.report_id }}"></div>
+          </div>
+
+          <div class="f-group">
+            <label>Your field notes (optional)</label>
+            <textarea name="inspection_notes" rows="3"
+                      placeholder="e.g. Large pothole 3ft x 2ft, water accumulated, base layer exposed. Rainy season worsened damage."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-orange submit-full"
+                id="verifyBtn-{{ r.report_id }}">
+          ✅ Submit Verification + Before Photo
+        </button>
       </form>
+    </div>
+
+    <!-- Damage not found option -->
+    <div class="step-panel panel-not-found" style="margin-top:0;">
+      <div class="panel-title">❓ Damage Not Found?</div>
+      <div class="panel-desc">
+        If you reached the location and there is genuinely no damage — pothole already fixed,
+        wrong address, or false complaint — submit below. Complaint returns to Open for officer review.
+      </div>
+      <form action="/reject-inspection" method="post"
+            onsubmit="return confirm('Confirm: You visited the site and found NO damage?')">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <input type="text" name="reject_note"
+                 style="flex:1;padding:8px 10px;border:1px solid #fca5a5;border-radius:6px;font-size:13px;min-width:180px;"
+                 placeholder="What did you find? e.g. Road already repaired, wrong location given"
+                 onkeydown="blockEnter(event)">
+          <button type="submit" class="btn btn-red">❌ Not Found</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Ward flag option -->
+    <div class="step-panel panel-ward-flag" style="margin-top:0;">
+      <div class="panel-title">🚩 Wrong Ward? Flag It</div>
+      <div class="panel-desc">
+        If this complaint belongs to a different ward — tap below. Your AE will review and reassign.
+        You still need to handle it until AE approves the reassignment.
+      </div>
+      <form action="/flag-incorrect-ward" method="post"
+            onsubmit="return confirm('Flag this complaint as wrong ward?')">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div class="f-group">
+            <label>Correct ward *</label>
+            <select name="requested_ward" required>
+              <option value="">Select correct ward...</option>
+              {% for w in ward_names %}
+              <option value="{{ w }}" {% if w == r.ward %}disabled{% endif %}>{{ w }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="f-group">
+            <label>Reason *</label>
+            <input type="text" name="reason" required
+                   placeholder="e.g. Location is in Ward 23, not Ward 22 — road is past the canal">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-red">🚩 Flag Wrong Ward to AE</button>
+      </form>
+    </div>
+
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         ALREADY VERIFIED — show banner + work-done form (status: inspected)
+    ═══════════════════════════════════════════════════════════════ -->
+    {% if r.verified_by %}
+    <div class="verified-banner">
+      ✅ Verified on site by <strong>{{ r.verified_by }}</strong> · {{ r.verified_at[:16] if r.verified_at else '' }}
+      · Confirmed: <strong>{{ r.verified_damage_type }}</strong>
+      · Condition: {{ r.site_condition }}
     </div>
     {% endif %}
 
-    <!-- REPAIR DONE NOTIFICATION -->
-    {% if r.verified_by and r.status not in ('resolved','closed') %}
-    <div style="padding:0 14px;">
-      <div class="repair-done-strip">
-        <h4>🔔 Repair Done? Notify Your Officer</h4>
-        <p>Use this to let your officer know the repair is complete.
-           They will mark it resolved. Do not mark it resolved yourself.</p>
-        <form action="/add-comment" method="post" class="repair-done-form">
-          <input type="hidden" name="report_id" value="{{ r.report_id }}">
-          <input type="hidden" name="csrf" value="{{ csrf }}">
-          <input type="text" name="comment" class="repair-done-input"
-                 value="✅ Repair complete — {{ r.damage_type }} at {{ r.ward }} fixed. Ready for officer to close."
-                 placeholder="Describe what was done..."
-                 onkeydown="blockEnter(event)">
-          <button type="submit" class="btn btn-done" style="white-space:nowrap;">
-            ✅ Notify Officer
-          </button>
-        </form>
+    <!-- ═══════════════════════════════════════════════════════════════
+         STEP 3 — UPLOAD AFTER PHOTO (status: inspected, no work_done_photo yet)
+         WAS has fixed the road, now uploads after photo
+         THIS TRIGGERS CITIZEN SMS
+    ═══════════════════════════════════════════════════════════════ -->
+    {% if r.status == 'inspected' and not r.work_done_photo %}
+
+    <div class="step-panel panel-work-done">
+      <div class="panel-title">🔨 Step 3 — Upload After Photo (Work Done)</div>
+      <div class="panel-desc">
+        Road is fixed? Take a clear photo of the repaired area from the same angle as the before photo.
+        Once you submit this, the citizen will get an SMS asking them to confirm.
+        <strong>GPS location will be captured to prove you were at the site.</strong>
       </div>
+
+      <div class="gps-capture" id="workGpsCapture-{{ r.report_id }}">
+        📍 GPS will be captured when you submit — make sure you are at the repair site
+      </div>
+
+      <form action="/work-done-upload" method="post" enctype="multipart/form-data"
+            id="workForm-{{ r.report_id }}"
+            onsubmit="return handleWorkDoneSubmit(this, '{{ r.report_id }}')">
+        <input type="hidden" name="report_id" value="{{ r.report_id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="work_done_lat" id="wLat-{{ r.report_id }}" value="">
+        <input type="hidden" name="work_done_lng" id="wLng-{{ r.report_id }}" value="">
+
+        <div class="form-grid">
+          <div class="f-group">
+            <label>After photo — repaired road *
+              <span style="color:var(--red);font-weight:bold;">(Required)</span>
+            </label>
+            <input type="file" name="work_done_photo"
+                   id="afterPhoto-{{ r.report_id }}"
+                   accept="image/*" capture="environment" required
+                   onchange="previewPhoto(this,'afterPreview-{{ r.report_id }}','afterHint-{{ r.report_id }}')">
+            <img id="afterPreview-{{ r.report_id }}" class="upload-preview">
+            <div class="upload-hint" id="afterHint-{{ r.report_id }}"></div>
+          </div>
+
+          <div class="f-group">
+            <label>Completion note (optional)</label>
+            <textarea name="work_note" rows="3"
+                      placeholder="e.g. Pothole filled with cold mix, surface levelled, area cleaned. Crew: 3 workers. Materials: 2 bags cold mix."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-green submit-full"
+                id="workBtn-{{ r.report_id }}">
+          ✅ Submit After Photo — Notify Citizen Work Is Done
+        </button>
+      </form>
+    </div>
+
+    {% endif %}
+
+    <!-- Work done banner — photo already submitted -->
+    {% if r.work_done_photo %}
+    <div class="work-done-banner">
+      📸 After photo submitted — citizen has been notified via SMS. Waiting for confirmation.
     </div>
     {% endif %}
 
     <!-- FIELD NOTE -->
-    <div class="comment-form-strip">
+    <div class="comment-strip">
       <form action="/add-comment" method="post" style="display:flex;gap:7px;flex:1;">
         <input type="hidden" name="report_id" value="{{ r.report_id }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="text" name="comment" class="comment-input"
-               placeholder="Add field note — e.g. Pothole confirmed, repair scheduled for tomorrow"
+               placeholder="Add field note — visible to AE and Commissioner"
                onkeydown="blockEnter(event)">
         <button type="submit" class="btn btn-note" style="white-space:nowrap;">💬 Note</button>
       </form>
@@ -432,6 +642,7 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
     <!-- ACTIVITY LOG -->
     <div class="activity">
       <div class="activity-title">📜 Complaint Trail</div>
+
       <div class="a-item">
         <div class="a-dot dot-submitted"></div>
         <div class="a-body">
@@ -439,24 +650,42 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
           <div class="a-time">{{ r.submitted_at[:16] }}</div>
         </div>
       </div>
+
       {% if r.assigned_to %}
       <div class="a-item">
         <div class="a-dot dot-assigned"></div>
         <div class="a-body">
           Assigned to <span class="a-who">{{ r.assigned_to }}</span>
-          {% if r.assigned_officer %} by {{ r.assigned_officer }}{% endif %}
+          {% if r.assigned_officer and r.assigned_officer != 'system' %}
+            by <span class="a-who">{{ r.assigned_officer }}</span>
+          {% elif r.assigned_officer == 'system' %}
+            <em style="color:#aaa;">(auto-assigned by system)</em>
+          {% endif %}
         </div>
       </div>
       {% endif %}
+
       {% if r.verified_by %}
       <div class="a-item">
         <div class="a-dot dot-inspection_verified"></div>
         <div class="a-body">
-          <span class="a-who">{{ r.verified_by }}</span> verified on site
-          <div class="a-time">{{ r.verified_at[:16] }}</div>
+          <span class="a-who">{{ r.verified_by }}</span> verified on site —
+          {{ r.verified_damage_type }}, {{ r.site_condition }}
+          <div class="a-time">{{ r.verified_at[:16] if r.verified_at else '' }}</div>
         </div>
       </div>
       {% endif %}
+
+      {% if r.work_done_photo %}
+      <div class="a-item">
+        <div class="a-dot dot-work_done"></div>
+        <div class="a-body">
+          Work done — after photo submitted. Citizen SMS sent.
+          <div class="a-time">{{ r.work_done_at[:16] if r.work_done_at else '' }}</div>
+        </div>
+      </div>
+      {% endif %}
+
       {% for c in all_comments.get(r.report_id, []) %}
       <div class="comment-item">
         <div class="comment-text">💬 {{ c.comment }}</div>
@@ -465,7 +694,7 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
       {% endfor %}
     </div>
 
-  </div>
+  </div><!-- /report-card -->
   {% endfor %}
 
 {% else %}
@@ -473,11 +702,22 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
   <div class="empty-icon">✅</div>
   <h3>All Clear!</h3>
   <p>No complaints assigned to you right now.<br>
-  Your officer will assign new complaints when they come in.</p>
+  Complaints from your ward will appear here automatically.</p>
 </div>
 {% endif %}
 
 </div><!-- /page-content -->
+
+<!-- PHOTO LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;
+            display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="position:relative;max-width:100%;max-height:100%;">
+    <img id="lightboxImg" style="max-width:100%;max-height:85vh;border-radius:8px;">
+    <div id="lightboxCaption" style="color:white;text-align:center;margin-top:10px;font-size:13px;"></div>
+    <div style="color:white;text-align:center;font-size:12px;margin-top:6px;opacity:.6;">Tap anywhere to close</div>
+  </div>
+</div>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
@@ -507,40 +747,124 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 })();
 
 // ── ENTER KEY BLOCK ───────────────────────────────────────────────────────────
-// FIX: prevents Enter on text inputs from accidentally submitting the wrong form
-// (e.g. typing a field note and pressing Enter should NOT fire the verify form)
 function blockEnter(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-  }
+  if (e.key === 'Enter') e.preventDefault();
 }
 
-// ── PHOTO SELECTED FEEDBACK ───────────────────────────────────────────────────
-function onPhotoSelected(input, reportId) {
-  var hint = document.getElementById('hint-' + reportId);
-  if (hint && input.files[0]) {
+// ── PHOTO PREVIEW ─────────────────────────────────────────────────────────────
+function previewPhoto(input, previewId, hintId) {
+  var preview = document.getElementById(previewId);
+  var hint    = document.getElementById(hintId);
+  if (input.files && input.files[0]) {
     var kb = Math.round(input.files[0].size / 1024);
-    hint.textContent = '📷 Photo selected (' + kb + 'KB) — will upload with form.';
-    hint.classList.add('visible');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+    if (hint) hint.textContent = '📷 Photo selected (' + kb + 'KB)';
   }
 }
 
-// ── VERIFY SUBMIT — prevent double submit on slow networks ────────────────────
+// ── GPS CAPTURE ───────────────────────────────────────────────────────────────
+// Captures browser GPS when called, stores in hidden fields
+function captureGPS(latFieldId, lngFieldId, captureBoxId, onDone) {
+  if (!navigator.geolocation) {
+    if (onDone) onDone(false, 'GPS not supported on this device');
+    return;
+  }
+  var box = document.getElementById(captureBoxId);
+  if (box) box.textContent = '📍 Getting your GPS location...';
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude.toFixed(6);
+      var lng = pos.coords.longitude.toFixed(6);
+      var latF = document.getElementById(latFieldId);
+      var lngF = document.getElementById(lngFieldId);
+      if (latF) latF.value = lat;
+      if (lngF) lngF.value = lng;
+      if (box) {
+        box.textContent = '✅ GPS captured: ' + lat + ', ' + lng;
+        box.classList.remove('error');
+      }
+      if (onDone) onDone(true);
+    },
+    function(err) {
+      if (box) {
+        box.textContent = '⚠️ GPS unavailable — submitting without location. Please ensure you are at the site.';
+        box.classList.add('error');
+      }
+      if (onDone) onDone(false, err.message);
+    },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+  );
+}
+
+// ── VERIFY FORM SUBMIT ────────────────────────────────────────────────────────
 function handleVerifySubmit(form, reportId) {
   var photo = form.querySelector('[name=site_photo]');
   if (!photo || !photo.files[0]) {
-    alert('Please take or upload a site photo before submitting.\nThis is required as proof of inspection.');
+    alert('A before photo is required.\n\nPlease take a photo of the damage before submitting.');
     return false;
   }
+
   var btn = document.getElementById('verifyBtn-' + reportId);
   if (btn && btn.disabled) return false;
+
+  // Capture GPS then submit
   if (btn) {
     btn.disabled = true;
-    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    var slow = conn && (conn.effectiveType==='2g' || (conn.downlink && conn.downlink < 1));
-    btn.textContent = slow ? '⏳ Uploading on slow network — do not close...' : '⏳ Uploading... Please wait';
+    btn.textContent = '📍 Getting GPS, then uploading...';
   }
-  return true;
+
+  captureGPS(
+    'vLat-' + reportId, 'vLng-' + reportId,
+    'gpsCapture-' + reportId,
+    function() {
+      // Submit regardless of GPS success
+      form.submit();
+    }
+  );
+  return false; // prevent default, we submit manually after GPS
+}
+
+// ── WORK DONE FORM SUBMIT ─────────────────────────────────────────────────────
+function handleWorkDoneSubmit(form, reportId) {
+  var photo = form.querySelector('[name=work_done_photo]');
+  if (!photo || !photo.files[0]) {
+    alert('An after photo is required.\n\nPlease take a photo of the repaired road before submitting.');
+    return false;
+  }
+
+  var btn = document.getElementById('workBtn-' + reportId);
+  if (btn && btn.disabled) return false;
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '📍 Getting GPS, then uploading...';
+  }
+
+  captureGPS(
+    'wLat-' + reportId, 'wLng-' + reportId,
+    'workGpsCapture-' + reportId,
+    function() {
+      form.submit();
+    }
+  );
+  return false;
+}
+
+// ── PHOTO LIGHTBOX ─────────────────────────────────────────────────────────────
+function openPhoto(src, caption) {
+  var lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightboxCaption').textContent = caption || '';
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
 }
 </script>
 

@@ -14,8 +14,18 @@ ROLES (production-grade, hard walls everywhere):
   field_engineer      → assigned complaints only (legacy / pilot compatibility)
   viewer              → read-only, no write access
 
+STATUS LADDER (real GVMC workflow):
+  pending_triage   → No GPS, triage officer assigns ward
+  open             → Ward known, WAS not yet auto-assigned
+  assigned         → Auto-assigned to WAS (system) or manually by AE
+  inspecting       → WAS clicked "I am at site"
+  inspected        → WAS verified damage, uploaded before photo (AI training point)
+  resolved         → WAS uploaded after photo, citizen SMS sent
+  closed           → Citizen confirmed OR 72h no response
+  disputed         → Citizen not satisfied → AE site visit required
+
 SLA LADDER:
-  Hour 0   → Complaint filed → WAS assigned
+  Hour 0   → Complaint filed → WAS auto-assigned
   Hour 36  → WAS warning SMS (12h before breach)
   Hour 48  → WAS breach → AE takes over
   Hour 60  → AE warning SMS (12h before breach)
@@ -25,10 +35,16 @@ SLA LADDER:
   Hour 108 → Commissioner warning SMS (12h before max)
   Hour 120 → Maximum escalation — daily reminders
 
-SECOND DISPUTE:
-  Citizen disputes resolution → AE site visit required
-  AE physically verifies → can Force Close OR Reopen
-  No auto-close on second dispute (prevents citizen frustration)
+PHOTOS (4 photos per complaint for full audit trail):
+  Photo 1 — Citizen submitted photo (at complaint time)
+  Photo 2 — WAS before photo (at site verification, AI training label)
+  Photo 3 — WAS after photo (work done, triggers citizen SMS)
+  Photo 4 — AE dispute photo (if citizen not satisfied)
+
+GPS STAMPS:
+  Citizen GPS      → latitude/longitude on reports table
+  WAS verify GPS   → verify_lat/verify_lng on reports table
+  WAS work GPS     → work_done_lat/work_done_lng on reports table
 
 WARD FLAGS:
   WAS flags "Incorrect Ward" → AE approves/rejects
@@ -49,7 +65,6 @@ DB_PATH      = "roadseva.db"
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _resolve_ipv4(url: str) -> str:
-    """Force IPv4 resolution to avoid Render/Neon IPv6 issues."""
     try:
         import socket, re
         host = re.search(r'@([^:/]+)', url)
@@ -84,7 +99,6 @@ def now() -> str:
     return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
 def _q(sql):
-    """Convert ? placeholders to %s for PostgreSQL."""
     return sql.replace("?", "%s") if USE_POSTGRES else sql
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,11 +113,10 @@ ROLE_LABELS = {
     "grievance_officer":   "Grievance Officer",
     "triage_officer":      "Triage Officer",
     "was":                 "Ward Amenities Secretary",
-    "field_engineer":      "Field Engineer",       # legacy / pilot
+    "field_engineer":      "Field Engineer",
     "viewer":              "Viewer / Corporator",
 }
 
-# Who can log into which dashboard
 ROLE_HOME = {
     "admin":              "/commissioner",
     "commissioner":       "/commissioner",
@@ -116,7 +129,6 @@ ROLE_HOME = {
     "viewer":             "/staff",
 }
 
-# Who can create which roles (hierarchical)
 CREATABLE_ROLES = {
     "admin": [
         "admin", "commissioner", "zonal_commissioner",
@@ -131,16 +143,14 @@ CREATABLE_ROLES = {
     "ae":                 ["was", "field_engineer"],
 }
 
-VALID_ROLES    = set(ROLE_LABELS.keys())
+VALID_ROLES     = set(ROLE_LABELS.keys())
 ROLE_CAN_CREATE = {k: set(v) for k, v in CREATABLE_ROLES.items()}
 
-# Roles that can READ all reports in their scope
 READ_ROLES = {
     "admin", "commissioner", "zonal_commissioner",
     "ae", "viewer", "grievance_officer", "triage_officer",
 }
 
-# Roles that can WRITE status changes
 WRITE_ROLES = {
     "admin", "commissioner", "zonal_commissioner", "ae", "was", "field_engineer",
 }
@@ -252,6 +262,8 @@ def init_db():
                 site_photo_data TEXT DEFAULT "",
                 verified_by TEXT DEFAULT "",
                 verified_at TEXT DEFAULT "",
+                verify_lat REAL,
+                verify_lng REAL,
                 ward_flag_reason TEXT DEFAULT "",
                 ward_flag_status TEXT DEFAULT "",
                 ward_flag_by TEXT DEFAULT "",
@@ -266,7 +278,9 @@ def init_db():
                 citizen_satisfied INTEGER DEFAULT NULL,
                 satisfaction_reviewed_at TEXT DEFAULT "",
                 work_done_photo TEXT DEFAULT "",
-                work_done_at TEXT DEFAULT ""
+                work_done_at TEXT DEFAULT "",
+                work_done_lat REAL,
+                work_done_lng REAL
             );
 
             CREATE TABLE IF NOT EXISTS staff (
@@ -422,7 +436,6 @@ def init_db():
 
 
 def _init_postgres(c):
-    """Create all tables for PostgreSQL (Render production)."""
     statements = [
         """CREATE TABLE IF NOT EXISTS reports (
             id SERIAL PRIMARY KEY,
@@ -461,6 +474,8 @@ def _init_postgres(c):
             site_photo_data TEXT DEFAULT '',
             verified_by TEXT DEFAULT '',
             verified_at TEXT DEFAULT '',
+            verify_lat REAL,
+            verify_lng REAL,
             ward_flag_reason TEXT DEFAULT '',
             ward_flag_status TEXT DEFAULT '',
             ward_flag_by TEXT DEFAULT '',
@@ -475,7 +490,9 @@ def _init_postgres(c):
             citizen_satisfied INTEGER DEFAULT NULL,
             satisfaction_reviewed_at TEXT DEFAULT '',
             work_done_photo TEXT DEFAULT '',
-            work_done_at TEXT DEFAULT ''
+            work_done_at TEXT DEFAULT '',
+            work_done_lat REAL,
+            work_done_lng REAL
         )""",
         """CREATE TABLE IF NOT EXISTS staff (
             id SERIAL PRIMARY KEY,
@@ -553,48 +570,48 @@ def _safe_add_columns(c, conn):
     """Add new columns to existing databases without breaking old data."""
     new_cols = {
         "staff": [
-            ("supervised_by",       "INTEGER DEFAULT NULL"),
-            ("zone",                "TEXT DEFAULT ''"),
-            ("division",            "TEXT DEFAULT ''"),
-            ("ward_list",           "TEXT DEFAULT ''"),
-            ("phone",               "TEXT DEFAULT ''"),
-            ("password_expires_at", "TEXT DEFAULT NULL"),
+            ("supervised_by",         "INTEGER DEFAULT NULL"),
+            ("zone",                  "TEXT DEFAULT ''"),
+            ("division",              "TEXT DEFAULT ''"),
+            ("ward_list",             "TEXT DEFAULT ''"),
+            ("phone",                 "TEXT DEFAULT ''"),
+            ("password_expires_at",   "TEXT DEFAULT NULL"),
             ("temp_password_expired", "INTEGER DEFAULT 0"),
         ],
         "reports": [
-            ("assigned_officer",    "TEXT DEFAULT ''"),
-            ("verified_damage_type","TEXT DEFAULT ''"),
-            ("site_condition",      "TEXT DEFAULT ''"),
-            ("site_photo_data",     "TEXT DEFAULT ''"),
-            ("verified_by",         "TEXT DEFAULT ''"),
-            ("verified_at",         "TEXT DEFAULT ''"),
-            ("intake_channel",      "TEXT DEFAULT 'citizen_web'"),
-            ("intake_ref",          "TEXT DEFAULT ''"),
-            ("rqi_flagged",         "INTEGER DEFAULT 0"),
-            ("accident_risk",       "TEXT DEFAULT ''"),
-            ("recommended_action",  "TEXT DEFAULT ''"),
-            ("estimated_size",      "TEXT DEFAULT ''"),
-            ("location_text",       "TEXT DEFAULT ''"),
-            ("division_name",       "TEXT DEFAULT ''"),
-            ("ward_flag_reason",    "TEXT DEFAULT ''"),
-            ("ward_flag_status",    "TEXT DEFAULT ''"),
-            ("ward_flag_by",        "TEXT DEFAULT ''"),
-            ("ward_flag_at",        "TEXT DEFAULT ''"),
-            ("escalation_level",    "INTEGER DEFAULT 0"),
-            ("escalation_count",    "INTEGER DEFAULT 0"),
-            ("sla_due_at",          "TEXT DEFAULT ''"),
-            ("last_escalated_at",   "TEXT DEFAULT ''"),
-            ("ae_site_visit_required","INTEGER DEFAULT 0"),
-            ("ae_site_visit_done",  "INTEGER DEFAULT 0"),
-            ("dispute_count",       "INTEGER DEFAULT 0"),
-            ("citizen_satisfied",   "INTEGER DEFAULT NULL"),
+            ("assigned_officer",       "TEXT DEFAULT ''"),
+            ("verified_damage_type",   "TEXT DEFAULT ''"),
+            ("site_condition",         "TEXT DEFAULT ''"),
+            ("site_photo_data",        "TEXT DEFAULT ''"),
+            ("verified_by",            "TEXT DEFAULT ''"),
+            ("verified_at",            "TEXT DEFAULT ''"),
+            ("verify_lat",             "REAL"),
+            ("verify_lng",             "REAL"),
+            ("intake_channel",         "TEXT DEFAULT 'citizen_web'"),
+            ("intake_ref",             "TEXT DEFAULT ''"),
+            ("rqi_flagged",            "INTEGER DEFAULT 0"),
+            ("accident_risk",          "TEXT DEFAULT ''"),
+            ("recommended_action",     "TEXT DEFAULT ''"),
+            ("estimated_size",         "TEXT DEFAULT ''"),
+            ("location_text",          "TEXT DEFAULT ''"),
+            ("division_name",          "TEXT DEFAULT ''"),
+            ("ward_flag_reason",       "TEXT DEFAULT ''"),
+            ("ward_flag_status",       "TEXT DEFAULT ''"),
+            ("ward_flag_by",           "TEXT DEFAULT ''"),
+            ("ward_flag_at",           "TEXT DEFAULT ''"),
+            ("escalation_level",       "INTEGER DEFAULT 0"),
+            ("escalation_count",       "INTEGER DEFAULT 0"),
+            ("sla_due_at",             "TEXT DEFAULT ''"),
+            ("last_escalated_at",      "TEXT DEFAULT ''"),
+            ("ae_site_visit_required", "INTEGER DEFAULT 0"),
+            ("ae_site_visit_done",     "INTEGER DEFAULT 0"),
+            ("dispute_count",          "INTEGER DEFAULT 0"),
+            ("citizen_satisfied",      "INTEGER DEFAULT NULL"),
             ("satisfaction_reviewed_at","TEXT DEFAULT ''"),
-            ("work_done_photo",     "TEXT DEFAULT ''"),
-            ("work_done_at",        "TEXT DEFAULT ''"),
-            ("verify_lat",      "REAL DEFAULT NULL"),
-            ("verify_lng",      "REAL DEFAULT NULL"),
-            ("work_done_lat",   "REAL DEFAULT NULL"),
-            ("work_done_lng",   "REAL DEFAULT NULL"),
+            ("work_done_photo",        "TEXT DEFAULT ''"),
+            ("work_done_at",           "TEXT DEFAULT ''"),
+            ("work_done_lat",          "REAL"),
+            ("work_done_lng",          "REAL"),
         ],
     }
     for table, cols in new_cols.items():
@@ -607,7 +624,6 @@ def _safe_add_columns(c, conn):
 
 
 def _seed_admin(c, conn):
-    """Seed default admin account if not present."""
     try:
         if USE_POSTGRES:
             try: conn.rollback()
@@ -751,20 +767,16 @@ def add_report(
     intake_channel="citizen_web", intake_ref="",
     location_text="",
 ):
-    """Add a new citizen complaint. Returns report_id."""
+    """Add a new citizen complaint. Auto-assigns to WAS if ward is known. Returns report_id."""
     conn = get_conn(); c = conn.cursor()
     rid  = _generate_report_id()
     ts   = now()
 
-    # Calculate initial SLA due time (48h for WAS)
-    ist      = timezone(timedelta(hours=5, minutes=30))
-    sla_due  = (datetime.now(ist) + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S")
+    ist     = timezone(timedelta(hours=5, minutes=30))
+    sla_due = (datetime.now(ist) + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Determine initial status: if no ward, needs triage
     initial_status = "pending_triage" if not ward else "open"
 
-    # FIX 10 — persist division_name at submission time so it's available
-    # for training labels, CSV export, and AE/ZC scoping without recomputing
     division_name = ""
     if ward:
         try:
@@ -797,6 +809,31 @@ def add_report(
         "(report_id,action,old_value,new_value,done_by,done_at) "
         "VALUES (?,?,?,?,?,?)"
     ), (rid, "submitted", "", f"citizen submission via {intake_channel}", "citizen", ts))
+
+    # AUTO-ASSIGN TO WAS
+    # When ward is known, immediately assign to the WAS responsible for that ward.
+    # This means WAS sees the complaint the moment it is filed — no manual assignment needed.
+    # If no WAS is configured for that ward, complaint stays 'open' for AE to assign.
+    auto_assigned_to = ""
+    if ward and initial_status == "open":
+        try:
+            was = get_was_for_ward(ward)
+            if was:
+                auto_assigned_to = was["name"]
+                c.execute(_q("""
+                    UPDATE reports
+                    SET assigned_to=?, assigned_officer='system',
+                        status='assigned', updated_at=?
+                    WHERE report_id=?
+                """), (auto_assigned_to, ts, rid))
+                c.execute(_q(
+                    "INSERT INTO audit_log "
+                    "(report_id,action,old_value,new_value,done_by,done_at) "
+                    "VALUES (?,?,?,?,?,?)"
+                ), (rid, "auto_assigned", "open", auto_assigned_to, "system", ts))
+        except Exception as e:
+            print(f"[auto_assign] {e}")
+
     conn.commit(); conn.close()
     return rid
 
@@ -808,12 +845,14 @@ def add_manual_report(
     severity="unknown", severity_details="", urgency="",
     location_text="",
 ):
-    """Staff-logged complaint (phone, letter, WhatsApp, Spandana)."""
+    """Staff-logged complaint. Also auto-assigns to WAS."""
     conn = get_conn(); c = conn.cursor()
     rid  = _generate_report_id()
     ts   = now()
     ist  = timezone(timedelta(hours=5, minutes=30))
     sla_due = (datetime.now(ist) + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S")
+
+    initial_status = "pending_triage" if not ward else "open"
 
     c.execute(_q("""
         INSERT INTO reports (
@@ -832,7 +871,7 @@ def add_manual_report(
         None, None,
         severity, severity_details, "", urgency,
         photo_data or "",
-        "pending_triage" if not ward else "open",
+        initial_status,
         ts, ts,
         source, docket_ref, logged_by, sla_due,
     ))
@@ -841,6 +880,26 @@ def add_manual_report(
         "(report_id,action,old_value,new_value,done_by,done_at) "
         "VALUES (?,?,?,?,?,?)"
     ), (rid, "manual_intake", "", f"logged by {logged_by} via {source}", logged_by, ts))
+
+    # Auto-assign to WAS
+    if ward and initial_status == "open":
+        try:
+            was = get_was_for_ward(ward)
+            if was:
+                c.execute(_q("""
+                    UPDATE reports
+                    SET assigned_to=?, assigned_officer='system',
+                        status='assigned', updated_at=?
+                    WHERE report_id=?
+                """), (was["name"], ts, rid))
+                c.execute(_q(
+                    "INSERT INTO audit_log "
+                    "(report_id,action,old_value,new_value,done_by,done_at) "
+                    "VALUES (?,?,?,?,?,?)"
+                ), (rid, "auto_assigned", "open", was["name"], "system", ts))
+        except Exception as e:
+            print(f"[auto_assign_manual] {e}")
+
     conn.commit(); conn.close()
     return rid
 
@@ -920,13 +979,9 @@ def get_reports_for_role(
     severity=None, search=None, damage_type=None,
     limit=200, offset=0,
 ) -> list:
-    """
-    Role-scoped report access — every role sees exactly what they should.
-    """
     role = staff.get("role", "viewer")
 
     if role in ("commissioner", "admin"):
-        # Full city access
         return get_all_reports(
             status=status, ward=ward, severity=severity,
             search=search, damage_type=damage_type,
@@ -938,8 +993,6 @@ def get_reports_for_role(
         zone = staff.get("zone", "")
         ward_names = get_wards_for_zone(zone) if zone else []
         if not ward_names:
-            # Zone not configured — fail closed, not open.
-            # Fill in wards.py's ZONE_DIVISION_MAP to fix this properly.
             return []
         conn = get_conn(); c = conn.cursor()
         conds  = [f"ward IN ({','.join(['?']*len(ward_names))})"]
@@ -964,7 +1017,6 @@ def get_reports_for_role(
         division = staff.get("division", "")
         ward_names = get_wards_for_division(division) if division else []
         if not ward_names:
-            # Division not set, or has no wards mapped — fail closed, not open.
             return []
         conn = get_conn(); c = conn.cursor()
         conds  = [f"ward IN ({','.join(['?']*len(ward_names))})"]
@@ -990,7 +1042,6 @@ def get_reports_for_role(
         return results
 
     elif role in ("viewer",):
-        # Read-only, full access
         return get_all_reports(
             status=status, ward=ward, severity=severity,
             search=search, damage_type=damage_type,
@@ -998,7 +1049,7 @@ def get_reports_for_role(
         )
 
     elif role in ("was",):
-        ward_str = staff.get("ward_list", "") or ""
+        ward_str  = staff.get("ward_list", "") or ""
         was_wards = [w.strip() for w in ward_str.split(",") if w.strip()]
         if ward:
             return get_all_reports(
@@ -1040,7 +1091,6 @@ def get_reports_for_role(
         return results
 
     elif role == "field_engineer":
-        # Legacy pilot role — only assigned to them
         return get_all_reports(
             status=status, ward=ward, severity=severity,
             search=search, damage_type=damage_type,
@@ -1049,7 +1099,6 @@ def get_reports_for_role(
         )
 
     elif role in ("grievance_officer", "triage_officer"):
-        # Can see all reports (read) + triage queue
         return get_all_reports(
             status=status, ward=ward, severity=severity,
             search=search, damage_type=damage_type,
@@ -1063,9 +1112,7 @@ def get_reports_for_division(
     division: str, status=None, severity=None,
     search=None, damage_type=None, limit=200, offset=0,
 ) -> list:
-    """Returns reports for a specific AE division."""
     conn = get_conn(); c = conn.cursor()
-    # Get all wards in this division
     c.execute(_q(
         "SELECT DISTINCT ward_list FROM staff WHERE division=? AND role='was' AND is_active=1"
     ), (division,))
@@ -1081,7 +1128,6 @@ def get_reports_for_division(
                 wards_in_division.add(w)
 
     if not wards_in_division:
-        # Fall back to full access if division not configured
         return get_all_reports(
             status=status, severity=severity,
             search=search, damage_type=damage_type,
@@ -1148,8 +1194,7 @@ def update_report_status(report_id: str, new_status: str, done_by: str):
 def assign_report(
     report_id: str, assigned_to: str, done_by: str, assigned_officer: str = ""
 ) -> tuple:
-    """Assign complaint to WAS or field engineer. Only allowed while status='open' —
-    prevents silent re-assignment/overwrite of an already-assigned complaint."""
+    """Manual assignment by AE. Only allowed while status='open'."""
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT status FROM reports WHERE report_id=?"), (report_id,))
     row = c.fetchone()
@@ -1186,20 +1231,122 @@ def update_report_severity(
     conn.commit(); conn.close()
 
 
-def mark_work_done(report_id: str, work_done_photo: str, done_by: str):
-    """WAS marks work as done and uploads after-photo."""
-    conn = get_conn(); c = conn.cursor()
-    ts = now()
-    c.execute(_q(
-        "UPDATE reports SET work_done_photo=?, work_done_at=?, "
-        "status='resolved', updated_at=?, updated_by=? "
-        "WHERE report_id=?"
-    ), (work_done_photo, ts, ts, done_by, report_id))
+def was_verify_damage(
+    report_id: str,
+    verified_damage_type: str,
+    site_condition: str,
+    before_photo_data: str,
+    verified_by: str,
+    notes: str = "",
+    verify_lat: float = None,
+    verify_lng: float = None,
+) -> bool:
+    """
+    WAS visits site, corrects damage type, uploads before photo.
+    Status: inspecting → inspected
+    This is the primary AI training point — ground truth from a field officer
+    who physically saw the damage.
+
+    Photo timeline after this call:
+      photo_data      = citizen original photo (untouched)
+      site_photo_data = WAS before photo (this function)
+      work_done_photo = WAS after photo (mark_work_done)
+    """
+    conn = get_conn(); c = conn.cursor(); ts = now()
+    c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close(); return False
+    r = dict(row)
+
+    c.execute(_q("""
+        UPDATE reports
+        SET verified_damage_type=?,
+            site_condition=?,
+            site_photo_data=?,
+            verified_by=?,
+            verified_at=?,
+            verify_lat=?,
+            verify_lng=?,
+            status='inspected',
+            updated_at=?,
+            updated_by=?
+        WHERE report_id=?
+    """), (
+        verified_damage_type,
+        site_condition,
+        before_photo_data,
+        verified_by, ts,
+        verify_lat, verify_lng,
+        ts, verified_by,
+        report_id,
+    ))
+
     c.execute(_q(
         "INSERT INTO audit_log "
         "(report_id,action,old_value,new_value,done_by,done_at) "
         "VALUES (?,?,?,?,?,?)"
-    ), (report_id, "work_done", "inspecting", "inspected", done_by, ts))
+    ), (
+        report_id, "was_verified_damage",
+        r.get("damage_type",""),
+        verified_damage_type,
+        verified_by, ts,
+    ))
+
+    if notes:
+        c.execute(_q(
+            "INSERT INTO comments (report_id,comment,added_by,added_at) VALUES (?,?,?,?)"
+        ), (report_id, f"🔍 Site verification: {notes}", verified_by, ts))
+
+    conn.commit(); conn.close()
+
+    # Write AI training label — WAS is ground truth
+    save_training_sample(
+        report_id        = report_id,
+        ward             = r.get("ward",""),
+        citizen_damage_type  = r.get("damage_type",""),
+        verified_damage_type = verified_damage_type,
+        severity         = r.get("severity","unknown"),
+        site_condition   = site_condition,
+        verified_by      = verified_by,
+        verified_at      = ts,
+        photo_data       = before_photo_data,
+        is_override      = False,
+    )
+
+    # Log AI correction if damage type changed
+    if verified_damage_type and verified_damage_type != r.get("damage_type",""):
+        log_ai_correction(
+            report_id, r.get("severity",""), r.get("severity",""),
+            r.get("damage_type",""), verified_damage_type, verified_by,
+            r.get("photo_path",""), r.get("ward",""),
+            f"WAS on-site correction. Condition: {site_condition}",
+        )
+
+    return True
+
+
+def mark_work_done(report_id: str, work_done_photo: str, done_by: str,
+                   work_done_lat: float = None, work_done_lng: float = None):
+    """
+    WAS uploads after photo — road is fixed.
+    Status: inspected → resolved
+    This triggers citizen SMS via work_done_upload route.
+    GPS coordinates prove WAS was physically at the site.
+    """
+    conn = get_conn(); c = conn.cursor()
+    ts = now()
+    c.execute(_q(
+        "UPDATE reports SET work_done_photo=?, work_done_at=?, "
+        "work_done_lat=?, work_done_lng=?, "
+        "status='resolved', updated_at=?, updated_by=? "
+        "WHERE report_id=?"
+    ), (work_done_photo, ts, work_done_lat, work_done_lng, ts, done_by, report_id))
+    c.execute(_q(
+        "INSERT INTO audit_log "
+        "(report_id,action,old_value,new_value,done_by,done_at) "
+        "VALUES (?,?,?,?,?,?)"
+    ), (report_id, "work_done", "inspected", "resolved", done_by, ts))
     conn.commit(); conn.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1207,10 +1354,6 @@ def mark_work_done(report_id: str, work_done_photo: str, done_by: str):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_pending_triage_reports(limit: int = 100) -> list:
-    """
-    Returns complaints where GPS failed and ward is empty.
-    These are the Grievance Officer's work queue.
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
         SELECT * FROM reports
@@ -1228,9 +1371,8 @@ def assign_ward_from_triage(
     report_id: str, ward: str, assigned_by: str
 ) -> tuple:
     """
-    Grievance Officer assigns a ward to a GPS-failed complaint.
-    Complaint moves from pending_triage → open.
-    SLA clock starts from this moment.
+    Triage officer assigns ward to GPS-failed complaint.
+    After ward assignment, auto-assigns to WAS if available.
     """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
@@ -1242,7 +1384,6 @@ def assign_ward_from_triage(
     ist     = timezone(timedelta(hours=5, minutes=30))
     sla_due = (datetime.now(ist) + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S")
 
-    # FIX 10 — backfill division_name now that ward is finally known
     division_name = ""
     try:
         from wards import get_division_for_ward_name
@@ -1260,6 +1401,25 @@ def assign_ward_from_triage(
         "(report_id,action,old_value,new_value,done_by,done_at) "
         "VALUES (?,?,?,?,?,?)"
     ), (report_id, "triage_ward_assigned", "", ward, assigned_by, ts))
+
+    # Auto-assign to WAS after ward is set
+    try:
+        was = get_was_for_ward(ward)
+        if was:
+            c.execute(_q("""
+                UPDATE reports
+                SET assigned_to=?, assigned_officer='system',
+                    status='assigned', updated_at=?
+                WHERE report_id=?
+            """), (was["name"], ts, report_id))
+            c.execute(_q(
+                "INSERT INTO audit_log "
+                "(report_id,action,old_value,new_value,done_by,done_at) "
+                "VALUES (?,?,?,?,?,?)"
+            ), (report_id, "auto_assigned", "open", was["name"], "system", ts))
+    except Exception as e:
+        print(f"[triage_auto_assign] {e}")
+
     conn.commit(); conn.close()
     return True, f"Ward assigned: {ward}"
 
@@ -1271,11 +1431,6 @@ def flag_incorrect_ward(
     report_id: str, requested_ward: str,
     reason: str, flagged_by: str
 ) -> tuple:
-    """
-    WAS flags that a complaint is in the wrong ward.
-    Creates a ward_reassignment_log record.
-    AE must approve/reject — SLA clock does NOT pause.
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
     row = c.fetchone()
@@ -1283,7 +1438,6 @@ def flag_incorrect_ward(
         conn.close(); return False, "Report not found"
     r = dict(row)
 
-    # Prevent duplicate pending flags
     if r.get("ward_flag_status") == "pending":
         conn.close(); return False, "A ward flag is already pending review"
 
@@ -1312,18 +1466,14 @@ def flag_incorrect_ward(
 
 
 def get_pending_ward_flags(division: str = "") -> list:
-    """
-    Returns open ward flag requests.
-    AE sees flags for their division. Admin/commissioner sees all.
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
-    SELECT r.*, wrl.requested_ward, wrl.id as flag_id
-    FROM reports r
-    JOIN ward_reassignment_log wrl ON wrl.report_id = r.report_id
-    WHERE r.ward_flag_status = 'pending'
-      AND wrl.decision = 'pending'
-    ORDER BY r.ward_flag_at ASC
+        SELECT r.*, wrl.requested_ward, wrl.id as flag_id
+        FROM reports r
+        JOIN ward_reassignment_log wrl ON wrl.report_id = r.report_id
+        WHERE r.ward_flag_status = 'pending'
+          AND wrl.decision = 'pending'
+        ORDER BY r.ward_flag_at ASC
     """))
     rows = c.fetchall()
     conn.close()
@@ -1334,21 +1484,14 @@ def approve_ward_reassignment(
     report_id: str, approved: bool,
     reviewed_by: str, reason: str = ""
 ) -> tuple:
-    """
-    AE approves or rejects a WAS ward flag.
-    If approved: ward changes, complaint moves to new ward's WAS.
-    If rejected: complaint stays in current ward, WAS must handle.
-    SLA clock continues in both cases — no reset.
-    """
     conn = get_conn(); c = conn.cursor()
 
-    # Get the pending flag
     c.execute(_q("""
-    SELECT wrl.*, r.ward as current_ward
-    FROM ward_reassignment_log wrl
-    JOIN reports r ON wrl.report_id = r.report_id
-    WHERE wrl.report_id = ? AND wrl.decision = 'pending'
-    ORDER BY wrl.flagged_at DESC LIMIT 1
+        SELECT wrl.*, r.ward as current_ward
+        FROM ward_reassignment_log wrl
+        JOIN reports r ON wrl.report_id = r.report_id
+        WHERE wrl.report_id = ? AND wrl.decision = 'pending'
+        ORDER BY wrl.flagged_at DESC LIMIT 1
     """), (report_id,))
     flag = c.fetchone()
     if not flag:
@@ -1357,23 +1500,31 @@ def approve_ward_reassignment(
     ts = now()
 
     if approved:
-        # FIX 10 — recompute division_name since ward is changing
         new_division = ""
         try:
             from wards import get_division_for_ward_name
             new_division = get_division_for_ward_name(f["requested_ward"]) or ""
         except Exception:
             new_division = ""
-        # Update ward on the complaint
+
+        # Re-assign to correct WAS after ward change
+        new_was_name = ""
+        try:
+            new_was = get_was_for_ward(f["requested_ward"])
+            if new_was:
+                new_was_name = new_was["name"]
+        except Exception:
+            pass
+
         c.execute(_q(
             "UPDATE reports SET ward=?, division_name=?, ward_flag_status='approved', "
-            "updated_at=?, updated_by=?, assigned_to='' WHERE report_id=?"
-        ), (f["requested_ward"], new_division, ts, reviewed_by, report_id))
+            "updated_at=?, updated_by=?, assigned_to=? WHERE report_id=?"
+        ), (f["requested_ward"], new_division, ts, reviewed_by,
+            new_was_name or "", report_id))
         decision_text = "approved"
         audit_action  = "ward_reassigned"
         audit_new     = f["requested_ward"]
     else:
-        # Keep complaint in current ward
         c.execute(_q(
             "UPDATE reports SET ward_flag_status='rejected', "
             "updated_at=?, updated_by=? WHERE report_id=?"
@@ -1382,7 +1533,6 @@ def approve_ward_reassignment(
         audit_action  = "ward_flag_rejected"
         audit_new     = f["current_ward"]
 
-    # Update the log record
     c.execute(_q("""
         UPDATE ward_reassignment_log
         SET reviewed_by=?, reviewed_at=?, decision=?, reason=?
@@ -1396,25 +1546,22 @@ def approve_ward_reassignment(
     ), (report_id, audit_action, f["current_ward"], audit_new, reviewed_by, ts))
 
     conn.commit(); conn.close()
-    action_word = "approved — ward changed" if approved else "rejected — complaint stays in current ward"
+    action_word = "approved — ward changed and re-assigned" if approved else "rejected — complaint stays in current ward"
     return True, f"Ward flag {action_word}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SLA TRACKING
 # ─────────────────────────────────────────────────────────────────────────────
 
-# SLA level → hours until breach at this level
 SLA_LEVELS = {
-    0: 48,   # WAS must resolve within 48h
-    1: 72,   # AE gets it at 48h, must resolve within 24 more = 72h total
-    2: 96,   # ZC gets it at 72h, must resolve within 24 more = 96h total
-    3: 120,  # Commissioner gets it at 96h, max = 120h
+    0: 48,
+    1: 72,
+    2: 96,
+    3: 120,
 }
 
-# Hours before breach to send warning SMS
 SLA_WARNING_BUFFER = 12
 
-# Role responsible at each escalation level
 SLA_LEVEL_ROLE = {
     0: "was",
     1: "ae",
@@ -1424,10 +1571,6 @@ SLA_LEVEL_ROLE = {
 
 
 def get_sla_breached_reports(level: int) -> list:
-    """
-    Returns reports whose SLA is breached at a given escalation level.
-    Used by the watchdog to trigger escalations.
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
         SELECT * FROM reports
@@ -1443,9 +1586,6 @@ def get_sla_breached_reports(level: int) -> list:
 
 
 def get_sla_warning_reports(level: int, warning_hours: int = 12) -> list:
-    """
-    Returns reports approaching SLA breach (within warning_hours of deadline).
-    """
     conn = get_conn(); c = conn.cursor()
     ist      = timezone(timedelta(hours=5, minutes=30))
     now_dt   = datetime.now(ist)
@@ -1466,10 +1606,6 @@ def get_sla_warning_reports(level: int, warning_hours: int = 12) -> list:
 
 
 def escalate_report(report_id: str, from_level: int, escalated_by: str = "system") -> bool:
-    """
-    Escalate a complaint to the next SLA level.
-    Updates escalation_level, escalation_count, and sla_due_at.
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
     row = c.fetchone()
@@ -1479,11 +1615,9 @@ def escalate_report(report_id: str, from_level: int, escalated_by: str = "system
 
     new_level = from_level + 1
     if new_level > 3:
-        # Already at Commissioner level — just mark and return
         conn.close(); return False
 
     ist     = timezone(timedelta(hours=5, minutes=30))
-    # New SLA deadline: 24h from now at the new level
     sla_due = (datetime.now(ist) + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
     ts      = now()
     old_count = r.get("escalation_count", 0) or 0
@@ -1514,7 +1648,6 @@ def log_sla_event(
     target_role: str, target_name: str,
     message_sent: str = "", sms_sent: bool = False
 ):
-    """Record every SLA warning and breach event for audit purposes."""
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
         INSERT INTO sla_events
@@ -1529,25 +1662,15 @@ def log_sla_event(
 
 
 def get_staff_for_escalation_level(level: int, ward: str = "", zone: str = "") -> list:
-    """
-    Returns the right staff members to notify at each escalation level.
-    level 0 → WAS for this ward
-    level 1 → AE for this division
-    level 2 → Zonal Commissioner for this zone
-    level 3 → Commissioner + admin
-    """
     conn = get_conn(); c = conn.cursor()
-    role_at_level = SLA_LEVEL_ROLE.get(level, "commissioner")
 
     if level == 0 and ward:
-        # Find WAS assigned to this ward
         c.execute(_q("""
             SELECT * FROM staff
             WHERE role='was' AND is_active=1
               AND (ward_list LIKE ? OR ward_list = ?)
         """), (f"%{ward}%", ward))
     elif level == 1:
-        # Find AE for this ward's division
         if zone:
             c.execute(_q("SELECT * FROM staff WHERE role='ae' AND is_active=1 AND division=?"), (zone,))
         else:
@@ -1571,10 +1694,6 @@ def get_staff_for_escalation_level(level: int, ward: str = "", zone: str = "") -
 # ─────────────────────────────────────────────────────────────────────────────
 
 def create_citizen_review_token(report_id: str) -> str:
-    """
-    Generate a one-time review token for the citizen satisfaction link.
-    Sent via SMS when complaint is resolved.
-    """
     token = secrets.token_urlsafe(32)
     conn  = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT COUNT(*) as cnt FROM citizen_reviews WHERE report_id=?"), (report_id,))
@@ -1607,16 +1726,6 @@ def get_review_by_token(token: str) -> dict | None:
 def submit_citizen_review(
     token: str, satisfied: bool, comment: str = ""
 ) -> tuple:
-    """
-    Process citizen satisfaction response.
-
-    First dispute (dispute_number=1):
-      - Satisfied → complaint closed
-      - Not satisfied → AE site visit required (NOT force close)
-
-    Second dispute (dispute_number=2):
-      - AE must personally verify → only AE can force close
-    """
     conn = get_conn(); c = conn.cursor()
     c.execute(_q(
         "SELECT * FROM citizen_reviews WHERE review_token=? AND satisfied IS NULL"
@@ -1628,7 +1737,6 @@ def submit_citizen_review(
     rv = dict(row)
     ts = now()
 
-    # Mark review as submitted
     c.execute(_q("""
         UPDATE citizen_reviews
         SET satisfied=?, comment=?, reviewed_at=?
@@ -1636,7 +1744,6 @@ def submit_citizen_review(
     """), (1 if satisfied else 0, comment, ts, token))
 
     if satisfied:
-        # Close the complaint permanently
         c.execute(_q("""
             UPDATE reports
             SET status='closed', citizen_satisfied=1,
@@ -1652,10 +1759,8 @@ def submit_citizen_review(
         return True, "closed"
 
     else:
-        # Citizen NOT satisfied
         dispute_number = rv.get("dispute_number", 1)
 
-        # Increment dispute count on report
         c.execute(_q("""
             UPDATE reports
             SET dispute_count = COALESCE(dispute_count,0) + 1,
@@ -1664,7 +1769,6 @@ def submit_citizen_review(
             WHERE report_id=?
         """), (ts, ts, rv["report_id"]))
 
-        # Always require AE site visit — no auto-close (production rule)
         c.execute(_q("""
             UPDATE reports
             SET ae_site_visit_required=1
@@ -1691,11 +1795,6 @@ def submit_citizen_review(
 
 
 def get_disputed_reports_for_ae(ae_name: str = "", division: str = "") -> list:
-    """
-    Returns complaints where citizen disputed and AE site visit is required.
-    AE must physically verify → can force close OR reopen.
-    If division is provided, scopes to that division's wards only.
-    """
     conn = get_conn(); c = conn.cursor()
     if division:
         ward_list = get_wards_in_division(division)
@@ -1732,11 +1831,6 @@ def ae_resolve_disputed(
     report_id: str, decision: str,
     ae_name: str, ae_notes: str = ""
 ) -> tuple:
-    """
-    AE reviews disputed complaint after physical site visit.
-    decision: 'force_close' | 'reopen'
-    Only AE can close a disputed ticket — never auto-close.
-    """
     conn = get_conn(); c = conn.cursor()
     ts = now()
 
@@ -1774,7 +1868,6 @@ def ae_resolve_disputed(
         ), (report_id, f"AE site visit: {ae_notes}", ae_name, ts))
 
     if new_status == "closed":
-        # Append to CSV archive
         c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
         r_row = c.fetchone()
         if r_row:
@@ -1788,7 +1881,6 @@ def ae_resolve_disputed(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_wards_in_division(division: str) -> list:
-    """Return ward names belonging to a division (from WAS ward_list assignments)."""
     conn = get_conn(); c = conn.cursor()
     c.execute(_q(
         "SELECT ward_list FROM staff WHERE division=? AND role='was' AND is_active=1"
@@ -1841,7 +1933,7 @@ def get_active_officers() -> list:
 
 
 def get_was_for_ward(ward: str) -> dict | None:
-    """Find the WAS responsible for a given ward."""
+    """Find the active WAS responsible for a given ward."""
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
         SELECT * FROM staff
@@ -1855,7 +1947,6 @@ def get_was_for_ward(ward: str) -> dict | None:
 
 
 def get_engineers_under(officer_id: int) -> list:
-    """Returns WAS/engineers supervised by this officer (by id)."""
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("""
         SELECT id, name, username, role
@@ -2066,10 +2157,8 @@ def add_staff(
         c.execute(_q("SELECT id FROM staff WHERE username=?"), (username,))
         if c.fetchone():
             conn.close(); return False, "Username already exists"
-       # Set 24hr expiry for temp passwords
         expires = None
         if must_change:
-            from datetime import datetime, timezone, timedelta
             expires = (datetime.now(timezone.utc) + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
 
         c.execute(_q("""
@@ -2253,7 +2342,6 @@ def create_session(staff_id: int) -> str:
     c.execute(_q("UPDATE staff SET last_login=? WHERE id=?"), (ts, staff_id))
     conn.commit(); conn.close()
     return token
-
 
 def get_staff_by_token(token: str) -> dict | None:
     conn = get_conn(); c = conn.cursor()

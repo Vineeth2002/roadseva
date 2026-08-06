@@ -361,7 +361,7 @@ textarea.field-input{resize:vertical;min-height:88px;line-height:1.6}
               <div class="field-row full">
                 <div class="field-group" id="fg-desc">
                   <label class="field-label" for="description">
-                    Location Description <span class="req">*</span>
+                    Location Description <span class="opt">(Optional)</span>
                   </label>
                   <textarea class="field-input" id="description" name="description"
                     placeholder="e.g. Near Gajuwaka bus stand, opposite Hanuman temple, 50m from main junction. Describe a landmark, street name, or cross-road."
@@ -602,8 +602,12 @@ textarea.field-input{resize:vertical;min-height:88px;line-height:1.6}
             <span><strong>Critical:</strong> Response within 24 hours</span>
           </div>
           <div class="help-item">
-            <span class="hi-icon">🟡</span>
+            <span class="hi-icon">🟠</span>
             <span><strong>High:</strong> Within 3 working days</span>
+          </div>
+          <div class="help-item">
+            <span class="hi-icon">🟡</span>
+            <span><strong>Medium/Low:</strong> Within 7 working days</span>
           </div>
           <div class="help-item">
             <span class="hi-icon">🟢</span>
@@ -659,7 +663,6 @@ function validate(step) {
   if (step===2) {
     // GPS mandatory — outside GVMC blocks submission
     const hasGPS  = !!document.getElementById('lat-hidden').value;
-    const hasDesc = !!document.getElementById('description').value.trim();
     const ok = hasGPS && !gpsOutsideGVMC;
 if (gpsOutsideGVMC) {
   document.querySelector('.gps-status').className = 'gps-status err';
@@ -788,10 +791,12 @@ async function detectWardFromGPS(lat, lng) {
     const data = await res.json();
     const addr = data.address || {};
 
-    const city = addr.city || addr.town || addr.state_district || '';
-    const isVisakhapatnam = city.toLowerCase().includes('visakhapatnam') ||
-                            city.toLowerCase().includes('vizag') ||
-                            (addr.state_district || '').toLowerCase().includes('visakhapatnam');
+    const allFields = [
+      addr.city, addr.town, addr.county, addr.state_district,
+      addr.city_district, addr.suburb, addr.neighbourhood
+    ].filter(Boolean).join(' ').toLowerCase();
+    const isVisakhapatnam = allFields.includes('visakhapatnam') ||
+                            allFields.includes('vizag');
 
     if (!isVisakhapatnam) {
       gpsOutsideGVMC = true;
@@ -857,14 +862,14 @@ function captureGPS() {
     pos => {
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
-      if (pos.coords.accuracy < 5) {
-  st.className='gps-status err';
-  st.textContent='❌ GPS signal looks artificial. Please disable any fake GPS apps and try again.';
-  btn.textContent='📡 Capture GPS'; btn.disabled=false;
-  document.getElementById('lat-hidden').value='';
-  document.getElementById('lng-hidden').value='';
-  return;
-}
+      if (pos.coords.accuracy === 0) {
+        st.className='gps-status err';
+        st.textContent='❌ GPS signal looks artificial. Please disable any fake GPS apps and try again.';
+        btn.textContent='📡 Capture GPS'; btn.disabled=false;
+        document.getElementById('lat-hidden').value='';
+        document.getElementById('lng-hidden').value='';
+        return;
+      }
       document.getElementById('lat-hidden').value = lat;
       document.getElementById('lng-hidden').value = lng;
       dis.textContent = `📍 ${lat}° N, ${lng}° E  (±${Math.round(pos.coords.accuracy)}m)`;
@@ -882,8 +887,10 @@ function captureGPS() {
       btn.textContent='📡 Capture GPS'; btn.disabled=false;
       st.className='gps-status err';
       st.textContent = err.code===1
-        ? '❌ Location permission denied — please describe the location below instead.'
-        : '❌ Could not capture location. Please describe location in the text box below.';
+        ? '❌ Location permission denied. Please allow location access in your browser settings, then tap Capture GPS again.'
+        : err.code===3
+        ? '❌ GPS timed out — weak signal. Move to an open area and try again, or describe the location below.'
+        : '❌ Could not capture location. Please describe the location below.';
     },
     {enableHighAccuracy:true, timeout:15000}
   );
