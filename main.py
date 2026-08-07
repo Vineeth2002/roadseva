@@ -77,32 +77,6 @@ except ImportError:
     def notify_citizen(*a, **kw): return {"sms": False, "email": False}
 
 
-# ── ROLE ROUTING ───────────────────────────────────────────────────────────────
-
-ROLE_HOME = {
-    "admin":              "/commissioner",
-    "commissioner":       "/commissioner",
-    "zonal_commissioner": "/commissioner",
-    "ae":                 "/staff",
-    "grievance_officer":  "/triage",
-    "triage_officer":     "/triage",
-    "was":                "/field",
-    "field_engineer":     "/field",
-    "viewer":             "/staff",
-}
-
-ROLE_LABELS = {
-    "admin":              "IT Administrator",
-    "commissioner":       "Commissioner",
-    "zonal_commissioner": "Zonal Commissioner",
-    "ae":                 "Assistant Engineer",
-    "grievance_officer":  "Grievance Officer",
-    "triage_officer":     "Triage Officer",
-    "was":                "Ward Amenities Secretary",
-    "field_engineer":     "Field Engineer",
-    "viewer":             "Viewer / Corporator",
-}
-
 COOKIE_NAME    = "session_token"
 COOKIE_MAX_AGE = 8 * 3600
 WARRANTY_DAYS  = 180
