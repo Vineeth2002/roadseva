@@ -25,6 +25,9 @@ psycopg[binary]==3.2.13
 # ── SMS Notifications ─────────────────────────────────────
 twilio==9.3.3
 
+# ── Email (enquiry form) ──────────────────────────────────
+resend==2.4.0
+
 # ── Cloud Photo Storage ───────────────────────────────────
 cloudinary==1.45.0
 
