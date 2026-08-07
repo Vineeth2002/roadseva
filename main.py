@@ -541,7 +541,7 @@ async def assign_ward(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/triage?error=csrf", status_code=302)
 
-    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, "admin", "commissioner"):
+    if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, *permissions.COMMISSIONER_ROLES):
         return permissions.redirect_home(staff)
 
     ward, _ = sanitize_input(ward)
