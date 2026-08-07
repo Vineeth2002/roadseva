@@ -300,12 +300,12 @@ def _send_enquiry_email(fname, lname, email, org, etype, msg):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return templates.TemplateResponse(request, "landing.html", {})
 
 @app.get("/about", response_class=HTMLResponse)
 async def about(request: Request):
     staff, _ = require_login(request)
-    return templates.TemplateResponse("about.html", {"request": request, "staff": staff})
+    return templates.TemplateResponse(request, "about.html", {"staff": staff})
 
 @app.post("/enquiry")
 async def enquiry_post(request: Request):
@@ -331,8 +331,7 @@ async def enquiry_post(request: Request):
 
 @app.get("/citizen", response_class=HTMLResponse)
 async def citizen(request: Request):
-    return templates.TemplateResponse("citizen.html", {
-        "request": request, "csrf": csrf_token_citizen(), "wards": WARD_NAMES})
+    return templates.TemplateResponse(request, "citizen.html", {"csrf": csrf_token_citizen(), "wards": WARD_NAMES})
 
 
 @app.post("/submit", response_class=HTMLResponse)
@@ -355,13 +354,11 @@ async def submit(
     ip = get_real_ip(request)
     ok, reason, retry = check_rate_limit("submit", ip)
     if not ok:
-        return templates.TemplateResponse("citizen.html", {
-            "request": request, "error": reason,
+        return templates.TemplateResponse(request, "citizen.html", {"error": reason,
             "csrf": csrf_token_citizen(), "wards": WARD_NAMES})
 
     if not verify_csrf_citizen(csrf):
-        return templates.TemplateResponse("citizen.html", {
-            "request": request, "error": "Session expired. Please try again.",
+        return templates.TemplateResponse(request, "citizen.html", {"error": "Session expired. Please try again.",
             "csrf": csrf_token_citizen(), "wards": WARD_NAMES})
 
     citizen_name, _  = sanitize_input(citizen_name)
@@ -391,8 +388,7 @@ async def submit(
         safe_filename, _ = sanitize_filename(photo.filename or "upload.jpg")
         inspect = deep_inspect_photo(photo_bytes, safe_filename)
         if not inspect["safe"]:
-            return templates.TemplateResponse("citizen.html", {
-                "request": request, "error": inspect["error"],
+            return templates.TemplateResponse(request, "citizen.html", {"error": inspect["error"],
                 "csrf": csrf_token_citizen(), "wards": WARD_NAMES})
         clean_bytes = inspect["clean_bytes"]; ext = inspect["ext"]
         filename    = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{safe_filename}"
@@ -400,8 +396,7 @@ async def submit(
         os.makedirs("uploads", exist_ok=True)
         with open(file_path, "wb") as f: f.write(clean_bytes)
     else:
-        return templates.TemplateResponse("citizen.html", {
-            "request": request, "error": "Please upload a photo of the damage.",
+        return templates.TemplateResponse(request, "citizen.html", {"error": "Please upload a photo of the damage.",
             "csrf": csrf_token_citizen(), "wards": WARD_NAMES})
 
     try:    lat = float(latitude) if latitude else None
@@ -475,8 +470,7 @@ async def submitted_get(request: Request,
     rqi: str="0", dup_id: str="", dup_dist: str="", division: str=""):
     if not id:
         return RedirectResponse(url="/citizen", status_code=303)
-    return templates.TemplateResponse("submitted.html", {
-        "request": request, "report_id": id, "citizen_name": name,
+    return templates.TemplateResponse(request, "submitted.html", {"report_id": id, "citizen_name": name,
         "severity": severity, "rqi_breach": rqi=="1",
         "duplicate_id": dup_id, "duplicate_dist": dup_dist,
         "division_name": division})
@@ -495,9 +489,7 @@ async def citizen_review_get(request: Request, report_id: str, token: str = ""):
         return HTMLResponse(
             "<h2>This review link is invalid or has already been used.</h2>",
             status_code=404)
-    return templates.TemplateResponse("citizen_review.html", {
-        "request": request,
-        "report_id": report_id,
+    return templates.TemplateResponse(request, "citizen_review.html", {"report_id": report_id,
         "token": token,
         "ward": review.get("ward",""),
         "damage_type": review.get("damage_type",""),
@@ -526,8 +518,7 @@ async def citizen_review_post(request: Request, report_id: str,
     report = database.get_report_by_id(report_id)
 
     if result == "closed":
-        return templates.TemplateResponse("citizen_review_thanks.html", {
-            "request": request, "satisfied": True, "force_closed": False,
+        return templates.TemplateResponse(request, "citizen_review_thanks.html", {"satisfied": True, "force_closed": False,
             "report_id": report_id,
             "message": "Thank you for confirming. Your feedback helps us serve Visakhapatnam better."
         })
@@ -540,8 +531,7 @@ async def citizen_review_post(request: Request, report_id: str,
     except Exception as e:
         print(f"[citizen_review] notify_citizen error: {e}")
 
-    return templates.TemplateResponse("citizen_review_thanks.html", {
-        "request": request, "satisfied": False, "force_closed": False,
+    return templates.TemplateResponse(request, "citizen_review_thanks.html", {"satisfied": False, "force_closed": False,
         "report_id": report_id,
         "message": "Thank you for letting us know. A senior officer will review the work photos and take action within 48 hours."
     })
@@ -559,8 +549,7 @@ async def triage_dashboard(request: Request):
 
     reports = database.get_pending_triage_reports(limit=100)
     token   = request.cookies.get(COOKIE_NAME, "")
-    return templates.TemplateResponse("triage.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "triage.html", {"staff": staff,
         "reports": reports,
         "csrf": generate_csrf_token(token),
         "wards": WARD_NAMES,
@@ -673,8 +662,7 @@ async def disputed_reviews(request: Request):
     reports  = database.get_disputed_reports_for_review(division_name=division)
     token    = request.cookies.get(COOKIE_NAME,"")
 
-    return templates.TemplateResponse("disputed_reviews.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "disputed_reviews.html", {"staff": staff,
         "reports": reports, "csrf": generate_csrf_token(token)})
 
 @app.post("/resolve-dispute", response_class=HTMLResponse)
@@ -809,30 +797,25 @@ async def track_get(request: Request,
         query = report_id.strip().upper()
         r = database.get_report_by_id(query)
         if r:
-            return templates.TemplateResponse("track.html", {
-                "request": request, "searched": True, "reports": [r],
+            return templates.TemplateResponse(request, "track.html", {"searched": True, "reports": [r],
                 "query": query, "error": "", "is_staff": bool(staff),
                 "search_type": "id", "from_archive": False})
         archived = database.get_archived_report(query)
         if archived:
-            return templates.TemplateResponse("track.html", {
-                "request": request, "searched": True, "reports": [archived],
+            return templates.TemplateResponse(request, "track.html", {"searched": True, "reports": [archived],
                 "query": query, "error": "", "is_staff": bool(staff),
                 "search_type": "id", "from_archive": True})
-        return templates.TemplateResponse("track.html", {
-            "request": request, "searched": True, "reports": [],
+        return templates.TemplateResponse(request, "track.html", {"searched": True, "reports": [],
             "query": query, "error": "Complaint not found.", "is_staff": bool(staff),
             "search_type": "id", "from_archive": False})
 
     if phone and staff:
         reports = database.get_archived_reports_by_phone(phone.strip())
-        return templates.TemplateResponse("track.html", {
-            "request": request, "searched": True, "reports": reports,
+        return templates.TemplateResponse(request, "track.html", {"searched": True, "reports": reports,
             "query": phone.strip(), "error": "", "is_staff": bool(staff),
             "search_type": "phone", "from_archive": False})
 
-    return templates.TemplateResponse("track.html", {
-        "request": request, "searched": False, "reports": [],
+    return templates.TemplateResponse(request, "track.html", {"searched": False, "reports": [],
         "query": "", "error": "", "is_staff": bool(staff),
         "search_type": "id", "from_archive": False})
 
@@ -846,8 +829,7 @@ async def track_post(request: Request,
 
     ok, reason, retry = check_rate_limit("track", ip)
     if not ok:
-        return templates.TemplateResponse("track.html", {
-            "request": request, "searched": False, "reports": [],
+        return templates.TemplateResponse(request, "track.html", {"searched": False, "reports": [],
             "query": "", "search_type": search_type,
             "is_staff": bool(staff),
             "error": "Too many lookups. Please wait before trying again."})
@@ -875,8 +857,7 @@ async def track_post(request: Request,
         else:
             error = "Please enter a grievance reference number"
 
-    return templates.TemplateResponse("track.html", {
-        "request": request, "searched": True, "reports": reports,
+    return templates.TemplateResponse(request, "track.html", {"searched": True, "reports": reports,
         "query": query, "error": error,
         "is_staff": bool(staff), "search_type": search_type,
         "from_archive": from_archive})
@@ -889,7 +870,7 @@ async def login_get(request: Request):
     staff, _ = require_login(request)
     if staff:
         return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": ""})
+    return templates.TemplateResponse(request, "login.html", {"error": ""})
 
 @app.post("/login", response_class=HTMLResponse)
 async def login_post(request: Request,
@@ -898,7 +879,7 @@ async def login_post(request: Request,
     username = username.strip().lower()
     staff, err = database.authenticate_staff(username, password, ip)
     if not staff:
-        return templates.TemplateResponse("login.html", {"request": request, "error": err})
+        return templates.TemplateResponse(request, "login.html", {"error": err})
     token = database.create_session(staff["id"])
     dest  = "/change-password?forced=1" if staff.get("must_change_password") \
             else ROLE_HOME.get(staff["role"],"/staff")
@@ -922,8 +903,7 @@ async def change_password_get(request: Request, forced: str="0"):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
     token = request.cookies.get(COOKIE_NAME,"")
-    return templates.TemplateResponse("change_password.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "change_password.html", {"staff": staff,
         "is_forced": mc or forced=="1",
         "csrf": generate_csrf_token(token), "error": "", "message": ""})
 
@@ -938,19 +918,16 @@ async def change_password_post(request: Request,
     if not staff: return RedirectResponse("/login", status_code=302)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
-        return templates.TemplateResponse("change_password.html", {
-            "request": request, "staff": staff, "is_forced": mc or forced=="1",
+        return templates.TemplateResponse(request, "change_password.html", {"staff": staff, "is_forced": mc or forced=="1",
             "csrf": generate_csrf_token(token),
             "error": "Session expired. Please try again.", "message": ""})
     if new_password != confirm_password:
-        return templates.TemplateResponse("change_password.html", {
-            "request": request, "staff": staff, "is_forced": mc or forced=="1",
+        return templates.TemplateResponse(request, "change_password.html", {"staff": staff, "is_forced": mc or forced=="1",
             "csrf": generate_csrf_token(token),
             "error": "New passwords do not match.", "message": ""})
     ok, err = database.change_password(staff["id"], current_password, new_password)
     if not ok:
-        return templates.TemplateResponse("change_password.html", {
-            "request": request, "staff": staff, "is_forced": mc or forced=="1",
+        return templates.TemplateResponse(request, "change_password.html", {"staff": staff, "is_forced": mc or forced=="1",
             "csrf": generate_csrf_token(token), "error": err, "message": ""})
     return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
 
@@ -992,8 +969,7 @@ async def staff_dashboard(request: Request,
     token      = request.cookies.get(COOKIE_NAME,"")
     sla_cutoff = (datetime.now()-timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
 
-    return templates.TemplateResponse("staff.html", {
-        "request": request, "staff": staff, "reports": reports,
+    return templates.TemplateResponse(request, "staff.html", {"staff": staff, "reports": reports,
         "all_reports": all_reports, "all_audits": all_audits,
         "all_comments": all_comments, "officers": officers,
         "engineers": officers, "ward_list": ward_list,
@@ -1127,8 +1103,7 @@ async def field_dashboard(request: Request):
     my_flags = [f for f in pending_flags
                 if f.get("ward_flag_by") == staff["name"]]
 
-    return templates.TemplateResponse("field.html", {
-        "request": request, "staff": staff, "reports": active,
+    return templates.TemplateResponse(request, "field.html", {"staff": staff, "reports": active,
         "csrf": generate_csrf_token(token),
         "sla_cutoff": sla_cutoff, "all_comments": all_comments,
         "ward_names": WARD_NAMES,
@@ -1401,8 +1376,7 @@ async def commissioner(request: Request):
     data = database.get_commissioner_data(ward_filter=ward_filter)
 
     from watchdog import get_sla_dashboard_data
-    return templates.TemplateResponse("commissioner.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "commissioner.html", {"staff": staff,
         "data": data,
         "sla": get_sla_dashboard_data()})
 
@@ -1433,8 +1407,7 @@ async def analytics(request: Request):
     if permissions.deny_role(staff, *permissions.FIELD_ROLES):
         return RedirectResponse("/field", status_code=302)
     data = database.get_analytics_data()
-    return templates.TemplateResponse("analytics.html", {
-        "request": request, "staff": staff, "data": data, "now_ist": _now_ist()})
+    return templates.TemplateResponse(request, "analytics.html", {"staff": staff, "data": data, "now_ist": _now_ist()})
 
 # ── MAP ────────────────────────────────────────────────────────────────────────
 
@@ -1447,8 +1420,7 @@ async def map_page(request: Request):
         return RedirectResponse("/field", status_code=302)
     reports     = database.get_all_reports(limit=500)
     geo_reports = [r for r in reports if r.get("latitude") and r.get("longitude")]
-    return templates.TemplateResponse("map.html", {
-        "request": request, "staff": staff, "reports": geo_reports})
+    return templates.TemplateResponse(request, "map.html", {"staff": staff, "reports": geo_reports})
 
 # ── EXPORT CSV ─────────────────────────────────────────────────────────────────
 
@@ -1516,8 +1488,7 @@ async def admin_get(request: Request):
         return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
     all_staff = database.get_all_staff()
     token     = request.cookies.get(COOKIE_NAME,"")
-    return templates.TemplateResponse("admin.html", {
-        "request": request, "staff": staff, "all_staff": all_staff,
+    return templates.TemplateResponse(request, "admin.html", {"staff": staff, "all_staff": all_staff,
         "csrf": generate_csrf_token(token), "message": "", "error": ""})
 
 @app.post("/admin/add-staff", response_class=HTMLResponse)
@@ -1542,8 +1513,7 @@ async def admin_add_staff(request: Request,
     ok, result = database.add_staff(name, username, password, role, staff["name"],
                                      zone=zone, division=division, ward_list=ward_list, phone=phone)
     all_staff  = database.get_all_staff()
-    return templates.TemplateResponse("admin.html", {
-        "request": request, "staff": staff, "all_staff": all_staff,
+    return templates.TemplateResponse(request, "admin.html", {"staff": staff, "all_staff": all_staff,
         "csrf": generate_csrf_token(token),
         "message": f"Account created. Temp password: {result}" if ok else "",
         "error": result if not ok else ""})
@@ -1573,8 +1543,7 @@ async def team_get(request: Request, message: str="", error: str=""):
         staff["role"], staff["username"], staff.get("id"))
     creatable    = database.ROLE_CAN_CREATE.get(staff["role"], set())
     token        = request.cookies.get(COOKIE_NAME,"")
-    return templates.TemplateResponse("team.html", {
-        "request": request, "staff": staff, "team_members": team_members,
+    return templates.TemplateResponse(request, "team.html", {"staff": staff, "team_members": team_members,
         "creatable_roles": sorted(creatable), "role_labels": ROLE_LABELS,
         "csrf": generate_csrf_token(token), "message": message, "error": error})
 
@@ -1653,8 +1622,7 @@ async def staff_log_get(request: Request):
     if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
         return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
-    return templates.TemplateResponse("staff_log.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "staff_log.html", {"staff": staff,
         "csrf": generate_csrf_token(token), "wards": WARD_NAMES,
         "message": "", "error": "", "report_id": ""})
 
@@ -1691,8 +1659,7 @@ async def staff_log_post(request: Request,
         citizen_name, citizen_phone, "", lat, lng,
         severity="unknown", photo_data="",
         intake_channel=intake_channel, intake_ref=intake_ref)
-    return templates.TemplateResponse("staff_log.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "staff_log.html", {"staff": staff,
         "csrf": generate_csrf_token(token), "wards": WARD_NAMES,
         "message": "Complaint logged successfully.", "error": "",
         "report_id": report_id})
@@ -1709,8 +1676,7 @@ async def rqi_page(request: Request):
     rqi_raw = database.get_rqi_data()
     database.mark_rqi_seen()
     data = _build_rqi_data(rqi_raw["events"])
-    return templates.TemplateResponse("rqi.html", {
-        "request": request, "staff": staff, "data": data})
+    return templates.TemplateResponse(request, "rqi.html", {"staff": staff, "data": data})
 
 # ── WARDS ──────────────────────────────────────────────────────────────────────
 
@@ -1723,8 +1689,7 @@ async def wards_page(request: Request):
                "open":w["open_count"],"rate":w["resolution_rate"],
                "avg_days":0,"rank":i+1}
              for i,w in enumerate(raw)]
-    return templates.TemplateResponse("wards.html", {
-        "request": request, "staff": staff,
+    return templates.TemplateResponse(request, "wards.html", {"staff": staff,
         "wards": wards, "total_wards": len(wards)})
 
 @app.get("/ward/{ward_name:path}", response_class=HTMLResponse)
@@ -1732,8 +1697,7 @@ async def ward_public(request: Request, ward_name: str):
     ward_name = urllib.parse.unquote(ward_name)
     data      = database.get_ward_stats(ward_name)
     staff, _  = require_login(request)
-    return templates.TemplateResponse("ward_public.html", {
-        "request": request, "staff": staff, "data": data, "ward": ward_name})
+    return templates.TemplateResponse(request, "ward_public.html", {"staff": staff, "data": data, "ward": ward_name})
 
 # ── ACCOUNT LOG ────────────────────────────────────────────────────────────────
 
@@ -1745,8 +1709,7 @@ async def account_log(request: Request):
     if not permissions.check_role(staff, "admin", "commissioner"):
         return permissions.redirect_home(staff)
     log = database.get_staff_audit_log(200)
-    return templates.TemplateResponse("account_log.html", {
-        "request": request, "staff": staff, "log": log})
+    return templates.TemplateResponse(request, "account_log.html", {"staff": staff, "log": log})
 
 # ── CREDENTIAL CARD ────────────────────────────────────────────────────────────
 
@@ -1758,8 +1721,7 @@ async def credential_card(request: Request, staff_id: int):
         return permissions.redirect_home(staff)
     target = database.get_staff_by_id(staff_id)
     if not target: return RedirectResponse("/team", status_code=302)
-    return templates.TemplateResponse("credential_card.html", {
-        "request": request, "staff": staff, "target": target,
+    return templates.TemplateResponse(request, "credential_card.html", {"staff": staff, "target": target,
         "name": target["name"], "username": target["username"],
         "role": ROLE_LABELS.get(target["role"], target["role"]),
         "org":  database.get_system_setting("org_name") or "GVMC",
@@ -1774,9 +1736,7 @@ async def setup_get(request: Request):
     if database.is_setup_complete():
         return RedirectResponse("/login", status_code=302)
     token = request.cookies.get(COOKIE_NAME,"")
-    return templates.TemplateResponse("setup.html", {
-        "request": request,
-        "csrf": generate_csrf_token(token) if token else csrf_token_citizen(),
+    return templates.TemplateResponse(request, "setup.html", {"csrf": generate_csrf_token(token) if token else csrf_token_citizen(),
         "org": database.get_system_setting("org_name") or "",
         "error": "", "message": ""})
 
@@ -1791,9 +1751,7 @@ async def setup_post(request: Request,
         return RedirectResponse("/login", status_code=302)
     token = request.cookies.get(COOKIE_NAME,"")
     def render_error(msg):
-        return templates.TemplateResponse("setup.html", {
-            "request": request,
-            "csrf": generate_csrf_token(token) if token else csrf_token_citizen(),
+        return templates.TemplateResponse(request, "setup.html", {"csrf": generate_csrf_token(token) if token else csrf_token_citizen(),
             "org": org_name, "error": msg, "message": ""})
     commissioner_name, _     = sanitize_input(commissioner_name)
     commissioner_username, _ = sanitize_input(commissioner_username.strip().lower())
@@ -1805,9 +1763,7 @@ async def setup_post(request: Request,
     if not ok: return render_error(result)
     new_staff = database.get_staff_by_username(commissioner_username)
     if not new_staff: return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse("credential_card.html", {
-        "request": request,
-        "staff": {"name": "Setup Wizard", "role": "admin"},
+    return templates.TemplateResponse(request, "credential_card.html", {"staff": {"name": "Setup Wizard", "role": "admin"},
         "target": new_staff, "name": commissioner_name,
         "username": commissioner_username, "role": "Commissioner",
         "org": org_name, "created_by": "IT Setup Wizard",
@@ -1818,7 +1774,7 @@ async def setup_post(request: Request,
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy(request: Request):
-    return templates.TemplateResponse("privacy.html", {"request": request})
+    return templates.TemplateResponse(request, "privacy.html", {})
 
 @app.get("/health")
 async def health():
