@@ -54,6 +54,7 @@ from fastapi.templating import Jinja2Templates
 
 import database
 from wards import WARD_NAMES
+from permissions import ROLE_HOME, ROLE_LABELS
 
 from security import (
     sanitize_input, sanitize_filename, deep_inspect_photo,
