@@ -61,6 +61,25 @@ jobs:
           name: test-results
           path: .pytest_cache/
 
+      - name: Notify on test failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ -n "$RESEND_API_KEY" ]; then
+            curl -s -X POST "https://api.resend.com/emails" \
+              -H "Authorization: Bearer $RESEND_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "from": "RoadSeva CI <onboarding@resend.dev>",
+                "to": ["ainimireddyvineeth25@gmail.com"],
+                "subject": "🚨 RoadSeva CI FAILED — ${{ github.ref_name }}",
+                "html": "<p><b>Commit:</b> ${{ github.sha }}</p><p><b>Branch:</b> ${{ github.ref_name }}</p><p><b>By:</b> ${{ github.actor }}</p><p><a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View failure details</a></p>"
+              }'
+          else
+            echo "RESEND_API_KEY not set — skipping notification"
+          fi
+
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
