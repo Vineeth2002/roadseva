@@ -323,6 +323,28 @@ class TestRoleBasedAccess:
         }, follow_redirects=False)
         assert response.status_code in (302, 200), f"Expected redirect/200, got {response.status_code} — check for NameError/500"
 
+    def test_add_comment_with_real_csrf_succeeds(self, authed_client, sample_report_id):
+        """Full success path: real CSRF token → comment actually gets added."""
+        c = authed_client("ae")
+        get_response = c.get("/staff")
+        assert get_response.status_code == 200
+
+        import re
+        match = re.search(r'name="csrf" value="([^"]+)"', get_response.text)
+        assert match, "Could not find CSRF token on /staff page"
+        real_csrf = match.group(1)
+
+        response = c.post("/add-comment", data={
+            "report_id": sample_report_id,
+            "comment": "Real CSRF test comment",
+            "csrf": real_csrf,
+        }, follow_redirects=False)
+        assert response.status_code == 302
+
+        comments = database.get_comments(sample_report_id)
+        assert any("Real CSRF test comment" in cm["comment"] for cm in comments), \
+            "Comment was not actually saved to the database"
+
     def test_change_password_redirects_correctly(self, authed_client):
         c = authed_client("ae")
         # Get a real CSRF token first — GET renders it into the page via generate_csrf_token()
