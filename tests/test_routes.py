@@ -64,6 +64,39 @@ def sample_report_id(fresh_db):
     )
     return rid
 
+@pytest.fixture
+def authed_client(fresh_db):
+    """
+    Factory fixture: call authed_client(role) to get a TestClient
+    logged in as a real staff account with that role.
+    Creates the account fresh in the test DB, logs in via create_session()
+    (same mechanism main.py's real /login route uses), and sets the
+    session cookie — mirrors an actual browser session.
+    """
+    from main import app
+
+    def _make(role: str, **kwargs):
+        username = f"test_{role}"
+        ok, result = database.add_staff(
+            name=f"Test {role.title()}",
+            username=username,
+            password="TestPass@2024!",
+            role=role,
+            created_by="test_suite",
+            zone=kwargs.get("zone", "Zone 1" if role == "zonal_commissioner" else ""),
+            division=kwargs.get("division", "East" if role == "ae" else ""),
+            ward_list=kwargs.get("ward_list", "Ward 1 - Gajuwaka" if role == "was" else ""),
+        )
+        assert ok, f"Failed to create test {role} account: {result}"
+
+        staff = database.get_staff_by_username(username)
+        token = database.create_session(staff["id"])
+
+        c = TestClient(app, raise_server_exceptions=False)
+        c.cookies.set("session_token", token)
+        return c
+
+    return _make
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # /track GET — auto-search via ?ref= param
@@ -223,3 +256,88 @@ class TestSecurityHeaders:
     def test_csp_present(self, client):
         response = client.get("/")
         assert "Content-Security-Policy" in response.headers
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Role-based access — routes that previously had zero coverage
+# (this exact gap let the ROLE_HOME/ROLE_LABELS import bug ship silently
+#  through 6 commits before CI's ruff check caught it)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestRoleBasedAccess:
+
+    def test_login_redirects_admin_to_correct_home(self, client):
+        database.add_staff(name="Admin Test", username="logintest_admin",
+            password="TestPass@2024!", role="admin", created_by="test_suite")
+        response = client.post("/login", data={
+            "username": "logintest_admin", "password": "TestPass@2024!"
+        }, follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] in ("/staff", "/commissioner", "/change-password?forced=1")
+
+    def test_login_wrong_password_shows_error(self, client):
+        database.add_staff(name="Admin Test", username="logintest_admin2",
+            password="TestPass@2024!", role="admin", created_by="test_suite")
+        response = client.post("/login", data={
+            "username": "logintest_admin2", "password": "WrongPassword123!"
+        })
+        assert response.status_code == 200
+
+    def test_admin_route_loads_for_admin_no_crash(self, authed_client):
+        c = authed_client("admin")
+        response = c.get("/admin")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code} — check for NameError/500"
+
+    def test_admin_route_denies_non_admin(self, authed_client):
+        c = authed_client("viewer")
+        response = c.get("/admin", follow_redirects=False)
+        assert response.status_code == 302
+        assert "/admin" not in response.headers.get("location", "")
+
+    def test_credential_card_loads_no_crash(self, authed_client):
+        c = authed_client("admin")
+        staff = database.get_staff_by_username("test_admin")
+        response = c.get(f"/credential-card/{staff['id']}")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code} — check for NameError/500"
+
+    def test_team_page_loads_for_ae_no_crash(self, authed_client):
+        c = authed_client("ae")
+        response = c.get("/team")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code} — check for NameError/500"
+
+    def test_field_dashboard_loads_for_was_no_crash(self, authed_client):
+        c = authed_client("was")
+        response = c.get("/field")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code} — check for NameError/500"
+
+    def test_staff_dashboard_loads_for_ae_no_crash(self, authed_client):
+        c = authed_client("ae")
+        response = c.get("/staff")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code} — check for NameError/500"
+
+    def test_add_comment_route_no_crash(self, authed_client, sample_report_id):
+        c = authed_client("ae")
+        response = c.post("/add-comment", data={
+            "report_id": sample_report_id,
+            "comment": "test comment",
+            "csrf": "test",
+        }, follow_redirects=False)
+        assert response.status_code in (302, 200), f"Expected redirect/200, got {response.status_code} — check for NameError/500"
+
+    def test_change_password_redirects_correctly(self, authed_client):
+        c = authed_client("ae")
+        # Get a real CSRF token first — GET renders it into the page via generate_csrf_token()
+        get_response = c.get("/change-password")
+        assert get_response.status_code == 200
+
+        import re
+        match = re.search(r'name="csrf" value="([^"]+)"', get_response.text)
+        assert match, "Could not find CSRF token in change-password page"
+        real_csrf = match.group(1)
+
+        response = c.post("/change-password", data={
+            "current_password": "TestPass@2024!",
+            "new_password": "NewPass@2024!",
+            "confirm_password": "NewPass@2024!",
+            "csrf": real_csrf,
+        }, follow_redirects=False)
+        assert response.status_code == 302, f"Expected 302, got {response.status_code} — check for NameError/500"
