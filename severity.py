@@ -129,57 +129,60 @@ def _default_result(reason: str = "") -> dict:
         "damage_confirmed":   False
     }
 
-
 def retry_pending_severity():
     """
     Reprocesses reports stuck at severity='unknown' due to Groq rate limits
     or transient API failures at submission time.
 
-    FIX BUG 8: CAST(submitted_at AS TIMESTAMP) → CAST(submitted_at AS TIMESTAMPTZ)
-    Same timezone mismatch as sessions bug — TIMESTAMP is timezone-naive,
-    NOW() returns TIMESTAMPTZ. PostgreSQL refuses the comparison.
+    FIX (this session): originally re-read photo_path from local disk —
+    but Render wipes the uploads/ folder on every deploy, so this silently
+    did nothing on every startup. Now reads photo_data (base64) from the
+    database instead, which survives restarts, and writes it to a temp
+    file just for the duration of the analyse_severity() call.
     """
     import database
+    import tempfile
     try:
         conn = database.get_conn()
-
         if database.USE_POSTGRES:
             rows = conn.execute("""
-                SELECT report_id, photo_path, damage_type
+                SELECT report_id, photo_data, damage_type
                 FROM reports
                 WHERE severity = 'unknown'
                   AND CAST(submitted_at AS TIMESTAMPTZ) >= NOW() - INTERVAL '2 days'
-                  AND photo_path != ''
+                  AND photo_data != ''
                 ORDER BY submitted_at DESC
                 LIMIT 20
             """).fetchall()
         else:
             rows = conn.execute("""
-                SELECT report_id, photo_path, damage_type
+                SELECT report_id, photo_data, damage_type
                 FROM reports
                 WHERE severity = 'unknown'
                   AND submitted_at >= date('now', '-2 days')
-                  AND photo_path != ''
+                  AND photo_data != ''
                 ORDER BY submitted_at DESC
                 LIMIT 20
             """).fetchall()
-
         conn.close()
-
         if not rows:
             return
-
         print(f"[severity] Retrying AI analysis for {len(rows)} pending report(s)...")
         for r in rows:
+            tmp_path = None
             try:
-                photo_path = r["photo_path"] or ""
-                if not photo_path:
+                photo_data = r["photo_data"] or ""
+                if not photo_data or not photo_data.startswith("data:"):
                     continue
-                abs_path = photo_path if os.path.isabs(photo_path) else os.path.join(os.path.dirname(os.path.abspath(__file__)), photo_path)
-                if not os.path.exists(abs_path):
-                    continue
-                photo_path = abs_path
-                result = analyse_severity(photo_path, r["damage_type"] or "Road Damage")
+                header, b64data = photo_data.split(",", 1)
+                ext = header.split("/")[1].split(";")[0] or "jpg"
+                image_bytes = base64.b64decode(b64data)
+
+                with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
+                    tmp.write(image_bytes)
+                    tmp_path = tmp.name
+
+                result = analyse_severity(tmp_path, r["damage_type"] or "Road Damage")
                 if result["severity"] != "unknown":
                     database.update_report_severity(
                         r["report_id"],
@@ -191,6 +194,8 @@ def retry_pending_severity():
                     print(f"[severity] {r['report_id']} → {result['severity']}")
             except Exception as e:
                 print(f"[severity] retry failed for {r['report_id']}: {e}")
-
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    os.remove(tmp_path)
     except Exception as e:
         print(f"[severity] retry_pending_severity error: {e}")
