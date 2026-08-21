@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contract Intelligence — RoadSeva GVMC</title>
+<style>
+:root {
+  --bg: #080f1a;
+  --navy: #0d1b2e;
+  --navy2: #122236;
+  --border: rgba(255,255,255,0.07);
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --muted2: #94a3b8;
+  --accent: #e8a020;
+  --accent2: #f0b840;
+  --green: #22c55e;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --teal: #14b8a6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+
+/* Topbar */
+.topbar {
+  background:var(--navy);
+  border-bottom:1px solid var(--border);
+  padding:0 28px; height:58px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.topbar-brand { font-size:1.1rem; font-weight:700; color:var(--accent); letter-spacing:1px; }
+.topbar-right { display:flex; align-items:center; gap:10px; }
+.nav-a { color:var(--muted2); text-decoration:none; font-size:.83rem; padding:5px 12px; border-radius:6px; transition:.15s; }
+.nav-a:hover { background:rgba(255,255,255,.05); color:var(--text); }
+.nav-a.active { color:var(--accent); background:rgba(232,160,32,.1); }
+.user-chip { background:var(--navy2); border:1px solid var(--border); border-radius:20px; padding:3px 14px; font-size:.8rem; }
+
+/* Confidential */
+.confidential {
+  background:linear-gradient(90deg, rgba(139,92,246,.12), rgba(139,92,246,.05));
+  border-bottom:1px solid rgba(139,92,246,.3);
+  padding:8px 28px; display:flex; align-items:center; gap:10px;
+  font-size:.82rem; color:#c4b5fd;
+}
+.confidential strong { color:#a78bfa; }
+
+/* Page */
+.page { max-width:1280px; margin:0 auto; padding:28px 24px; }
+.page-header { margin-bottom:28px; }
+.page-header h1 { font-size:1.5rem; font-weight:700; color:var(--text); }
+.page-header p { font-size:.875rem; color:var(--muted2); margin-top:5px; }
+
+/* Demo banner */
+.demo-banner {
+  background:linear-gradient(90deg, rgba(234,179,8,.12), rgba(234,179,8,.05));
+  border:1px solid rgba(234,179,8,.3);
+  border-radius:10px; padding:12px 18px;
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:24px; font-size:.83rem; color:#fde047;
+}
+.demo-banner strong { color:var(--yellow); }
+
+/* Summary grid */
+.summary-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap:14px; margin-bottom:32px;
+}
+.stat-card {
+  background:var(--navy2);
+  border:1px solid var(--border);
+  border-radius:12px; padding:18px 20px;
+}
+.stat-card .label { font-size:.75rem; color:var(--muted2); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.stat-card .value { font-size:1.8rem; font-weight:700; line-height:1; }
+.stat-card .sub   { font-size:.75rem; color:var(--muted2); margin-top:4px; }
+.val-green  { color:var(--green); }
+.val-orange { color:var(--orange); }
+.val-red    { color:var(--red); }
+.val-blue   { color:var(--blue); }
+.val-purple { color:var(--purple); }
+.val-teal   { color:var(--teal); }
+.val-yellow { color:var(--yellow); }
+
+/* Alert cards */
+.alert-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:32px; }
+.alert-card {
+  background:var(--navy2); border:1px solid var(--border);
+  border-radius:12px; padding:18px 20px;
+}
+.alert-card.warn { border-color:rgba(249,115,22,.4); background:rgba(249,115,22,.05); }
+.alert-card.danger { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.05); }
+.alert-card h3 { font-size:.9rem; font-weight:600; margin-bottom:12px; color:var(--text); }
+.alert-card.warn h3 { color:var(--orange); }
+.alert-card.danger h3 { color:var(--red); }
+.alert-item { font-size:.82rem; color:var(--muted2); padding:6px 0; border-bottom:1px solid var(--border); }
+.alert-item:last-child { border-bottom:none; }
+.alert-empty { font-size:.82rem; color:var(--muted); font-style:italic; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0; }
+.tab-btn {
+  padding:8px 18px; font-size:.85rem; font-weight:500;
+  background:none; border:none; color:var(--muted2); cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s;
+}
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-btn:hover { color:var(--text); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* Tables */
+.table-wrap { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
+table { width:100%; border-collapse:collapse; font-size:.83rem; }
+thead tr { background:var(--navy2); }
+th { padding:10px 14px; text-align:left; font-weight:600; color:var(--muted2);
+     font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+td { padding:10px 14px; border-top:1px solid var(--border); vertical-align:middle; }
+tr:hover td { background:rgba(255,255,255,.02); }
+
+/* Badges */
+.badge {
+  display:inline-block; padding:2px 8px; border-radius:20px;
+  font-size:.72rem; font-weight:600; white-space:nowrap;
+}
+.badge-active   { background:rgba(34,197,94,.15); color:var(--green); }
+.badge-expired  { background:rgba(100,116,139,.15); color:var(--muted2); }
+.badge-arterial    { background:rgba(59,130,246,.15); color:var(--blue); }
+.badge-collector   { background:rgba(139,92,246,.15); color:var(--purple); }
+.badge-residential { background:rgba(20,184,166,.15); color:var(--teal); }
+.badge-pending     { background:rgba(234,179,8,.15); color:var(--yellow); }
+.badge-overdue     { background:rgba(239,68,68,.15); color:var(--red); }
+.badge-candidate   { background:rgba(249,115,22,.15); color:var(--orange); }
+.badge-verified    { background:rgba(239,68,68,.2); color:var(--red); }
+
+/* Contractor perf */
+.perf-bar-wrap { display:flex; align-items:center; gap:10px; }
+.perf-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.08); flex:1; min-width:60px; }
+.perf-fill { height:100%; border-radius:3px; background:var(--blue); }
+
+/* Section header */
+.section-header { margin-bottom:16px; }
+.section-header h2 { font-size:1.05rem; font-weight:600; color:var(--text); }
+.section-header p  { font-size:.8rem; color:var(--muted2); margin-top:3px; }
+
+/* Empty state */
+.empty-state { padding:40px; text-align:center; color:var(--muted); font-size:.9rem; }
+
+/* Data quality notice */
+.dq-notice {
+  background:rgba(59,130,246,.06); border:1px solid rgba(59,130,246,.2);
+  border-radius:8px; padding:10px 16px; margin-bottom:20px;
+  font-size:.8rem; color:#93c5fd;
+}
+
+@media(max-width:700px) {
+  .alert-row { grid-template-columns:1fr; }
+  .summary-grid { grid-template-columns:repeat(2,1fr); }
+  .page { padding:16px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-brand">🛣 RoadSeva</div>
+  <div class="topbar-right">
+    <a href="/commissioner" class="nav-a">Dashboard</a>
+    <a href="/analytics" class="nav-a">Analytics</a>
+    <a href="/rqi" class="nav-a">RQI</a>
+    <a href="/contracts" class="nav-a active">Contracts</a>
+    <a href="/breach-review" class="nav-a">Breach Review</a>
+    <a href="/staff" class="nav-a">Staff</a>
+    <span class="user-chip">{{ staff.name }} · {{ staff.role | replace('_',' ') | title }}</span>
+    <a href="/logout" class="nav-a" style="color:var(--red)">Logout</a>
+  </div>
+</div>
+
+<!-- Confidential banner -->
+<div class="confidential">
+  🔒 <strong>Restricted — Commissioner Level Access</strong>
+  &nbsp;·&nbsp; Contract and contractor data is confidential procurement information.
+</div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>📋 Contract Intelligence</h1>
+    <p>Road asset ownership, contractor mapping, repair lifecycle, and durability tracking.</p>
+  </div>
+
+  <!-- Demo data banner -->
+  <div class="demo-banner">
+    ⚠️ <strong>Demo Data Active</strong> — Showing realistic Visakhapatnam/GVMC sample data.
+    Replace with real GVMC contract data once received. Road assets, contractors, and contracts
+    shown are illustrative.
+  </div>
+
+  <!-- Summary stats -->
+  <div class="summary-grid">
+    <div class="stat-card">
+      <div class="label">Contractors</div>
+      <div class="value val-blue">{{ summary.total_contractors }}</div>
+      <div class="sub">Active on record</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Contracts</div>
+      <div class="value val-teal">{{ summary.total_contracts }}</div>
+      <div class="sub">{{ summary.active_contracts }} active</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Road Assets</div>
+      <div class="value val-green">{{ summary.total_road_assets }}</div>
+      <div class="sub">{{ summary.total_km }} km mapped</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Pending Inspections</div>
+      <div class="value {% if summary.overdue_inspections > 0 %}val-red{% else %}val-green{% endif %}">
+        {{ summary.pending_inspections }}
+      </div>
+      <div class="sub">{{ summary.overdue_inspections }} overdue</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Recurrence Candidates</div>
+      <div class="value val-orange">{{ summary.candidate_recurrences }}</div>
+      <div class="sub">Awaiting review</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Verified Breaches</div>
+      <div class="value val-red">{{ summary.verified_breaches }}</div>
+      <div class="sub">Warranty failures confirmed</div>
+    </div>
+  </div>
+
+  <!-- Alert cards -->
+  <div class="alert-row">
+    <div class="alert-card {% if summary.overdue_inspections > 0 %}danger{% endif %}">
+      <h3>🔴 Overdue Inspections</h3>
+      {% if summary.overdue_inspections == 0 %}
+        <div class="alert-empty">No overdue inspections — all on schedule.</div>
+      {% else %}
+        <div class="alert-item">{{ summary.overdue_inspections }} scheduled inspection(s) past due date.</div>
+        <div class="alert-item" style="margin-top:8px;font-size:.8rem;color:var(--muted);">
+          Go to the Inspections tab to review and assign field officers.
+        </div>
+      {% endif %}
+    </div>
+    <div class="alert-card {% if summary.candidate_recurrences > 0 %}warn{% endif %}">
+      <h3>⚠️ Recurrence Candidates</h3>
+      {% if summary.candidate_recurrences == 0 %}
+        <div class="alert-empty">No unreviewed recurrence candidates.</div>
+      {% else %}
+        <div class="alert-item">{{ summary.candidate_recurrences }} complaint(s) near recent repairs — require human review before classifying as warranty breach.</div>
+        <div class="alert-item" style="margin-top:8px;font-size:.8rem;color:var(--muted);">
+          Spatial match alone is not a breach verdict. Review in the Recurrences tab.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('contracts')">Contracts ({{ contracts | length }})</button>
+    <button class="tab-btn" onclick="showTab('contractors')">Contractors ({{ contractors | length }})</button>
+    <button class="tab-btn" onclick="showTab('assets')">Road Assets ({{ road_assets | length }})</button>
+    <button class="tab-btn" onclick="showTab('inspections')">Inspections</button>
+    <button class="tab-btn" onclick="showTab('recurrences')">Recurrences</button>
+    <button class="tab-btn" onclick="showTab('performance')">Contractor Performance</button>
+  </div>
+
+  <!-- ── CONTRACTS TAB ── -->
+  <div id="tab-contracts" class="tab-panel active">
+    <div class="section-header">
+      <h2>Active Contracts</h2>
+      <p>Tender-level contract records with contractor, division, value, and DLP period.</p>
+    </div>
+    <div class="dq-notice">
+      📌 <strong>Data quality note:</strong> Contractor attribution on existing repair records
+      uses free-text <code>contractor_name</code>. As contracts are linked, these will be
+      normalized to contractor entities. Until then, performance metrics are partial.
+    </div>
+    {% if contracts %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tender No.</th>
+            <th>Contractor</th>
+            <th>Division</th>
+            <th>Ward Scope</th>
+            <th>Value (₹ Lakh)</th>
+            <th>Work Period</th>
+            <th>DLP</th>
+            <th>AE</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in contracts %}
+          <tr>
+            <td style="font-family:monospace;font-size:.78rem;color:var(--accent2)">{{ c.tender_number }}</td>
+            <td style="font-weight:500">{{ c.contractor_name or '—' }}</td>
+            <td>{{ c.division }}</td>
+            <td style="font-size:.78rem;color:var(--muted2)">{{ c.ward_scope }}</td>
+            <td style="font-weight:600;color:var(--green)">₹{{ "%.2f"|format(c.contract_value_lakh) }}</td>
+            <td style="font-size:.78rem">{{ c.work_start_date }} → {{ c.work_end_date }}</td>
+            <td>{{ c.dlp_months }}m</td>
+            <td style="font-size:.78rem;color:var(--muted2)">{{ c.responsible_ae }}</td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status | title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No contracts on record. Seed demo data or import GVMC contract data.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── CONTRACTORS TAB ── -->
+  <div id="tab-contractors" class="tab-panel">
+    <div class="section-header">
+      <h2>Contractor Master</h2>
+      <p>All contractors registered in the system. Raw name variants track how their name appears in field reports.</p>
+    </div>
+    {% if contractors %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Registration</th>
+            <th>Contact Person</th>
+            <th>Phone</th>
+            <th>Known Name Variants</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for co in contractors %}
+          <tr>
+            <td style="font-family:monospace;font-size:.78rem;color:var(--muted2)">{{ co.contractor_code }}</td>
+            <td style="font-weight:600">{{ co.name }}</td>
+            <td style="font-size:.78rem;color:var(--muted2)">{{ co.registration_no or '—' }}</td>
+            <td>{{ co.contact_person or '—' }}</td>
+            <td style="font-size:.78rem">{{ co.contact_phone or '—' }}</td>
+            <td style="font-size:.75rem;color:var(--muted2);max-width:220px;">
+              {% if co.raw_name_variants %}
+                {% for v in co.raw_name_variants.split('|') %}
+                  <span style="background:rgba(255,255,255,.05);border-radius:4px;padding:1px 6px;margin:1px;display:inline-block;">{{ v }}</span>
+                {% endfor %}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if co.is_active %}
+                <span class="badge badge-active">Active</span>
+              {% else %}
+                <span class="badge badge-expired">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No contractors on record.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── ROAD ASSETS TAB ── -->
+  <div id="tab-assets" class="tab-panel">
+    <div class="section-header">
+      <h2>Road Asset Registry</h2>
+      <p>Individual road segments with stable geographic identity. Each asset persists across contract cycles.</p>
+    </div>
+    <div class="dq-notice">
+      📌 GPS coordinates shown are approximate segment endpoints. Full geometry (WKT LINESTRING)
+      will be added when GIS data is available from GVMC.
+    </div>
+    {% if road_assets %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Road Code</th>
+            <th>Name</th>
+            <th>Ward</th>
+            <th>Division</th>
+            <th>Type</th>
+            <th>Length</th>
+            <th>Surface</th>
+            <th>Start Point</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in road_assets %}
+          <tr>
+            <td style="font-family:monospace;font-size:.78rem;color:var(--accent2)">{{ a.road_code }}</td>
+            <td style="font-weight:500">{{ a.road_name }}</td>
+            <td style="font-size:.78rem">{{ a.ward }}</td>
+            <td style="font-size:.78rem;color:var(--muted2)">{{ a.division }}</td>
+            <td>
+              <span class="badge badge-{{ a.road_type }}">{{ a.road_type | title }}</span>
+            </td>
+            <td>{{ (a.length_m / 1000) | round(2) }} km</td>
+            <td style="font-size:.78rem;color:var(--muted2)">{{ a.surface_type | title }}</td>
+            <td style="font-size:.75rem;color:var(--muted)">
+              {% if a.start_lat %}
+                <a href="https://maps.google.com/?q={{ a.start_lat }},{{ a.start_lng }}"
+                   target="_blank" style="color:var(--blue);text-decoration:none;">
+                   {{ "%.4f"|format(a.start_lat) }}, {{ "%.4f"|format(a.start_lng) }} 🗺
+                </a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No road assets on record.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── INSPECTIONS TAB ── -->
+  <div id="tab-inspections" class="tab-panel">
+    <div class="section-header">
+      <h2>Scheduled Inspections</h2>
+      <p>Post-repair inspection tasks generated from contract DLP policies. Field officers action these from their queue.</p>
+    </div>
+    <div class="empty-state" style="background:var(--navy2);border-radius:10px;border:1px solid var(--border);">
+      <div style="font-size:2rem;margin-bottom:12px;">🔍</div>
+      <div style="font-weight:600;margin-bottom:6px;">Inspection workflow coming in Phase 2</div>
+      <div style="color:var(--muted);font-size:.82rem;max-width:420px;margin:0 auto;">
+        Inspections are auto-generated when a repair closes, based on the contract's DLP policy.
+        Once repairs are linked to contracts, scheduled inspections will appear here.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RECURRENCES TAB ── -->
+  <div id="tab-recurrences" class="tab-panel">
+    <div class="section-header">
+      <h2>Recurrence Candidates</h2>
+      <p>New complaints near recent repairs — requires human review before classifying as warranty breach.</p>
+    </div>
+    <div class="empty-state" style="background:var(--navy2);border-radius:10px;border:1px solid var(--border);">
+      <div style="font-size:2rem;margin-bottom:12px;">⚠️</div>
+      <div style="font-weight:600;margin-bottom:6px;">Recurrence detection coming in Phase 2</div>
+      <div style="color:var(--muted);font-size:.82rem;max-width:480px;margin:0 auto;">
+        Spatial match → same road asset → same defect type → within DLP → human verification → verified breach.<br><br>
+        Spatial proximity alone is never a breach verdict.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTRACTOR PERFORMANCE TAB ── -->
+  <div id="tab-performance" class="tab-panel">
+    <div class="section-header">
+      <h2>Contractor Performance</h2>
+      <p>Evidence-based metrics from verified repairs, inspections, and breach reviews.</p>
+    </div>
+
+    <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);
+      border-radius:8px;padding:10px 16px;margin-bottom:18px;font-size:.8rem;color:#93c5fd;">
+      📌 Warranty failure rate and median survival require completed inspections and commissioner-verified breaches.
+      Metrics marked <em>Insufficient data</em> populate as inspections accumulate over the DLP period.
+      <a href="/breach-review" style="color:#60a5fa;margin-left:8px;">Review breach candidates →</a>
+    </div>
+
+    {% if performance %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Contractor</th>
+            <th>Repairs</th>
+            <th>Inspections</th>
+            <th>Verified Breaches</th>
+            <th>Within DLP</th>
+            <th>Failure Rate</th>
+            <th>Median Survival</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in performance %}
+          <tr>
+            <td>
+              <div style="font-weight:600;">{{ p.contractor_name }}</div>
+              <div style="font-size:.75rem;color:var(--muted2);">{{ p.contractor_code }}</div>
+            </td>
+            <td style="font-weight:700;color:var(--blue);">{{ p.total_repairs or 0 }}</td>
+            <td>{{ p.completed_inspections or 0 }}</td>
+            <td style="font-weight:{% if p.verified_breaches %}700{% else %}400{% endif %};
+                color:{% if p.verified_breaches %}var(--red){% else %}var(--muted){% endif %};">
+              {{ p.verified_breaches or 0 }}
+            </td>
+            <td style="color:{% if p.within_dlp_breaches %}var(--red){% else %}var(--muted){% endif %};">
+              {{ p.within_dlp_breaches or 0 }}
+            </td>
+            <td>
+              {% if p.total_repairs and p.total_repairs > 0 %}
+                <div class="perf-bar-wrap">
+                  <div class="perf-bar">
+                    <div class="perf-fill" style="width:{{ [p.warranty_failure_rate, 100] | min }}%;
+                      background:{% if p.warranty_failure_rate >= 15 %}var(--red)
+                      {% elif p.warranty_failure_rate >= 5 %}var(--orange)
+                      {% else %}var(--green){% endif %};"></div>
+                  </div>
+                  <span style="font-size:.75rem;font-weight:600;
+                    color:{% if p.warranty_failure_rate >= 15 %}var(--red)
+                    {% elif p.warranty_failure_rate >= 5 %}var(--orange)
+                    {% else %}var(--green){% endif %};">
+                    {{ p.warranty_failure_rate }}%
+                  </span>
+                </div>
+              {% else %}
+                <span style="color:var(--muted);font-style:italic;font-size:.78rem;">No repairs</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.median_survival_days is not none %}
+                <span style="font-weight:600;
+                  color:{% if p.median_survival_days < 90 %}var(--red)
+                  {% elif p.median_survival_days < 180 %}var(--orange)
+                  {% else %}var(--green){% endif %};">
+                  {{ p.median_survival_days }} days
+                </span>
+              {% else %}
+                <span style="color:var(--muted);font-style:italic;font-size:.75rem;">Insufficient data</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge
+                {% if p.risk_tier == 'HIGH' %}badge-active" style="background:rgba(239,68,68,.15);color:var(--red);
+                {% elif p.risk_tier == 'MEDIUM' %}badge-active" style="background:rgba(249,115,22,.15);color:var(--orange);
+                {% elif p.risk_tier == 'LOW' %}badge-active" style="background:rgba(34,197,94,.15);color:var(--green);
+                {% else %}badge-active" style="background:rgba(100,116,139,.15);color:var(--muted2);
+                {% endif %}">
+                {{ p.risk_tier }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No contractor performance data yet. Link repairs to contracts and complete inspections to populate metrics.</div>
+    {% endif %}
+  </div>
+
+</div><!-- /page -->
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

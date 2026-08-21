@@ -183,6 +183,8 @@ body { font-family:Arial,sans-serif; background:#0f1923; color:#e0e0e0; min-heig
   <div class="topbar-right">
     <span class="role-badge">{{ staff.role.replace("_"," ") }}</span>
     <a href="/rqi" target="_blank" class="nav-a">🏆 Road Quality Index</a>
+    <a href="/contracts" target="_blank" class="nav-a">📋 Contracts</a>
+    <a href="/breach-review" target="_blank" class="nav-a">⚖️ Breach Review</a>
     <a href="/analytics" target="_blank" class="nav-a">📊 Analytics</a>
     <a href="/wards" target="_blank" class="nav-a">🏙️ All Wards</a>
     <a href="/triage" target="_blank" class="nav-a">📋 Triage Queue</a>
@@ -275,6 +277,21 @@ body { font-family:Arial,sans-serif; background:#0f1923; color:#e0e0e0; min-heig
       <div class="kpi-num" id="kpiRate">{{ data.resolution_rate }}%</div>
       <div class="kpi-label">Resolution Rate</div>
       <div class="kpi-sub">Overall</div>
+    </div>
+    <div class="kpi-card orange" onclick="window.open('/breach-review')" style="cursor:pointer;">
+      <div class="kpi-num" style="color:#f97316;">{{ inspection_stats.breach_candidates }}</div>
+      <div class="kpi-label">Breach Candidates</div>
+      <div class="kpi-sub">Awaiting your review →</div>
+    </div>
+    <div class="kpi-card red" onclick="window.open('/breach-review')" style="cursor:pointer;">
+      <div class="kpi-num" style="color:#ef4444;">{{ inspection_stats.verified_breaches }}</div>
+      <div class="kpi-label">Verified Breaches</div>
+      <div class="kpi-sub">Warranty failures confirmed</div>
+    </div>
+    <div class="kpi-card" onclick="window.open('/contracts')" style="cursor:pointer;">
+      <div class="kpi-num" style="color:#f59e0b;">{{ inspection_stats.overdue }}</div>
+      <div class="kpi-label">Overdue Inspections</div>
+      <div class="kpi-sub">Past due date →</div>
     </div>
     <div class="kpi-card purple">
       <div class="kpi-num" id="kpiInspecting">{{ data.inspecting_now }}</div>

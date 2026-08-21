@@ -1794,6 +1794,7 @@ def submit_citizen_review(
         return True, "disputed_ae_required"
 
 
+# NOTE: superseded by get_disputed_reports_for_review() — kept for reference only
 def get_disputed_reports_for_ae(ae_name: str = "", division: str = "") -> list:
     conn = get_conn(); c = conn.cursor()
     if division:
@@ -3021,7 +3022,12 @@ def add_repair_record(
         VALUES (?,?,?,?,?,?,?)
     """), (report_id, contractor_name, repair_lat, repair_lng,
            warranty_months, now(), recorded_by))
-    conn.commit(); conn.close()
+    conn.commit()
+    c.execute(_q("SELECT last_insert_rowid() AS id") if not USE_POSTGRES
+              else "SELECT lastval() AS id")
+    row = c.fetchone()
+    conn.close()
+    return dict(row)["id"] if row else None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STAFF AUDIT LOG
@@ -3336,3 +3342,1132 @@ def get_zone_performance() -> list:
     for r in rows:
         r["resolution_rate"] = round(r["resolved"]/r["total"]*100) if r["total"] > 0 else 0
     return rows
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1 — CONTRACT INTELLIGENCE SCHEMA
+# ═══════════════════════════════════════════════════════════════════════════════
+# Canonical data model for:
+#   contractors → contracts → contract_segments → road_assets
+#   repair_records (existing) → scheduled_inspections → inspection_results
+#   recurrence_events
+#
+# Design principles:
+#   - contractor_name kept in repair_records as permanent raw audit field
+#   - contractor_id FK added nullable — populated as contractor master is built
+#   - contract_id FK added nullable — populated after GVMC data ingestion
+#   - inspection intervals driven by inspection_schedule_policies, not hardcoded
+#   - recurrence is a candidate, not a verdict — human verification required
+#   - SQLite compatible (TEXT for all dates, REAL for coords, no PostGIS)
+#   - PostgreSQL production path: same DDL, _q() handles ? vs %s
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def init_contract_intelligence_schema():
+    """
+    Creates the Phase 1 contract intelligence tables if they don't exist.
+    Safe to call on every startup — all CREATE TABLE IF NOT EXISTS.
+    Call after init_db() in the lifespan handler.
+    """
+    conn = get_conn()
+    c = conn.cursor()
+
+    statements = [
+
+        # ── 1. CONTRACTORS ────────────────────────────────────────────────────
+        # Master list of contractors. Separate from contracts because one
+        # contractor may hold multiple contracts across years.
+        #
+        # raw_name_variants: pipe-separated list of name strings seen in
+        # repair_records.contractor_name that map to this contractor.
+        # Used during ingestion/normalization. Never auto-matched silently.
+        _q("""CREATE TABLE IF NOT EXISTS contractors (
+            id              INTEGER PRIMARY KEY {autoincrement},
+            contractor_code TEXT UNIQUE NOT NULL,
+            name            TEXT NOT NULL,
+            raw_name_variants TEXT DEFAULT '',
+            registration_no TEXT DEFAULT '',
+            contact_person  TEXT DEFAULT '',
+            contact_phone   TEXT DEFAULT '',
+            contact_email   TEXT DEFAULT '',
+            address         TEXT DEFAULT '',
+            is_active       INTEGER DEFAULT 1,
+            created_at      TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            notes           TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 2. CONTRACTS ──────────────────────────────────────────────────────
+        # One row per tender/contract awarded to a contractor.
+        # A contractor can have multiple contracts; a contract has one contractor.
+        #
+        # dlp_months: Defect Liability Period. Inspections are generated
+        # relative to repair_accepted_at, governed by inspection_schedule_policies.
+        # scope_description: free text — what the contract covers (ward-level,
+        # package, chainage, etc.) as GVMC describes it.
+        _q("""CREATE TABLE IF NOT EXISTS contracts (
+            id                  INTEGER PRIMARY KEY {autoincrement},
+            contract_code       TEXT UNIQUE NOT NULL,
+            tender_number       TEXT DEFAULT '',
+            contractor_id       INTEGER REFERENCES contractors(id),
+            division            TEXT DEFAULT '',
+            ward_scope          TEXT DEFAULT '',
+            scope_description   TEXT DEFAULT '',
+            contract_value_lakh REAL DEFAULT 0,
+            work_start_date     TEXT DEFAULT '',
+            work_end_date       TEXT DEFAULT '',
+            dlp_months          INTEGER DEFAULT 12,
+            status              TEXT DEFAULT 'active',
+            responsible_ae      TEXT DEFAULT '',
+            notes               TEXT DEFAULT '',
+            created_at          TEXT DEFAULT '',
+            created_by          TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 3. ROAD ASSETS ────────────────────────────────────────────────────
+        # Individual road segments as geographic/administrative entities.
+        # One asset persists across multiple contracts over its lifetime.
+        #
+        # road_code: stable identifier. GVMC may use chainage, package code,
+        # or a local road ID. road_code is whatever GVMC provides — do not
+        # invent one; ask for their identifier system first.
+        # geometry_wkt: WKT LINESTRING for future GIS. Nullable until available.
+        # start_lat/lng + end_lat/lng: minimum viable geometry for now.
+        _q("""CREATE TABLE IF NOT EXISTS road_assets (
+            id              INTEGER PRIMARY KEY {autoincrement},
+            road_code       TEXT UNIQUE NOT NULL,
+            road_name       TEXT NOT NULL,
+            ward            TEXT DEFAULT '',
+            division        TEXT DEFAULT '',
+            road_type       TEXT DEFAULT '',
+            length_m        REAL DEFAULT 0,
+            start_lat       REAL,
+            start_lng       REAL,
+            end_lat         REAL,
+            end_lng         REAL,
+            geometry_wkt    TEXT DEFAULT '',
+            surface_type    TEXT DEFAULT '',
+            status          TEXT DEFAULT 'active',
+            notes           TEXT DEFAULT '',
+            created_at      TEXT DEFAULT '',
+            created_by      TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 4. CONTRACT SEGMENTS ──────────────────────────────────────────────
+        # Association table: many-to-many between contracts and road_assets.
+        # One contract covers many segments; one segment may be under multiple
+        # contracts over time (re-tendering).
+        # scope_notes: what specifically this contract does to this segment
+        # (resurfacing, patch repair, full reconstruction, etc.)
+        _q("""CREATE TABLE IF NOT EXISTS contract_segments (
+            id              INTEGER PRIMARY KEY {autoincrement},
+            contract_id     INTEGER NOT NULL REFERENCES contracts(id),
+            road_asset_id   INTEGER NOT NULL REFERENCES road_assets(id),
+            scope_notes     TEXT DEFAULT '',
+            created_at      TEXT DEFAULT '',
+            created_by      TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 5. INSPECTION SCHEDULE POLICIES ───────────────────────────────────
+        # Defines WHEN inspections happen after repair acceptance, per contract.
+        # Not hardcoded as 30/60/90/180 — each contract's DLP obligations differ.
+        # If no policy exists for a contract, a default policy (id=1) is used.
+        #
+        # inspection_type: 'routine' | 'warranty_check' | 'final_dlp'
+        # due_after_days: days after repair_accepted_at to schedule inspection
+        _q("""CREATE TABLE IF NOT EXISTS inspection_schedule_policies (
+            id              INTEGER PRIMARY KEY {autoincrement},
+            policy_name     TEXT NOT NULL,
+            contract_id     INTEGER REFERENCES contracts(id),
+            inspection_type TEXT DEFAULT 'routine',
+            due_after_days  INTEGER NOT NULL,
+            is_default      INTEGER DEFAULT 0,
+            notes           TEXT DEFAULT '',
+            created_at      TEXT DEFAULT '',
+            created_by      TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 6. SCHEDULED INSPECTIONS ──────────────────────────────────────────
+        # One row per inspection task generated when a repair closes.
+        # Generated from inspection_schedule_policies, not hardcoded.
+        # Appears in the field officer dashboard as a task when due_date arrives.
+        #
+        # repair_record_id: FK to repair_records (existing table)
+        # status: 'pending' | 'completed' | 'overdue' | 'cancelled'
+        _q("""CREATE TABLE IF NOT EXISTS scheduled_inspections (
+            id                  INTEGER PRIMARY KEY {autoincrement},
+            repair_record_id    INTEGER NOT NULL REFERENCES repair_records(id),
+            policy_id           INTEGER REFERENCES inspection_schedule_policies(id),
+            inspection_type     TEXT DEFAULT 'routine',
+            due_date            TEXT NOT NULL,
+            status              TEXT DEFAULT 'pending',
+            assigned_to         TEXT DEFAULT '',
+            completed_at        TEXT DEFAULT '',
+            completed_by        TEXT DEFAULT '',
+            notes               TEXT DEFAULT '',
+            created_at          TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 7. INSPECTION RESULTS ─────────────────────────────────────────────
+        # Evidence captured during a scheduled inspection.
+        # condition_score: 1 (failed) to 5 (excellent) — field officer judgment
+        # warranty_breach: 0 = no, 1 = candidate (spatial match only),
+        #                  2 = verified breach (human confirmed)
+        # Never auto-set warranty_breach=2. Always requires human review.
+        _q("""CREATE TABLE IF NOT EXISTS inspection_results (
+            id                  INTEGER PRIMARY KEY {autoincrement},
+            inspection_id       INTEGER NOT NULL REFERENCES scheduled_inspections(id),
+            condition_score     INTEGER DEFAULT NULL,
+            condition_notes     TEXT DEFAULT '',
+            photo_data          TEXT DEFAULT '',
+            inspect_lat         REAL,
+            inspect_lng         REAL,
+            warranty_breach     INTEGER DEFAULT 0,
+            breach_notes        TEXT DEFAULT '',
+            verified_by         TEXT DEFAULT '',
+            verified_at         TEXT DEFAULT '',
+            recorded_by         TEXT DEFAULT '',
+            recorded_at         TEXT DEFAULT ''
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 8. RECURRENCE EVENTS ──────────────────────────────────────────────
+        # Candidate recurrences: new complaint spatially near a closed repair.
+        # NOT a verdict — represents a match requiring human review.
+        #
+        # Pipeline:
+        #   new complaint GPS → spatial match to repair_records →
+        #   same road_asset_id? → same/related defect? → within DLP? →
+        #   inspection evidence? → human verification → breach or dismissed
+        #
+        # match_method: how the spatial match was made
+        #   'gps_proximity' | 'road_asset' | 'manual'
+        # verification_status: 'candidate' | 'verified_recurrence' |
+        #                       'dismissed' | 'pending_review'
+        _q("""CREATE TABLE IF NOT EXISTS recurrence_events (
+            id                      INTEGER PRIMARY KEY {autoincrement},
+            original_report_id      TEXT NOT NULL,
+            new_report_id           TEXT NOT NULL,
+            original_repair_id      INTEGER REFERENCES repair_records(id),
+            road_asset_id           INTEGER REFERENCES road_assets(id),
+            distance_m              REAL DEFAULT 0,
+            days_since_repair       INTEGER DEFAULT 0,
+            within_dlp              INTEGER DEFAULT 0,
+            defect_type_match       INTEGER DEFAULT 0,
+            match_method            TEXT DEFAULT 'gps_proximity',
+            verification_status     TEXT DEFAULT 'candidate',
+            verified_by             TEXT DEFAULT '',
+            verified_at             TEXT DEFAULT '',
+            dismissal_reason        TEXT DEFAULT '',
+            contractor_id           INTEGER REFERENCES contractors(id),
+            contract_id             INTEGER REFERENCES contracts(id),
+            flagged_at              TEXT DEFAULT '',
+            seen_by_commissioner    INTEGER DEFAULT 0
+        )""".replace("{autoincrement}",
+            "AUTOINCREMENT" if not USE_POSTGRES else "GENERATED ALWAYS AS IDENTITY")),
+
+        # ── 9. MIGRATE repair_records — add nullable FKs ──────────────────────
+        # contractor_name stays permanently as raw audit field.
+        # contractor_id and contract_id populated after GVMC data ingestion.
+        # road_asset_id populated via GPS matching to road_assets geometry.
+    ]
+
+    for stmt in statements:
+        try:
+            c.execute(stmt)
+            conn.commit()
+        except Exception as e:
+            print(f"[contract_schema] table creation note: {e}")
+
+    # Add nullable FKs to repair_records (safe — uses existing _safe_add pattern)
+    fk_cols = [
+        ("contractor_id", "INTEGER DEFAULT NULL"),
+        ("contract_id",   "INTEGER DEFAULT NULL"),
+        ("road_asset_id", "INTEGER DEFAULT NULL"),
+    ]
+    for col_name, col_def in fk_cols:
+        try:
+            c.execute(f"ALTER TABLE repair_records ADD COLUMN {col_name} {col_def}")
+            conn.commit()
+        except Exception:
+            pass  # Already exists
+
+    conn.close()
+    print("[db] Phase 1 contract intelligence schema ready.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEMO DATA SEED — Visakhapatnam / GVMC
+# Realistic but fictional. Replace with real GVMC data when available.
+# Safe to call multiple times — checks existence before inserting.
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEMO_CONTRACTORS = [
+    ("MEIL-001",  "Megha Engineering & Infrastructures Ltd",  "MEIL|Megha Engineering|MEIL Pvt Ltd",  "AP-CONT-0041", "Ravi Kumar",   "9100000001"),
+    ("NCC-001",   "NCC Limited",                              "NCC|NCC Ltd|NCC Infra",                "AP-CONT-0088", "Suresh Babu",  "9100000002"),
+    ("GVMC-DW",   "GVMC Direct Works",                        "GVMC Direct|GVMC Direct Works",        "GVMC-INTERNAL","GVMC AE",      "08912760000"),
+    ("KPCL-001",  "KVR Constructions Pvt Ltd",                "KVR|KVR Constructions",                "AP-CONT-0122", "Venkat Rao",   "9100000003"),
+    ("SREE-001",  "Sree Constructions",                       "Sree Constructions|Sree Const",        "AP-CONT-0157", "Anand Murthy", "9100000004"),
+]
+
+DEMO_CONTRACTS = [
+    # (code, tender, contractor_code, division, ward_scope, description, value_lakh, start, end, dlp_months, ae)
+    ("CONT-2024-EAST-01", "GVMC/EE/East/2024/045", "MEIL-001",  "East",  "Ward 9,10,11,12",
+     "Annual road resurfacing — East Division Package A", 487.50, "2024-04-01", "2024-09-30", 24, "AE Prasad"),
+    ("CONT-2024-EAST-02", "GVMC/EE/East/2024/046", "NCC-001",   "East",  "Ward 13,15,16",
+     "Pothole patching and road repair — East Division Package B", 213.00, "2024-05-01", "2024-10-31", 12, "AE Prasad"),
+    ("CONT-2024-SOUTH-01","GVMC/EE/South/2024/031","KPCL-001",  "South", "Ward 29,30,31,32",
+     "Full road reconstruction — South Division inner roads", 892.00, "2024-03-15", "2024-12-31", 24, "AE Sharma"),
+    ("CONT-2024-WEST-01", "GVMC/EE/West/2024/022", "SREE-001",  "West",  "Ward 57,58,59",
+     "Road widening and resurfacing — West Division", 334.75, "2024-06-01", "2025-01-31", 18, "AE Reddy"),
+    ("CONT-2024-NORTH-01","GVMC/EE/North/2024/018","MEIL-001",  "North", "Ward 42,43,44,45",
+     "Annual maintenance — North Division arterial roads", 621.00, "2024-04-15", "2025-03-31", 24, "AE Mohan"),
+    ("CONT-2024-GW-01",   "GVMC/EE/Gaj/2024/011", "GVMC-DW",   "Gajuwaka","Ward 64,65,66",
+     "Emergency pothole repairs — Gajuwaka industrial zone", 78.25, "2024-07-01", "2024-12-31", 6,  "AE Vijay"),
+]
+
+DEMO_ROAD_ASSETS = [
+    # (code, name, ward, division, type, length_m, start_lat, start_lng, end_lat, end_lng, surface)
+    ("RD-EAST-001", "Waltair Main Road",            "Ward 9",  "East",  "arterial",    2100, 17.7326, 83.3320, 17.7145, 83.3298, "bitumen"),
+    ("RD-EAST-002", "Beach Road Extension",          "Ward 10", "East",  "arterial",    1800, 17.7210, 83.3351, 17.7080, 83.3380, "concrete"),
+    ("RD-EAST-003", "Lawsons Bay Colony Road",       "Ward 11", "East",  "residential", 950,  17.7290, 83.3410, 17.7220, 83.3450, "bitumen"),
+    ("RD-EAST-004", "MVP Colony 10th Road",          "Ward 12", "East",  "residential", 780,  17.7350, 83.3520, 17.7300, 83.3560, "bitumen"),
+    ("RD-EAST-005", "Steel Plant Main Gate Road",    "Ward 13", "East",  "arterial",    1650, 17.7190, 83.2990, 17.7100, 83.2940, "concrete"),
+    ("RD-EAST-006", "NAD Junction Bypass",           "Ward 15", "East",  "arterial",    2300, 17.7400, 83.3100, 17.7200, 83.3050, "bitumen"),
+    ("RD-SOUTH-001","Dondaparthy Main Road",         "Ward 29", "South", "collector",   1200, 17.7050, 83.3150, 17.6980, 83.3180, "bitumen"),
+    ("RD-SOUTH-002","Maharanipeta Market Road",      "Ward 30", "South", "collector",   900,  17.7020, 83.3220, 17.6970, 83.3260, "bitumen"),
+    ("RD-SOUTH-003","Scindia Road",                  "Ward 31", "South", "residential", 650,  17.6990, 83.3280, 17.6950, 83.3310, "bitumen"),
+    ("RD-SOUTH-004","Old Town Circular Road",        "Ward 32", "South", "residential", 1100, 17.6940, 83.3200, 17.6880, 83.3240, "bitumen"),
+    ("RD-WEST-001", "Madhura Nagar Main Road",       "Ward 57", "West",  "collector",   1400, 17.7200, 83.2880, 17.7130, 83.2830, "bitumen"),
+    ("RD-WEST-002", "Siripuram Junction Road",       "Ward 58", "West",  "arterial",    1750, 17.7240, 83.3010, 17.7170, 83.2970, "concrete"),
+    ("RD-WEST-003", "Jagadamba Circle Road",         "Ward 59", "West",  "arterial",    1300, 17.7160, 83.3060, 17.7090, 83.3090, "bitumen"),
+    ("RD-NORTH-001","Gajuwaka-Pedagantyada Road",    "Ward 42", "North", "arterial",    3200, 17.7550, 83.2700, 17.7350, 83.2650, "bitumen"),
+    ("RD-NORTH-002","Kommadi Road",                  "Ward 43", "North", "collector",   2100, 17.7620, 83.3120, 17.7490, 83.3090, "bitumen"),
+    ("RD-NORTH-003","Rushikonda Bypass",             "Ward 44", "North", "arterial",    2800, 17.7700, 83.3800, 17.7550, 83.3750, "bitumen"),
+    ("RD-NORTH-004","Bheemunipatnam Beach Road",     "Ward 45", "North", "arterial",    4100, 17.8900, 83.4500, 17.8650, 83.4400, "concrete"),
+    ("RD-GAJ-001",  "Gajuwaka Main Road",            "Ward 64", "Gajuwaka","arterial", 2400, 17.6800, 83.2100, 17.6650, 83.2050, "bitumen"),
+    ("RD-GAJ-002",  "BHPV Colony Road",              "Ward 65", "Gajuwaka","residential",900, 17.6720, 83.2200, 17.6680, 83.2250, "bitumen"),
+    ("RD-GAJ-003",  "Simhachalam Temple Road",       "Ward 66", "Gajuwaka","collector", 1600, 17.7450, 83.2500, 17.7350, 83.2470, "concrete"),
+]
+
+# Default inspection schedule — applies when no contract-specific policy exists
+DEFAULT_INSPECTION_SCHEDULE = [
+    ("30-Day Check",  None, "routine",       30,  1, "Standard 30-day post-repair check"),
+    ("60-Day Check",  None, "routine",       60,  0, "Standard 60-day post-repair check"),
+    ("90-Day Check",  None, "warranty_check",90,  0, "90-day warranty condition assessment"),
+    ("180-Day Check", None, "warranty_check",180, 0, "6-month warranty midpoint check"),
+    ("DLP Final",     None, "final_dlp",     365, 0, "Final DLP inspection before contractor release"),
+]
+
+
+def seed_demo_contract_data():
+    """
+    Seeds realistic Visakhapatnam demo data into the Phase 1 schema.
+    Safe to call multiple times — checks existence before inserting.
+    Call after init_contract_intelligence_schema().
+    """
+    conn = get_conn()
+    c = conn.cursor()
+    ts = now()
+
+    # ── Contractors ───────────────────────────────────────────────────────────
+    contractor_id_map = {}  # code → id
+    for (code, name, variants, reg, contact, phone) in DEMO_CONTRACTORS:
+        c.execute(_q("SELECT id FROM contractors WHERE contractor_code=?"), (code,))
+        row = c.fetchone()
+        if row:
+            contractor_id_map[code] = dict(row)["id"]
+            continue
+        c.execute(_q("""INSERT INTO contractors
+            (contractor_code, name, raw_name_variants, registration_no,
+             contact_person, contact_phone, created_at, created_by)
+            VALUES (?,?,?,?,?,?,?,?)"""),
+            (code, name, variants, reg, contact, phone, ts, "demo_seed"))
+        conn.commit()
+        c.execute(_q("SELECT id FROM contractors WHERE contractor_code=?"), (code,))
+        contractor_id_map[code] = dict(c.fetchone())["id"]
+
+    # ── Contracts ─────────────────────────────────────────────────────────────
+    contract_id_map = {}  # code → id
+    for (code, tender, cont_code, div, ward_scope, desc, val, start, end, dlp, ae) in DEMO_CONTRACTS:
+        c.execute(_q("SELECT id FROM contracts WHERE contract_code=?"), (code,))
+        row = c.fetchone()
+        if row:
+            contract_id_map[code] = dict(row)["id"]
+            continue
+        c.execute(_q("""INSERT INTO contracts
+            (contract_code, tender_number, contractor_id, division, ward_scope,
+             scope_description, contract_value_lakh, work_start_date, work_end_date,
+             dlp_months, status, responsible_ae, created_at, created_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""),
+            (code, tender, contractor_id_map[cont_code], div, ward_scope,
+             desc, val, start, end, dlp, "active", ae, ts, "demo_seed"))
+        conn.commit()
+        c.execute(_q("SELECT id FROM contracts WHERE contract_code=?"), (code,))
+        contract_id_map[code] = dict(c.fetchone())["id"]
+
+    # ── Road Assets ───────────────────────────────────────────────────────────
+    asset_id_map = {}  # code → id
+    for (code, name, ward, div, rtype, length, slat, slng, elat, elng, surface) in DEMO_ROAD_ASSETS:
+        c.execute(_q("SELECT id FROM road_assets WHERE road_code=?"), (code,))
+        row = c.fetchone()
+        if row:
+            asset_id_map[code] = dict(row)["id"]
+            continue
+        c.execute(_q("""INSERT INTO road_assets
+            (road_code, road_name, ward, division, road_type, length_m,
+             start_lat, start_lng, end_lat, end_lng, surface_type,
+             status, created_at, created_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""),
+            (code, name, ward, div, rtype, length,
+             slat, slng, elat, elng, surface, "active", ts, "demo_seed"))
+        conn.commit()
+        c.execute(_q("SELECT id FROM road_assets WHERE road_code=?"), (code,))
+        asset_id_map[code] = dict(c.fetchone())["id"]
+
+    # ── Contract → Segment mappings ───────────────────────────────────────────
+    segment_map = [
+        ("CONT-2024-EAST-01",  ["RD-EAST-001","RD-EAST-002","RD-EAST-003","RD-EAST-004"]),
+        ("CONT-2024-EAST-02",  ["RD-EAST-005","RD-EAST-006"]),
+        ("CONT-2024-SOUTH-01", ["RD-SOUTH-001","RD-SOUTH-002","RD-SOUTH-003","RD-SOUTH-004"]),
+        ("CONT-2024-WEST-01",  ["RD-WEST-001","RD-WEST-002","RD-WEST-003"]),
+        ("CONT-2024-NORTH-01", ["RD-NORTH-001","RD-NORTH-002","RD-NORTH-003","RD-NORTH-004"]),
+        ("CONT-2024-GW-01",    ["RD-GAJ-001","RD-GAJ-002","RD-GAJ-003"]),
+    ]
+    for (cont_code, asset_codes) in segment_map:
+        cont_id = contract_id_map.get(cont_code)
+        if not cont_id:
+            continue
+        for asset_code in asset_codes:
+            asset_id = asset_id_map.get(asset_code)
+            if not asset_id:
+                continue
+            c.execute(_q("""SELECT id FROM contract_segments
+                WHERE contract_id=? AND road_asset_id=?"""), (cont_id, asset_id))
+            if c.fetchone():
+                continue
+            c.execute(_q("""INSERT INTO contract_segments
+                (contract_id, road_asset_id, created_at, created_by)
+                VALUES (?,?,?,?)"""), (cont_id, asset_id, ts, "demo_seed"))
+        conn.commit()
+
+    # ── Default inspection schedule policies ──────────────────────────────────
+    for (name, cont_id, itype, days, is_default, notes) in DEFAULT_INSPECTION_SCHEDULE:
+        c.execute(_q("""SELECT id FROM inspection_schedule_policies
+            WHERE policy_name=? AND contract_id IS NULL"""), (name,))
+        if c.fetchone():
+            continue
+        c.execute(_q("""INSERT INTO inspection_schedule_policies
+            (policy_name, contract_id, inspection_type, due_after_days,
+             is_default, notes, created_at, created_by)
+            VALUES (?,?,?,?,?,?,?,?)"""),
+            (name, cont_id, itype, days, is_default, notes, ts, "demo_seed"))
+    conn.commit()
+    conn.close()
+    print(f"[db] Demo contract data seeded — "
+          f"{len(DEMO_CONTRACTORS)} contractors, {len(DEMO_CONTRACTS)} contracts, "
+          f"{len(DEMO_ROAD_ASSETS)} road assets.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PHASE 1 QUERY FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_contractors(active_only: bool = True) -> list:
+    conn = get_conn(); c = conn.cursor()
+    if active_only:
+        c.execute("SELECT * FROM contractors WHERE is_active=1 ORDER BY name")
+    else:
+        c.execute("SELECT * FROM contractors ORDER BY name")
+    rows = [dict(r) for r in c.fetchall()]; conn.close()
+    return rows
+
+
+def get_contracts(division: str = None) -> list:
+    conn = get_conn(); c = conn.cursor()
+    if division:
+        c.execute(_q("""
+            SELECT ct.*, co.name as contractor_name
+            FROM contracts ct
+            LEFT JOIN contractors co ON ct.contractor_id = co.id
+            WHERE ct.division=? ORDER BY ct.work_start_date DESC
+        """), (division,))
+    else:
+        c.execute("""
+            SELECT ct.*, co.name as contractor_name
+            FROM contracts ct
+            LEFT JOIN contractors co ON ct.contractor_id = co.id
+            ORDER BY ct.work_start_date DESC
+        """)
+    rows = [dict(r) for r in c.fetchall()]; conn.close()
+    return rows
+
+
+def get_road_assets(ward: str = None, division: str = None) -> list:
+    conn = get_conn(); c = conn.cursor()
+    if ward:
+        c.execute(_q("SELECT * FROM road_assets WHERE ward=? ORDER BY road_name"), (ward,))
+    elif division:
+        c.execute(_q("SELECT * FROM road_assets WHERE division=? ORDER BY road_name"), (division,))
+    else:
+        c.execute("SELECT * FROM road_assets ORDER BY division, road_name")
+    rows = [dict(r) for r in c.fetchall()]; conn.close()
+    return rows
+
+
+def get_contract_intelligence_summary() -> dict:
+    """
+    Summary statistics for the commissioner contract intelligence dashboard.
+    Returns counts and high-level metrics.
+    """
+    conn = get_conn(); c = conn.cursor()
+    def cnt(sql, params=()):
+        c.execute(sql, params); return dict(c.fetchone())["cnt"] or 0
+
+    total_contractors  = cnt("SELECT COUNT(*) as cnt FROM contractors WHERE is_active=1")
+    total_contracts    = cnt("SELECT COUNT(*) as cnt FROM contracts")
+    active_contracts   = cnt("SELECT COUNT(*) as cnt FROM contracts WHERE status='active'")
+    total_road_assets  = cnt("SELECT COUNT(*) as cnt FROM road_assets")
+    total_km           = 0
+    c.execute("SELECT SUM(length_m) as total FROM road_assets")
+    row = c.fetchone()
+    if row and dict(row)["total"]:
+        total_km = round(dict(row)["total"] / 1000, 2)
+
+    pending_inspections = cnt(
+        "SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE status='pending'"
+    )
+    overdue_inspections = cnt(
+        _q("SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE status='pending' AND due_date < ?"),
+        (now()[:10],)
+    )
+    candidate_recurrences = cnt(
+        "SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='candidate'"
+    )
+    verified_breaches = cnt(
+        "SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='verified_recurrence'"
+    )
+
+    # Contractor performance snapshot — repair counts with attributed contractor
+    c.execute("""
+        SELECT co.name, COUNT(rr.id) as repair_count
+        FROM repair_records rr
+        JOIN contractors co ON rr.contractor_id = co.id
+        GROUP BY co.id, co.name ORDER BY repair_count DESC LIMIT 10
+    """)
+    contractor_repair_counts = [dict(r) for r in c.fetchall()]
+
+    conn.close()
+    return {
+        "total_contractors":      total_contractors,
+        "total_contracts":        total_contracts,
+        "active_contracts":       active_contracts,
+        "total_road_assets":      total_road_assets,
+        "total_km":               total_km,
+        "pending_inspections":    pending_inspections,
+        "overdue_inspections":    overdue_inspections,
+        "candidate_recurrences":  candidate_recurrences,
+        "verified_breaches":      verified_breaches,
+        "contractor_repair_counts": contractor_repair_counts,
+    }
+
+
+# =============================================================================
+# PHASE 1 — SCHEDULED INSPECTION WORKFLOW
+# =============================================================================
+
+def create_scheduled_inspections(repair_record_id: int, contract_id: int = None) -> list:
+    """
+    Generate scheduled inspection tasks for a repair record.
+
+    Uses inspection_schedule_policies for the contract if one exists,
+    otherwise falls back to default policies (is_default=1).
+
+    Called immediately after link_repair_to_contract() persists the FKs.
+    Safe to call multiple times — checks for existing tasks first.
+
+    Returns list of created inspection ids.
+    """
+    conn = get_conn(); c = conn.cursor()
+    created = []
+    try:
+        # Get repair record for repaired_at date
+        c.execute(_q("SELECT id, repaired_at FROM repair_records WHERE id=?"),
+                  (repair_record_id,))
+        repair = c.fetchone()
+        if not repair:
+            print(f"[inspections] repair_record {repair_record_id} not found")
+            return []
+        repair = dict(repair)
+        repair_date = repair["repaired_at"][:10] if repair["repaired_at"] else now()[:10]
+
+        # Check if inspections already exist for this repair
+        c.execute(_q("SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE repair_record_id=?"),
+                  (repair_record_id,))
+        if dict(c.fetchone())["cnt"] > 0:
+            print(f"[inspections] inspections already exist for repair {repair_record_id}")
+            return []
+
+        # Get policies: contract-specific first, then default
+        if contract_id:
+            c.execute(_q("""
+                SELECT * FROM inspection_schedule_policies
+                WHERE contract_id = ?
+                ORDER BY due_after_days ASC
+            """), (contract_id,))
+            policies = [dict(r) for r in c.fetchall()]
+        else:
+            policies = []
+
+        if not policies:
+            # Fall back to default policies
+            c.execute("""
+                SELECT * FROM inspection_schedule_policies
+                WHERE is_default = 1 OR contract_id IS NULL
+                ORDER BY due_after_days ASC
+            """)
+            policies = [dict(r) for r in c.fetchall()]
+
+        if not policies:
+            print(f"[inspections] no inspection policies found — create default policies first")
+            return []
+
+        # Create one scheduled_inspection per policy
+        from datetime import datetime, timedelta
+        base_date = datetime.strptime(repair_date, "%Y-%m-%d")
+        ts = now()
+
+        for policy in policies:
+            due = (base_date + timedelta(days=policy["due_after_days"])).strftime("%Y-%m-%d")
+            c.execute(_q("""
+                INSERT INTO scheduled_inspections
+                    (repair_record_id, policy_id, inspection_type,
+                     due_date, status, created_at)
+                VALUES (?, ?, ?, ?, 'pending', ?)
+            """), (repair_record_id, policy["id"],
+                   policy.get("inspection_type", "routine"), due, ts))
+            conn.commit()
+            c.execute(_q("SELECT last_insert_rowid() AS id") if not USE_POSTGRES
+                      else "SELECT lastval() AS id")
+            row = c.fetchone()
+            if row:
+                created.append(dict(row)["id"])
+
+        print(f"[inspections] created {len(created)} inspection tasks for repair {repair_record_id}")
+        return created
+
+    except Exception as e:
+        print(f"[inspections] create_scheduled_inspections error: {e}")
+        try: conn.rollback()
+        except: pass
+        return []
+    finally:
+        conn.close()
+
+
+def get_pending_inspections_for_officer(officer_name: str = "",
+                                         include_overdue: bool = True) -> list:
+    """
+    Returns pending inspection tasks for a field officer.
+
+    If officer_name is given, returns tasks assigned to that officer.
+    Unassigned tasks (assigned_to='') are also returned so supervisors
+    can assign them.
+
+    Each row includes repair and road asset context for display.
+    """
+    conn = get_conn(); c = conn.cursor()
+    try:
+        c.execute(_q("""
+            SELECT
+                si.id              AS inspection_id,
+                si.repair_record_id,
+                si.inspection_type,
+                si.due_date,
+                si.status,
+                si.assigned_to,
+                si.notes,
+                rr.report_id,
+                rr.contractor_name AS raw_contractor_name,
+                rr.repaired_at,
+                rr.repair_lat,
+                rr.repair_lng,
+                ra.road_name,
+                ra.ward,
+                ra.division,
+                co.name            AS contractor_name,
+                ct.contract_code,
+                ct.dlp_months,
+                isp.policy_name,
+                isp.due_after_days,
+                CASE
+                    WHEN si.due_date < ? AND si.status = 'pending'
+                    THEN 1 ELSE 0
+                END AS is_overdue
+            FROM scheduled_inspections si
+            JOIN repair_records rr ON si.repair_record_id = rr.id
+            LEFT JOIN road_assets  ra ON rr.road_asset_id  = ra.id
+            LEFT JOIN contractors  co ON rr.contractor_id  = co.id
+            LEFT JOIN contracts    ct ON rr.contract_id    = ct.id
+            LEFT JOIN inspection_schedule_policies isp ON si.policy_id = isp.id
+            WHERE si.status = 'pending'
+            ORDER BY si.due_date ASC
+        """), (now()[:10],))
+        rows = [dict(r) for r in c.fetchall()]
+
+        if officer_name:
+            rows = [r for r in rows
+                    if r["assigned_to"] == officer_name or not r["assigned_to"]]
+
+        return rows
+    except Exception as e:
+        print(f"[inspections] get_pending_inspections error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def get_inspection_by_id(inspection_id: int) -> dict:
+    """Full inspection record with repair and road context."""
+    conn = get_conn(); c = conn.cursor()
+    try:
+        c.execute(_q("""
+            SELECT
+                si.*,
+                rr.report_id, rr.contractor_name AS raw_contractor_name,
+                rr.repaired_at, rr.repair_lat, rr.repair_lng,
+                ra.road_name, ra.ward, ra.road_code,
+                co.name AS contractor_name,
+                ct.contract_code, ct.dlp_months, ct.work_end_date
+            FROM scheduled_inspections si
+            JOIN repair_records rr ON si.repair_record_id = rr.id
+            LEFT JOIN road_assets  ra ON rr.road_asset_id = ra.id
+            LEFT JOIN contractors  co ON rr.contractor_id = co.id
+            LEFT JOIN contracts    ct ON rr.contract_id   = ct.id
+            WHERE si.id = ?
+        """), (inspection_id,))
+        row = c.fetchone()
+        return dict(row) if row else {}
+    finally:
+        conn.close()
+
+
+def submit_inspection_result(
+    inspection_id:   int,
+    condition_score: int,
+    condition_notes: str,
+    photo_data:      str,
+    inspect_lat:     float,
+    inspect_lng:     float,
+    recorded_by:     str,
+) -> dict:
+    """
+    Record the result of a scheduled inspection.
+
+    condition_score: 1 (failed) to 5 (excellent).
+    Scores 1–2 auto-flag as warranty_breach=1 (candidate — not verified).
+    warranty_breach=2 (verified) requires separate human review step.
+
+    Returns { "ok": True, "inspection_result_id": ..., "breach_candidate": bool }
+    """
+    if not 1 <= condition_score <= 5:
+        return {"ok": False, "error": "condition_score must be 1–5"}
+
+    conn = get_conn(); c = conn.cursor()
+    ts = now()
+    try:
+        # Validate inspection exists and is pending
+        c.execute(_q("SELECT * FROM scheduled_inspections WHERE id=?"), (inspection_id,))
+        inspection = c.fetchone()
+        if not inspection:
+            return {"ok": False, "error": f"Inspection {inspection_id} not found"}
+        inspection = dict(inspection)
+        if inspection["status"] == "completed":
+            return {"ok": False, "error": "Inspection already completed"}
+
+        # Score 1–2 → warranty breach candidate (not verdict — requires review)
+        breach_candidate = condition_score <= 2
+        warranty_breach  = 1 if breach_candidate else 0
+
+        # Write result
+        c.execute(_q("""
+            INSERT INTO inspection_results
+                (inspection_id, condition_score, condition_notes,
+                 photo_data, inspect_lat, inspect_lng,
+                 warranty_breach, recorded_by, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """), (inspection_id, condition_score, condition_notes,
+               photo_data, inspect_lat, inspect_lng,
+               warranty_breach, recorded_by, ts))
+        conn.commit()
+
+        c.execute(_q("SELECT last_insert_rowid() AS id") if not USE_POSTGRES
+                  else "SELECT lastval() AS id")
+        result_id = dict(c.fetchone())["id"]
+
+        # Mark inspection completed
+        c.execute(_q("""
+            UPDATE scheduled_inspections
+            SET status='completed', completed_at=?, completed_by=?
+            WHERE id=?
+        """), (ts, recorded_by, inspection_id))
+        conn.commit()
+
+        # If breach candidate — create recurrence_event candidate
+        if breach_candidate:
+            _flag_breach_candidate(c, conn, inspection, ts, recorded_by)
+
+        # Audit
+        c.execute(_q("""
+            INSERT INTO audit_log (report_id, action, old_value, new_value, done_by, done_at)
+            SELECT rr.report_id,
+                   'inspection_completed',
+                   'pending',
+                   ?,
+                   ?, ?
+            FROM repair_records rr
+            WHERE rr.id = ?
+        """), (
+            f"score={condition_score} breach_candidate={breach_candidate}",
+            recorded_by, ts,
+            inspection["repair_record_id"]
+        ))
+        conn.commit()
+
+        return {
+            "ok":                  True,
+            "inspection_result_id": result_id,
+            "breach_candidate":    breach_candidate,
+            "condition_score":     condition_score,
+        }
+
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
+        return {"ok": False, "error": str(e)}
+    finally:
+        conn.close()
+
+
+def _flag_breach_candidate(c, conn, inspection: dict, ts: str, flagged_by: str):
+    """
+    When a failed inspection is submitted, create a recurrence_event candidate.
+    This is a CANDIDATE — warranty_breach=1, not 2.
+    A commissioner must review and verify before it becomes a breach record.
+    Never auto-blame the contractor.
+    """
+    try:
+        repair_id = inspection["repair_record_id"]
+        c.execute(_q("SELECT * FROM repair_records WHERE id=?"), (repair_id,))
+        repair = c.fetchone()
+        if not repair:
+            return
+        repair = dict(repair)
+
+        # Compute days since repair
+        try:
+            from datetime import datetime
+            repaired = datetime.strptime(repair["repaired_at"][:10], "%Y-%m-%d")
+            today    = datetime.strptime(ts[:10], "%Y-%m-%d")
+            days_since = (today - repaired).days
+        except Exception:
+            days_since = 0
+
+        # Check if within DLP
+        within_dlp = 0
+        if repair.get("contract_id"):
+            c.execute(_q("SELECT dlp_months, work_end_date FROM contracts WHERE id=?"),
+                      (repair["contract_id"],))
+            ct = c.fetchone()
+            if ct:
+                ct = dict(ct)
+                within_dlp = 1 if days_since <= (ct.get("dlp_months", 12) * 30) else 0
+
+        c.execute(_q("""
+            INSERT INTO recurrence_events
+                (original_report_id, new_report_id, original_repair_id,
+                 road_asset_id, distance_m, days_since_repair,
+                 within_dlp, match_method, verification_status,
+                 contractor_id, contract_id, flagged_at)
+            VALUES (?, ?, ?, ?, 0, ?, ?, 'inspection_failed', 'candidate', ?, ?, ?)
+        """), (
+            repair.get("report_id", ""), repair.get("report_id", ""),
+            repair_id, repair.get("road_asset_id"),
+            days_since, within_dlp,
+            repair.get("contractor_id"), repair.get("contract_id"), ts
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"[inspections] breach candidate flag error (non-fatal): {e}")
+
+
+def get_inspection_stats_for_commissioner() -> dict:
+    """High-level inspection statistics for the commissioner dashboard."""
+    conn = get_conn(); c = conn.cursor()
+    def cnt(sql, params=()):
+        c.execute(sql, params); return dict(c.fetchone())["cnt"] or 0
+    today = now()[:10]
+    stats = {
+        "total_scheduled":   cnt("SELECT COUNT(*) as cnt FROM scheduled_inspections"),
+        "pending":           cnt("SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE status='pending'"),
+        "completed":         cnt("SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE status='completed'"),
+        "overdue":           cnt(_q("SELECT COUNT(*) as cnt FROM scheduled_inspections WHERE status='pending' AND due_date < ?"), (today,)),
+        "breach_candidates": cnt("SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='candidate'"),
+        "verified_breaches": cnt("SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='verified_recurrence'"),
+    }
+    # Completion rate
+    if stats["total_scheduled"] > 0:
+        stats["completion_rate"] = round(stats["completed"] / stats["total_scheduled"] * 100, 1)
+    else:
+        stats["completion_rate"] = 0.0
+
+    conn.close()
+    return stats
+
+
+
+# =============================================================================
+# BREACH REVIEW — Commissioner verification of warranty breach candidates
+# =============================================================================
+
+def get_breach_candidates(limit: int = 50) -> list:
+    """
+    All recurrence_events with verification_status='candidate'.
+    Includes full repair, road, contract, contractor context for review.
+    """
+    conn = get_conn(); c = conn.cursor()
+    try:
+        c.execute(_q("""
+            SELECT
+                re.id                   AS event_id,
+                re.original_report_id,
+                re.new_report_id,
+                re.original_repair_id,
+                re.road_asset_id,
+                re.distance_m,
+                re.days_since_repair,
+                re.within_dlp,
+                re.defect_type_match,
+                re.match_method,
+                re.verification_status,
+                re.flagged_at,
+                re.contractor_id,
+                re.contract_id,
+                ra.road_name,
+                ra.ward,
+                ra.road_code,
+                co.name                 AS contractor_name,
+                co.contractor_code,
+                ct.contract_code,
+                ct.tender_number,
+                ct.dlp_months,
+                ct.work_end_date,
+                rr.repaired_at,
+                rr.repair_lat,
+                rr.repair_lng,
+                rr.contractor_name      AS raw_contractor_name,
+                ir.condition_score,
+                ir.condition_notes,
+                ir.recorded_by          AS inspector_name,
+                ir.recorded_at          AS inspected_at,
+                si.due_date             AS inspection_due_date,
+                si.inspection_type
+            FROM recurrence_events re
+            LEFT JOIN road_assets  ra ON re.road_asset_id  = ra.id
+            LEFT JOIN contractors  co ON re.contractor_id  = co.id
+            LEFT JOIN contracts    ct ON re.contract_id    = ct.id
+            LEFT JOIN repair_records rr ON re.original_repair_id = rr.id
+            LEFT JOIN inspection_results ir ON ir.inspection_id = (
+                SELECT id FROM inspection_results
+                WHERE inspection_id IN (
+                    SELECT id FROM scheduled_inspections WHERE repair_record_id = rr.id
+                )
+                ORDER BY recorded_at DESC LIMIT 1
+            )
+            LEFT JOIN scheduled_inspections si ON si.repair_record_id = rr.id
+                AND si.status = 'completed'
+            WHERE re.verification_status = 'candidate'
+            ORDER BY re.within_dlp DESC, re.days_since_repair ASC
+            LIMIT ?
+        """), (limit,))
+        return [dict(r) for r in c.fetchall()]
+    finally:
+        conn.close()
+
+
+def verify_breach(event_id: int, verdict: str,
+                  verified_by: str, notes: str = "") -> dict:
+    """
+    Commissioner verifies or dismisses a breach candidate.
+
+    verdict: 'verified_recurrence' | 'dismissed'
+
+    'verified_recurrence' → becomes procurement evidence
+    'dismissed'           → reason recorded, contractor cleared
+
+    Never auto-verifies. This function is the human gate.
+    Returns { "ok": True } or { "ok": False, "error": ... }
+    """
+    if verdict not in ("verified_recurrence", "dismissed"):
+        return {"ok": False,
+                "error": "verdict must be 'verified_recurrence' or 'dismissed'"}
+
+    conn = get_conn(); c = conn.cursor()
+    ts = now()
+    try:
+        c.execute(_q("SELECT id, verification_status FROM recurrence_events WHERE id=?"),
+                  (event_id,))
+        event = c.fetchone()
+        if not event:
+            return {"ok": False, "error": f"Event {event_id} not found"}
+        event = dict(event)
+        if event["verification_status"] != "candidate":
+            return {"ok": False,
+                    "error": f"Event is already '{event['verification_status']}' — cannot re-verify"}
+
+        c.execute(_q("""
+            UPDATE recurrence_events
+            SET verification_status = ?,
+                verified_by         = ?,
+                verified_at         = ?,
+                dismissal_reason    = ?,
+                seen_by_commissioner= 1
+            WHERE id = ?
+        """), (verdict, verified_by, ts, notes, event_id))
+        conn.commit()
+
+        # Audit
+        c.execute(_q("""
+            INSERT INTO audit_log
+                (report_id, action, old_value, new_value, done_by, done_at)
+            VALUES (
+                (SELECT original_report_id FROM recurrence_events WHERE id=?),
+                'breach_reviewed', 'candidate', ?, ?, ?
+            )
+        """), (event_id,
+               f"{verdict} | {notes[:200]}" if notes else verdict,
+               verified_by, ts))
+        conn.commit()
+        return {"ok": True, "verdict": verdict}
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
+        return {"ok": False, "error": str(e)}
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# CONTRACTOR PERFORMANCE METRICS
+# =============================================================================
+
+def get_contractor_performance(contractor_id: int = None) -> list:
+    """
+    Compute per-contractor performance metrics from verified evidence.
+
+    Metrics:
+      - total_repairs          : repair_records attributed to this contractor
+      - completed_inspections  : inspections submitted for their repairs
+      - breach_candidates      : unverified low-score inspections
+      - verified_breaches      : commissioner-confirmed warranty failures
+      - warranty_failure_rate  : verified_breaches / total_repairs (%)
+      - median_survival_days   : median days_since_repair at breach
+      - dismissed_candidates   : candidates cleared by commissioner
+      - within_dlp_breaches    : verified breaches that occurred within DLP
+
+    If contractor_id given, returns single-contractor list.
+    All metrics are sourced from verified records only — no guessing.
+    """
+    conn = get_conn(); c = conn.cursor()
+    try:
+        where = _q("WHERE co.id = ?") if contractor_id else ""
+        params = (contractor_id,) if contractor_id else ()
+
+        c.execute(_q(f"""
+            SELECT
+                co.id                   AS contractor_id,
+                co.name                 AS contractor_name,
+                co.contractor_code,
+                COUNT(DISTINCT rr.id)   AS total_repairs,
+                COUNT(DISTINCT si.id)   AS completed_inspections,
+                SUM(CASE WHEN re.verification_status='candidate'         THEN 1 ELSE 0 END)
+                                        AS breach_candidates,
+                SUM(CASE WHEN re.verification_status='verified_recurrence' THEN 1 ELSE 0 END)
+                                        AS verified_breaches,
+                SUM(CASE WHEN re.verification_status='dismissed'         THEN 1 ELSE 0 END)
+                                        AS dismissed_candidates,
+                SUM(CASE WHEN re.verification_status='verified_recurrence'
+                              AND re.within_dlp=1                        THEN 1 ELSE 0 END)
+                                        AS within_dlp_breaches
+            FROM contractors co
+            LEFT JOIN repair_records rr      ON rr.contractor_id = co.id
+            LEFT JOIN scheduled_inspections si ON si.repair_record_id = rr.id
+                AND si.status = 'completed'
+            LEFT JOIN recurrence_events re   ON re.original_repair_id = rr.id
+            {where}
+            GROUP BY co.id, co.name, co.contractor_code
+            ORDER BY verified_breaches DESC, total_repairs DESC
+        """), params)
+        rows = [dict(r) for r in c.fetchall()]
+
+        # Compute derived metrics
+        for row in rows:
+            total    = row["total_repairs"] or 0
+            breaches = row["verified_breaches"] or 0
+            row["warranty_failure_rate"] = (
+                round(breaches / total * 100, 1) if total > 0 else 0.0
+            )
+
+            # Median survival days from verified breaches
+            if breaches > 0:
+                c.execute(_q("""
+                    SELECT days_since_repair FROM recurrence_events
+                    WHERE contractor_id = ?
+                      AND verification_status = 'verified_recurrence'
+                    ORDER BY days_since_repair
+                """), (row["contractor_id"],))
+                days = [dict(r)["days_since_repair"] for r in c.fetchall()]
+                mid  = len(days) // 2
+                row["median_survival_days"] = (
+                    days[mid] if len(days) % 2 == 1
+                    else (days[mid - 1] + days[mid]) // 2
+                )
+            else:
+                row["median_survival_days"] = None
+
+            # Risk tier
+            rate = row["warranty_failure_rate"]
+            row["risk_tier"] = (
+                "HIGH"   if rate >= 15 or breaches >= 3 else
+                "MEDIUM" if rate >= 5  or breaches >= 1 else
+                "LOW"    if total > 0  else
+                "UNKNOWN"
+            )
+
+        return rows
+    finally:
+        conn.close()
+
+
+def get_contractor_performance_summary() -> dict:
+    """Top-level summary for the commissioner performance dashboard."""
+    conn = get_conn(); c = conn.cursor()
+    def cnt(sql, p=()):
+        c.execute(sql, p); return dict(c.fetchone())["cnt"] or 0
+    result = {
+        "total_contractors":     cnt("SELECT COUNT(*) as cnt FROM contractors WHERE is_active=1"),
+        "with_repairs":          cnt("SELECT COUNT(DISTINCT contractor_id) as cnt FROM repair_records WHERE contractor_id IS NOT NULL"),
+        "verified_breaches":     cnt("SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='verified_recurrence'"),
+        "pending_candidates":    cnt("SELECT COUNT(*) as cnt FROM recurrence_events WHERE verification_status='candidate'"),
+        "high_risk_contractors": 0,
+    }
+    conn.close()
+
+    # Count high-risk from full metrics
+    all_perf = get_contractor_performance()
+    result["high_risk_contractors"] = sum(1 for r in all_perf if r["risk_tier"] == "HIGH")
+    return result

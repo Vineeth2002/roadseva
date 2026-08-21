@@ -265,6 +265,151 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
 
 <div class="page-content">
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SCHEDULED INSPECTIONS — DLP follow-up tasks
+     ═══════════════════════════════════════════════════════════════════════ -->
+{% if pending_inspections %}
+<div style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <h2 style="font-size:1rem;font-weight:700;color:#e2e8f0;">
+      🔍 Scheduled Inspections
+      <span style="background:rgba(234,179,8,.15);color:#fde047;border-radius:20px;
+        padding:2px 10px;font-size:.72rem;margin-left:8px;">
+        {{ pending_inspections|length }} pending
+      </span>
+    </h2>
+  </div>
+
+  {% for ins in pending_inspections %}
+  <div style="background:#0d1b2e;border:1px solid {% if ins.is_overdue %}rgba(239,68,68,.4){% else %}rgba(255,255,255,.07){% endif %};
+    border-radius:12px;padding:18px 20px;margin-bottom:12px;">
+
+    <!-- Header row -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+      <div>
+        <div style="font-weight:600;color:#e2e8f0;">
+          {{ ins.road_name or 'Road segment not linked' }}
+          {% if ins.ward %}<span style="font-size:.78rem;color:#64748b;margin-left:8px;">{{ ins.ward }}</span>{% endif %}
+        </div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:3px;">
+          {{ ins.inspection_type | replace('_',' ') | title }}
+          &nbsp;·&nbsp; {{ ins.policy_name or ins.inspection_type }}
+          &nbsp;·&nbsp; Due: <strong style="color:{% if ins.is_overdue %}#ef4444{% else %}#94a3b8{% endif %};">{{ ins.due_date }}</strong>
+          {% if ins.is_overdue %}<span style="color:#ef4444;font-weight:700;"> ⚠ OVERDUE</span>{% endif %}
+        </div>
+      </div>
+      <div style="text-align:right;font-size:.75rem;color:#64748b;">
+        <div>Repair #{{ ins.report_id }}</div>
+        <div style="margin-top:2px;">Repaired: {{ ins.repaired_at[:10] if ins.repaired_at else '—' }}</div>
+      </div>
+    </div>
+
+    <!-- Contract / contractor info -->
+    <div style="display:flex;gap:20px;font-size:.78rem;color:#64748b;margin-bottom:14px;flex-wrap:wrap;">
+      <div>🏗 <strong style="color:#94a3b8;">{{ ins.contractor_name or ins.raw_contractor_name or 'Unknown contractor' }}</strong></div>
+      {% if ins.contract_code %}
+      <div>📋 {{ ins.contract_code }}</div>
+      {% endif %}
+      {% if ins.dlp_months %}
+      <div>🛡 DLP: {{ ins.dlp_months }} months</div>
+      {% endif %}
+      {% if ins.repair_lat %}
+      <div>
+        <a href="https://maps.google.com/?q={{ ins.repair_lat }},{{ ins.repair_lng }}&z=18"
+           target="_blank" style="color:#3b82f6;text-decoration:none;">📍 View repair location</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Submit result form -->
+    <details style="margin-top:4px;">
+      <summary style="cursor:pointer;color:#e8a020;font-size:.85rem;font-weight:600;
+        padding:6px 0;user-select:none;">
+        📝 Submit Inspection Result
+      </summary>
+      <div style="margin-top:14px;padding:16px;background:#122236;border-radius:10px;
+        border:1px solid rgba(255,255,255,.06);">
+        <form action="/submit-inspection" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="inspection_id" value="{{ ins.inspection_id }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="inspect_lat" id="ilat-{{ ins.inspection_id }}" value="">
+          <input type="hidden" name="inspect_lng" id="ilng-{{ ins.inspection_id }}" value="">
+
+          <!-- Condition score -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:8px;
+              font-weight:600;text-transform:uppercase;letter-spacing:.05em;">
+              Road Condition Score *
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% for score, label, color in [
+                (1, '1 — Failed', '#ef4444'),
+                (2, '2 — Poor',   '#f97316'),
+                (3, '3 — Fair',   '#eab308'),
+                (4, '4 — Good',   '#22c55e'),
+                (5, '5 — Excellent','#10b981')
+              ] %}
+              <label style="cursor:pointer;">
+                <input type="radio" name="condition_score" value="{{ score }}" required
+                  style="display:none;"
+                  onchange="document.getElementById('score-btn-{{ ins.inspection_id }}-{{ score }}').style.borderColor='{{ color }}'">
+                <div id="score-btn-{{ ins.inspection_id }}-{{ score }}"
+                  style="padding:8px 14px;background:#0d1b2e;border:2px solid rgba(255,255,255,.1);
+                  border-radius:8px;font-size:.8rem;color:#e2e8f0;text-align:center;
+                  transition:.15s;cursor:pointer;min-width:90px;"
+                  onclick="selectScore({{ ins.inspection_id }}, {{ score }}, '{{ color }}')">
+                  {{ label }}
+                </div>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:6px;
+              font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Observations</label>
+            <textarea name="condition_notes" rows="3"
+              placeholder="Describe road condition — visible cracks, deformation, water pooling, surface failure, etc."
+              style="width:100%;padding:10px;background:#0d1b2e;border:1px solid rgba(255,255,255,.1);
+              border-radius:8px;color:#e2e8f0;font-size:.85rem;resize:vertical;outline:none;"></textarea>
+          </div>
+
+          <!-- Photo -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:6px;
+              font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Photo Evidence</label>
+            <input type="file" name="photo" accept="image/*" capture="environment"
+              style="color:#94a3b8;font-size:.82rem;">
+          </div>
+
+          <!-- GPS capture -->
+          <div style="margin-bottom:16px;">
+            <button type="button"
+              onclick="captureInspectionGPS('{{ ins.inspection_id }}')"
+              style="padding:8px 16px;background:#122236;border:1px solid rgba(59,130,246,.4);
+              border-radius:8px;color:#3b82f6;font-size:.82rem;cursor:pointer;">
+              📍 Capture Current GPS
+            </button>
+            <span id="gps-status-{{ ins.inspection_id }}"
+              style="font-size:.75rem;color:#64748b;margin-left:10px;"></span>
+          </div>
+
+          <button type="submit"
+            style="padding:10px 24px;background:linear-gradient(135deg,#e8a020,#f0b840);
+            border:none;border-radius:8px;color:#000;font-weight:700;font-size:.9rem;cursor:pointer;">
+            Submit Inspection
+          </button>
+        </form>
+      </div>
+    </details>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+
 {% if reports %}
   {% for r in reports %}
 
@@ -868,5 +1013,41 @@ function closeLightbox() {
 }
 </script>
 
+
+<script>
+function captureInspectionGPS(inspectionId) {
+  var status = document.getElementById('gps-status-' + inspectionId);
+  if (!navigator.geolocation) {
+    status.textContent = 'GPS not available on this device.';
+    return;
+  }
+  status.textContent = 'Getting location…';
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    document.getElementById('ilat-' + inspectionId).value = pos.coords.latitude.toFixed(7);
+    document.getElementById('ilng-' + inspectionId).value = pos.coords.longitude.toFixed(7);
+    status.style.color = '#22c55e';
+    status.textContent = '✓ ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+  }, function() {
+    status.style.color = '#ef4444';
+    status.textContent = 'GPS failed — submit without location.';
+  }, {enableHighAccuracy: true, timeout: 10000});
+}
+
+function selectScore(inspectionId, score, color) {
+  // Reset all score buttons for this inspection
+  for (var i = 1; i <= 5; i++) {
+    var btn = document.getElementById('score-btn-' + inspectionId + '-' + i);
+    if (btn) btn.style.borderColor = 'rgba(255,255,255,.1)';
+  }
+  // Highlight selected
+  var sel = document.getElementById('score-btn-' + inspectionId + '-' + score);
+  if (sel) sel.style.borderColor = color;
+  // Check the radio
+  var radio = document.querySelector(
+    'input[name="condition_score"][value="' + score + '"]'
+  );
+  if (radio) radio.checked = true;
+}
+</script>
 </body>
 </html>

@@ -91,9 +91,19 @@ async def lifespan(app: FastAPI):
         print(f"[startup] cleanup_expired_sessions skipped: {e}")
     try:
         from severity import retry_pending_severity
+        # NOTE: On Render's ephemeral filesystem, uploads/ is wiped on each deploy.
+        # retry_pending_severity() will find no files and silently no-op.
+        # This is expected behaviour — photos are stored in Cloudinary for production.
+        # This call only has effect in local dev where uploads/ persists.
         retry_pending_severity()
     except Exception:
         pass
+    # ── Phase 1: Contract Intelligence schema + demo data ─────────────────────
+    try:
+        database.init_contract_intelligence_schema()
+        database.seed_demo_contract_data()
+    except Exception as e:
+        print(f"[startup] contract schema init skipped: {e}")
     start_watchdog()
     yield
     stop_watchdog()
@@ -970,6 +980,7 @@ async def update_status(request: Request,
     new_status:      str = Form(...),
     csrf:            str = Form(default=""),
     contractor_name: str = Form(default=""),
+    road_asset_id:   str = Form(default=""),
     next_url:        str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
@@ -988,14 +999,43 @@ async def update_status(request: Request,
                 "/staff?error=Cannot+mark+resolved+until+field+engineer+submits+site+report",
                 status_code=302)
 
+    # ── Contractor attribution guard ──────────────────────────────────────────
+    # A repair closure without contractor attribution permanently loses
+    # durability and procurement data. Enforce before writing status.
+    contractor_name = contractor_name.strip() if contractor_name else ""
+    if new_status in ("resolved", "closed"):
+        if not contractor_name:
+            # Block closure — return error, do NOT update status
+            safe_next = next_url if next_url and next_url.startswith("/staff") else "/staff"
+            return RedirectResponse(
+                f"{safe_next}?error=Contractor+name+is+required+before+marking+work+done.+Enter+contractor+name+or+'GVMC+Direct'+for+municipal+works.",
+                status_code=302,
+            )
+
     database.update_report_status(report_id, new_status, staff["name"])
 
-    if new_status in ("resolved","closed") and contractor_name:
+    if new_status in ("resolved", "closed") and contractor_name:
         try:
             r = database.get_report_by_id(report_id)
             if r and r.get("latitude") and r.get("longitude"):
-                database.add_repair_record(report_id, contractor_name,
-                    float(r["latitude"]), float(r["longitude"]), staff["name"])
+                repair_rec_id = database.add_repair_record(
+                    report_id, contractor_name,
+                    float(r["latitude"]), float(r["longitude"]), staff["name"]
+                )
+                # ── Link to road asset chain if staff confirmed one ────────────
+                # road_asset_id is submitted as a hidden field by the closure modal
+                if repair_rec_id and road_asset_id:
+                    try:
+                        from linkage import link_repair_to_contract
+                        link_result = link_repair_to_contract(
+                            repair_record_id=repair_rec_id,
+                            road_asset_id=int(road_asset_id),
+                            confirmed_by=staff["name"],
+                        )
+                        if not link_result.get("ok"):
+                            print(f"[linkage] link failed: {link_result.get('error')}")
+                    except Exception as le:
+                        print(f"[linkage] link_repair_to_contract error: {le}")
         except Exception as e:
             print(f"[rqi] repair record error: {e}")
 
@@ -1078,14 +1118,80 @@ async def field_dashboard(request: Request):
     my_flags = [f for f in pending_flags
                 if f.get("ward_flag_by") == staff["name"]]
 
+    # Pending inspection tasks for this officer
+    pending_inspections = database.get_pending_inspections_for_officer(staff["name"])
+
     return templates.TemplateResponse(request, "field.html", {"staff": staff, "reports": active,
         "csrf": generate_csrf_token(token),
         "sla_cutoff": sla_cutoff, "all_comments": all_comments,
         "ward_names": WARD_NAMES,
         "pending_flags": my_flags,
         "role_labels": ROLE_LABELS,
+        "pending_inspections": pending_inspections,
     })
 
+
+
+# ── SUBMIT INSPECTION RESULT ──────────────────────────────────────────────────
+
+@app.post("/submit-inspection", response_class=HTMLResponse)
+async def submit_inspection(request: Request,
+    inspection_id:   str  = Form(...),
+    condition_score: int  = Form(...),
+    condition_notes: str  = Form(default=""),
+    inspect_lat:     str  = Form(default=""),
+    inspect_lng:     str  = Form(default=""),
+    photo:           UploadFile = File(default=None),
+    csrf:            str  = Form(default="")):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    token = request.cookies.get(COOKIE_NAME, "")
+    if not verify_csrf_token(token, csrf):
+        return RedirectResponse("/field?error=csrf", status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES):
+        return permissions.redirect_home(staff)
+
+    # Handle photo upload
+    photo_data = ""
+    if photo and photo.filename:
+        try:
+            raw = await photo.read()
+            if len(raw) > 0:
+                from PIL import Image
+                import io
+                img = Image.open(io.BytesIO(raw))
+                img.thumbnail((1200, 1200))
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=75)
+                import base64
+                photo_data = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+        except Exception as e:
+            print(f"[inspection] photo error: {e}")
+
+    flat = float(inspect_lat) if inspect_lat else None
+    flng = float(inspect_lng) if inspect_lng else None
+
+    result = database.submit_inspection_result(
+        inspection_id   = int(inspection_id),
+        condition_score = condition_score,
+        condition_notes = condition_notes,
+        photo_data      = photo_data,
+        inspect_lat     = flat,
+        inspect_lng     = flng,
+        recorded_by     = staff["name"],
+    )
+
+    if not result.get("ok"):
+        return RedirectResponse(
+            f"/field?error=Inspection+error:+{result.get('error','unknown')[:60]}",
+            status_code=302)
+
+    if result.get("breach_candidate"):
+        return RedirectResponse(
+            "/field?notice=Inspection+submitted.+Low+score+flagged+as+warranty+breach+candidate+for+commissioner+review.",
+            status_code=302)
+
+    return RedirectResponse("/field?notice=Inspection+submitted+successfully.", status_code=302)
 
 @app.get("/route", response_class=HTMLResponse)
 async def route_page(request: Request):
@@ -1351,12 +1457,44 @@ async def commissioner(request: Request):
     data = database.get_commissioner_data(ward_filter=ward_filter)
 
     from watchdog import get_sla_dashboard_data
+    inspection_stats = database.get_inspection_stats_for_commissioner()
     return templates.TemplateResponse(request, "commissioner.html", {"staff": staff,
-        "data": data,
-        "sla": get_sla_dashboard_data()})
+        "data":             data,
+        "sla":              get_sla_dashboard_data(),
+        "inspection_stats": inspection_stats,
+    })
 
 
 # ── API STATS ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/linkage-candidates")
+async def api_linkage_candidates(request: Request,
+    lat:  str = "",
+    lng:  str = "",
+    ward: str = ""):
+    """
+    Returns road asset candidates for a given GPS point.
+    Called by the closure modal JS before staff confirms.
+    Staff confirms/overrides — result is never auto-applied.
+    """
+    staff, _ = require_login(request)
+    if not staff:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    try:
+        from linkage import find_road_asset_candidates
+        flat = float(lat) if lat else None
+        flng = float(lng) if lng else None
+        result = find_road_asset_candidates(flat, flng, ward=ward)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({
+            "error": str(e),
+            "confidence": "NO_MATCH",
+            "candidates": [],
+            "recommended": None,
+            "reason": "Linkage lookup failed — manual selection required."
+        })
+
 
 @app.get("/api/stats")
 async def api_stats(request: Request):
@@ -1652,6 +1790,72 @@ async def rqi_page(request: Request):
     database.mark_rqi_seen()
     data = _build_rqi_data(rqi_raw["events"])
     return templates.TemplateResponse(request, "rqi.html", {"staff": staff, "data": data})
+
+
+# ── BREACH REVIEW ─────────────────────────────────────────────────────────────
+
+@app.get("/breach-review", response_class=HTMLResponse)
+async def breach_review_page(request: Request):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
+    if not permissions.check_role(staff, *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
+    token    = request.cookies.get(COOKIE_NAME, "")
+    candidates = database.get_breach_candidates()
+    perf_summary = database.get_contractor_performance_summary()
+    return templates.TemplateResponse(request, "breach_review.html", {
+        "staff":       staff,
+        "candidates":  candidates,
+        "summary":     perf_summary,
+        "csrf":        generate_csrf_token(token),
+    })
+
+
+@app.post("/breach-review/verify", response_class=HTMLResponse)
+async def breach_verify(request: Request,
+    event_id: int = Form(...),
+    verdict:  str = Form(...),
+    notes:    str = Form(default=""),
+    csrf:     str = Form(default="")):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    token = request.cookies.get(COOKIE_NAME, "")
+    if not verify_csrf_token(token, csrf):
+        return RedirectResponse("/breach-review?error=csrf", status_code=302)
+    if not permissions.check_role(staff, *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
+    result = database.verify_breach(event_id, verdict, staff["name"], notes)
+    if not result.get("ok"):
+        return RedirectResponse(
+            f"/breach-review?error={result.get('error','unknown')[:80]}",
+            status_code=302)
+    msg = "Breach+verified+and+added+to+procurement+record." if verdict == "verified_recurrence"           else "Candidate+dismissed+and+reason+recorded."
+    return RedirectResponse(f"/breach-review?notice={msg}", status_code=302)
+
+
+# ── CONTRACT INTELLIGENCE ──────────────────────────────────────────────────────
+
+@app.get("/contracts", response_class=HTMLResponse)
+async def contracts_page(request: Request):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
+    if not permissions.check_role(staff, *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
+    summary     = database.get_contract_intelligence_summary()
+    contracts   = database.get_contracts()
+    contractors = database.get_contractors()
+    road_assets = database.get_road_assets()
+    performance = database.get_contractor_performance()
+    return templates.TemplateResponse(request, "contracts.html", {
+        "staff":        staff,
+        "summary":      summary,
+        "contracts":    contracts,
+        "contractors":  contractors,
+        "road_assets":  road_assets,
+        "performance":  performance,
+    })
 
 # ── WARDS ──────────────────────────────────────────────────────────────────────
 

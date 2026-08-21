@@ -78,7 +78,7 @@ jobs:
               }'
           else
             echo "RESEND_API_KEY not set — skipping notification"
-          fi
+          fi"
 
   deploy:
     name: Deploy to Render
