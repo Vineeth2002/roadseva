@@ -513,8 +513,6 @@ class TestDLPBoundary:
         Insert a contract with dlp_months=1 (30 days) and a repair from yesterday.
         days_since=1 <= 30 → within_dlp=1.
         """
-        from datetime import datetime, timedelta
-
         # Insert a short-DLP contract (1 month) active yesterday
         yesterday_str  = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         tomorrow_str   = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
