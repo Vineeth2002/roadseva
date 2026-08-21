@@ -613,7 +613,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
       {% for r in reports %}
       {% set r_audits = all_audits.get(r.report_id, []) %}
       {% set last_audit = r_audits[-1] if r_audits else none %}
-      <tr class="clickable-row" data-rid="{{ r.report_id }}">
+      <tr class="clickable-row" data-rid="{{ r.report_id }}" data-lat="{{ r.latitude or '' }}" data-lng="{{ r.longitude or '' }}" data-ward="{{ r.ward or '' }}">
         <td class="td-id">
           {{ r.report_id }}
           {% if r.status not in ('resolved','closed') and r.submitted_at < sla_cutoff %}
@@ -677,6 +677,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
             <input type="hidden" name="report_id" value="{{ r.report_id }}">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="contractor_name" id="contractor-tbl-{{ r.report_id }}" value="">
+            <input type="hidden" name="road_asset_id" id="asset-tbl-{{ r.report_id }}" value="">
             <input type="hidden" name="next_url" value="{{ request.url }}">
             <select name="new_status" style="padding:4px 6px;font-size:11px;border:1px solid #ddd;border-radius:4px;"
                     onchange="handleTableStatusChange(this,'{{ r.report_id }}')">
@@ -725,7 +726,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
   <div class="card-view" id="cardView">
   {% if reports %}
     {% for r in reports %}
-    <div class="report-card {{ r.status }} {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}sla-breach{% endif %}">
+    <div class="report-card {{ r.status }} {% if r.submitted_at < sla_cutoff and r.status not in ('resolved','closed') %}sla-breach{% endif %}" data-report-id="{{ r.report_id }}" data-lat="{{ r.latitude or '' }}" data-lng="{{ r.longitude or '' }}" data-ward="{{ r.ward or '' }}">
 
       <div class="card-top">
         <div class="damage-type">
@@ -868,6 +869,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
             <input type="hidden" name="report_id" value="{{ r.report_id }}">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="contractor_name" id="contractor-{{ r.report_id }}" value="">
+            <input type="hidden" name="road_asset_id" id="asset-{{ r.report_id }}" value="">
             <input type="hidden" name="next_url" value="{{ request.url }}">
             <select name="new_status" id="sel-{{ r.report_id }}">
               {# Only show valid next status — enforce the flow #}
@@ -1035,26 +1037,164 @@ function checkForUpdates() {
 setInterval(checkForUpdates, 30000);
 
 // ── RESOLVE PROMPT (contractor name) ─────────────────────────────────────────
+// ── CLOSURE MODAL STATE ───────────────────────────────────────────────────────
+var _modal = {
+  form: null, reportId: null, mode: 'card', sel: null,
+  lat: null, lng: null, ward: null, resolvedAssetId: null,
+};
+
 function checkResolve(form, reportId) {
   var sel = document.getElementById('sel-' + reportId);
   if (sel && sel.value === 'resolved') {
-    var contractor = prompt('Enter contractor name who completed repair.\nLeave blank if GVMC direct work.', '');
-    if (contractor === null) return false;
-    var field = document.getElementById('contractor-' + reportId);
-    if (field) field.value = contractor || 'GVMC Direct';
+    var card = document.querySelector('[data-report-id="' + reportId + '"]');
+    openClosureModal(form, reportId, 'card', sel,
+      card ? card.dataset.lat  : null,
+      card ? card.dataset.lng  : null,
+      card ? card.dataset.ward : null);
+    return false;
   }
   return true;
 }
+
 function handleTableStatusChange(sel, reportId) {
   if (sel.value === 'resolved') {
-    var contractor = prompt('Contractor name who completed repair? Leave blank for GVMC direct.', '');
-    if (contractor === null) { sel.value = sel.getAttribute('data-prev') || 'open'; return; }
-    var field = document.getElementById('contractor-tbl-' + reportId);
-    if (field) field.value = contractor || 'GVMC Direct';
+    var row = sel.closest('tr');
+    openClosureModal(sel.closest('form'), reportId, 'table', sel,
+      row ? row.dataset.lat  : null,
+      row ? row.dataset.lng  : null,
+      row ? row.dataset.ward : null);
+    return;
   }
   sel.setAttribute('data-prev', sel.value);
   sel.closest('form').submit();
 }
+
+function openClosureModal(form, reportId, mode, sel, lat, lng, ward) {
+  _modal.form = form; _modal.reportId = reportId; _modal.mode = mode;
+  _modal.sel = sel; _modal.lat = lat; _modal.lng = lng; _modal.ward = ward;
+  _modal.resolvedAssetId = null;
+  document.getElementById('modal-contractor').value = '';
+  document.getElementById('modal-linkage-result').innerHTML = '';
+  document.getElementById('modal-manual-select').style.display = 'none';
+  document.getElementById('modal-road-select').innerHTML = '<option value="">— Choose road segment —</option>';
+  document.getElementById('closure-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  if (lat && lng) {
+    document.getElementById('modal-linkage-result').innerHTML =
+      '<div style="color:#64748b;font-size:.82rem;padding:10px 0;">Searching nearest road segment\u2026</div>';
+    fetchLinkageCandidates(lat, lng, ward);
+  } else { showNoGPS(); }
+}
+
+function closeModal() {
+  document.getElementById('closure-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  if (_modal.sel && _modal.mode === 'table')
+    _modal.sel.value = _modal.sel.getAttribute('data-prev') || 'assigned';
+}
+
+function fetchLinkageCandidates(lat, lng, ward) {
+  var url = '/api/linkage-candidates?lat=' + encodeURIComponent(lat) +
+            '&lng=' + encodeURIComponent(lng) +
+            (ward ? '&ward=' + encodeURIComponent(ward) : '');
+  fetch(url, {credentials: 'same-origin'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ renderLinkageResult(d); })
+    .catch(function(){ showNoGPS(); });
+}
+
+function renderLinkageResult(data) {
+  var el = document.getElementById('modal-linkage-result');
+  var sel = document.getElementById('modal-road-select');
+  var ms  = document.getElementById('modal-manual-select');
+  var conf = data.confidence || 'NO_MATCH';
+  sel.innerHTML = '<option value="">— Choose road segment —</option>';
+  (data.candidates||[]).forEach(function(c){
+    var o = document.createElement('option');
+    o.value = c.road_asset_id;
+    o.textContent = c.road_name + ' (' + c.distance_m + 'm)' +
+      (c.contractor_name ? ' \u00b7 ' + c.contractor_name : ' \u00b7 No contract');
+    sel.appendChild(o);
+  });
+  if (conf === 'HIGH' || conf === 'MEDIUM') {
+    var rec = data.recommended;
+    var cc = conf === 'HIGH' ? '#22c55e' : '#f59e0b';
+    var cb = conf === 'HIGH' ? 'rgba(34,197,94,.08)' : 'rgba(245,158,11,.08)';
+    var cd = conf === 'HIGH' ? 'rgba(34,197,94,.3)'  : 'rgba(245,158,11,.3)';
+    _modal.resolvedAssetId = rec.road_asset_id;
+    sel.value = rec.road_asset_id;
+    var cline = rec.contract_code
+      ? '<div style="margin-top:4px;font-size:.78rem;color:#94a3b8;">Contract: ' + rec.contract_code + ' &nbsp;\u00b7&nbsp; Contractor: ' + (rec.contractor_name||'\u2014') + '</div>'
+      : '<div style="margin-top:4px;font-size:.78rem;color:#ef4444;">\u26a0 No active contract for this road and date.</div>';
+    el.innerHTML = '<div style="background:'+cb+';border:1px solid '+cd+';border-radius:10px;padding:14px 16px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="font-weight:600;color:#e2e8f0;">' + rec.road_name + '</div>' +
+        '<span style="color:'+cc+';font-size:.72rem;font-weight:700;background:'+cb+';border:1px solid '+cd+';border-radius:20px;padding:2px 10px;">' + conf + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px;font-size:.8rem;color:#94a3b8;">' + rec.distance_m + 'm from GPS &nbsp;\u00b7&nbsp; ' + rec.ward + '</div>' +
+      cline +
+      '<div style="margin-top:10px;display:flex;gap:8px;">' +
+        '<button onclick="acceptSuggestion()" style="padding:6px 14px;background:#122236;border:1px solid rgba(34,197,94,.4);border-radius:6px;color:#22c55e;font-size:.8rem;cursor:pointer;">\u2713 Accept this road</button>' +
+        '<button onclick="showManualSelect()" style="padding:6px 14px;background:#122236;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#94a3b8;font-size:.8rem;cursor:pointer;">Choose another road</button>' +
+      '</div>' +
+    '</div>';
+  } else if (conf === 'AMBIGUOUS') {
+    _modal.resolvedAssetId = null;
+    el.innerHTML = '<div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:14px 16px;">' +
+      '<div style="font-weight:600;color:#fb923c;margin-bottom:6px;">\u26a0 Multiple nearby road segments</div>' +
+      '<div style="font-size:.82rem;color:#94a3b8;">' + (data.reason||'') + '</div>' +
+      '<div style="margin-top:6px;font-size:.78rem;color:#f97316;">Select the correct segment below.</div></div>';
+    ms.style.display = 'block';
+  } else {
+    _modal.resolvedAssetId = null;
+    el.innerHTML = '<div style="background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);border-radius:10px;padding:14px 16px;">' +
+      '<div style="font-weight:600;color:#94a3b8;margin-bottom:6px;">\ud83d\udccd Road segment not identified from GPS</div>' +
+      '<div style="font-size:.82rem;color:#64748b;">' + (data.reason||'No road found within search radius.') + '</div></div>';
+    if (data.candidates && data.candidates.length) ms.style.display = 'block';
+  }
+}
+
+function showNoGPS() {
+  _modal.resolvedAssetId = null;
+  document.getElementById('modal-linkage-result').innerHTML =
+    '<div style="background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);' +
+    'border-radius:10px;padding:14px 16px;font-size:.82rem;color:#64748b;">' +
+    'No GPS on this complaint. Contractor name only will be recorded.</div>';
+}
+
+function acceptSuggestion() {
+  document.getElementById('modal-manual-select').style.display = 'none';
+}
+
+function showManualSelect() {
+  document.getElementById('modal-manual-select').style.display = 'block';
+  _modal.resolvedAssetId = null;
+}
+
+function confirmClosure() {
+  var contractor = document.getElementById('modal-contractor').value.trim();
+  if (!contractor) {
+    document.getElementById('modal-contractor').style.borderColor = '#ef4444';
+    document.getElementById('modal-contractor').focus();
+    return;
+  }
+  document.getElementById('modal-contractor').style.borderColor = 'rgba(255,255,255,.1)';
+  var assetId = _modal.resolvedAssetId || '';
+  var ms = document.getElementById('modal-road-select');
+  if (ms.value) assetId = ms.value;
+  var cf = document.getElementById('contractor-' + (_modal.mode === 'card' ? _modal.reportId : 'tbl-' + _modal.reportId));
+  var af = document.getElementById('asset-'      + (_modal.mode === 'card' ? _modal.reportId : 'tbl-' + _modal.reportId));
+  if (cf) cf.value = contractor;
+  if (af) af.value = assetId;
+  if (_modal.mode === 'table' && _modal.sel) _modal.sel.setAttribute('data-prev', 'resolved');
+  closeModal();
+  _modal.form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var m = document.getElementById('closure-modal');
+  if (m) m.addEventListener('click', function(e){ if (e.target === this) closeModal(); });
+});
 
 // ── LIGHTBOX ──────────────────────────────────────────────────────────────────
 function openLightbox(src, caption) {
@@ -1134,5 +1274,74 @@ document.getElementById('scoOverlay').addEventListener('click', function(e){
   wrap.addEventListener('touchend', function(){ down=false; });
 })();
 </script>
+
+<!-- ── CLOSURE MODAL — Road Linkage Confirmation ─────────────────────────── -->
+<div id="closure-modal" style="display:none;position:fixed;inset:0;z-index:2000;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;">
+  <div style="background:#0d1b2e;border:1px solid rgba(255,255,255,.1);border-radius:16px;
+    width:min(520px,95vw);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.6);
+    max-height:90vh;overflow-y:auto;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;">🔗 Confirm Road Linkage</div>
+        <div style="font-size:.8rem;color:#64748b;margin-top:3px;">
+          This links the repair to a contract for durability tracking.
+        </div>
+      </div>
+      <button onclick="closeModal()" style="background:none;border:none;color:#64748b;
+        font-size:1.4rem;cursor:pointer;padding:4px 8px;border-radius:6px;"
+        onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#64748b'">✕</button>
+    </div>
+
+    <!-- Contractor input -->
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:.8rem;color:#94a3b8;margin-bottom:6px;font-weight:600;
+        text-transform:uppercase;letter-spacing:.05em;">Contractor Name *</label>
+      <input type="text" id="modal-contractor" placeholder="e.g. Megha Engineering or GVMC Direct"
+        style="width:100%;padding:10px 14px;background:#122236;border:1px solid rgba(255,255,255,.1);
+        border-radius:8px;color:#e2e8f0;font-size:.9rem;outline:none;"
+        onfocus="this.style.borderColor='#e8a020'" onblur="this.style.borderColor='rgba(255,255,255,.1)'">
+    </div>
+
+    <!-- GPS linkage result -->
+    <div id="modal-linkage-result" style="margin-bottom:16px;"></div>
+
+    <!-- Manual road select (shown on AMBIGUOUS / NO_MATCH) -->
+    <div id="modal-manual-select" style="display:none;margin-bottom:16px;">
+      <label style="display:block;font-size:.8rem;color:#94a3b8;margin-bottom:6px;font-weight:600;
+        text-transform:uppercase;letter-spacing:.05em;">Select Road Segment</label>
+      <select id="modal-road-select"
+        style="width:100%;padding:10px 14px;background:#122236;border:1px solid rgba(255,255,255,.1);
+        border-radius:8px;color:#e2e8f0;font-size:.85rem;outline:none;">
+        <option value="">— Choose road segment —</option>
+      </select>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button id="modal-confirm-btn" onclick="confirmClosure()"
+        style="flex:1;padding:11px;background:linear-gradient(135deg,#22c55e,#16a34a);
+        border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;">
+        ✅ Confirm & Close Complaint
+      </button>
+      <button onclick="closeModal()"
+        style="padding:11px 18px;background:#1e293b;border:1px solid rgba(255,255,255,.1);
+        border-radius:8px;color:#94a3b8;cursor:pointer;font-size:.9rem;">
+        Cancel
+      </button>
+    </div>
+
+    <!-- Honesty note -->
+    <div style="margin-top:14px;padding:10px 14px;background:rgba(59,130,246,.08);
+      border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:.75rem;color:#93c5fd;">
+      ℹ️ The road segment you confirm here becomes procurement evidence.
+      If unsure, choose manually rather than accepting an uncertain GPS suggestion.
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

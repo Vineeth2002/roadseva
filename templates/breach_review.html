@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breach Review — RoadSeva GVMC</title>
+<style>
+:root {
+  --bg:#080f1a; --navy:#0d1b2e; --navy2:#122236; --border:rgba(255,255,255,.07);
+  --text:#e2e8f0; --muted:#64748b; --muted2:#94a3b8;
+  --accent:#e8a020; --green:#22c55e; --red:#ef4444;
+  --orange:#f97316; --yellow:#eab308; --blue:#3b82f6; --purple:#8b5cf6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+.topbar { background:var(--navy); border-bottom:1px solid var(--border);
+  padding:0 28px; height:58px; display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:100; }
+.topbar-brand { font-size:1.1rem; font-weight:700; color:var(--accent); }
+.nav-a { color:var(--muted2); text-decoration:none; font-size:.83rem;
+  padding:5px 12px; border-radius:6px; transition:.15s; }
+.nav-a:hover { background:rgba(255,255,255,.05); color:var(--text); }
+.nav-a.active { color:var(--accent); background:rgba(232,160,32,.1); }
+.user-chip { background:var(--navy2); border:1px solid var(--border);
+  border-radius:20px; padding:3px 14px; font-size:.8rem; }
+.confidential { background:linear-gradient(90deg,rgba(139,92,246,.12),rgba(139,92,246,.05));
+  border-bottom:1px solid rgba(139,92,246,.3); padding:8px 28px;
+  font-size:.82rem; color:#c4b5fd; }
+.page { max-width:1100px; margin:0 auto; padding:28px 24px; }
+.page-header { margin-bottom:24px; }
+.page-header h1 { font-size:1.5rem; font-weight:700; }
+.page-header p  { font-size:.875rem; color:var(--muted2); margin-top:5px; }
+
+/* Notice / error */
+.notice { background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.3);
+  border-radius:8px; padding:10px 16px; font-size:.83rem; color:#86efac;
+  margin-bottom:20px; }
+.error-msg { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3);
+  border-radius:8px; padding:10px 16px; font-size:.83rem; color:#fca5a5;
+  margin-bottom:20px; }
+
+/* Summary strip */
+.summary-strip { display:flex; gap:12px; margin-bottom:28px; flex-wrap:wrap; }
+.sstat { background:var(--navy2); border:1px solid var(--border); border-radius:10px;
+  padding:14px 18px; flex:1; min-width:130px; }
+.sstat .lbl { font-size:.72rem; color:var(--muted2); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:4px; }
+.sstat .val { font-size:1.6rem; font-weight:700; }
+
+/* Important note */
+.important { background:rgba(59,130,246,.06); border:1px solid rgba(59,130,246,.25);
+  border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:.83rem; color:#93c5fd; }
+.important strong { color:#60a5fa; }
+
+/* Candidate cards */
+.candidate-card { background:var(--navy2); border:1px solid var(--border);
+  border-radius:12px; padding:20px 22px; margin-bottom:16px; }
+.candidate-card.within-dlp { border-color:rgba(239,68,68,.35); }
+.card-header { display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:14px; gap:12px; flex-wrap:wrap; }
+.card-title { font-size:1rem; font-weight:700; color:var(--text); }
+.card-sub   { font-size:.78rem; color:var(--muted2); margin-top:4px; }
+.badges     { display:flex; gap:6px; flex-wrap:wrap; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:.72rem; font-weight:700; }
+.badge-dlp    { background:rgba(239,68,68,.15);  color:var(--red);    }
+.badge-nocon  { background:rgba(100,116,139,.15); color:var(--muted2); }
+.badge-insp   { background:rgba(59,130,246,.15);  color:var(--blue);   }
+.badge-cand   { background:rgba(249,115,22,.15);  color:var(--orange); }
+
+/* Evidence grid */
+.evidence-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:10px; margin-bottom:16px; }
+.ev-item { background:rgba(255,255,255,.03); border:1px solid var(--border);
+  border-radius:8px; padding:10px 14px; }
+.ev-label { font-size:.72rem; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:3px; }
+.ev-value { font-size:.87rem; color:var(--text); font-weight:500; }
+.ev-value.red { color:var(--red); }
+.ev-value.orange { color:var(--orange); }
+.ev-value.green { color:var(--green); }
+
+/* Score bar */
+.score-bar { display:flex; gap:4px; align-items:center; }
+.score-pip { width:20px; height:8px; border-radius:3px; }
+
+/* Verdict form */
+.verdict-form { background:rgba(255,255,255,.03); border:1px solid var(--border);
+  border-radius:10px; padding:16px 18px; margin-top:14px; }
+.verdict-form h4 { font-size:.85rem; font-weight:600; color:var(--text);
+  margin-bottom:12px; }
+.verdict-row { display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+.verdict-notes { flex:1; min-width:200px; }
+.verdict-notes textarea { width:100%; padding:8px 12px; background:var(--navy);
+  border:1px solid var(--border); border-radius:8px; color:var(--text);
+  font-size:.82rem; resize:vertical; outline:none; }
+.btn-verify { padding:10px 20px; background:linear-gradient(135deg,#dc2626,#b91c1c);
+  border:none; border-radius:8px; color:#fff; font-weight:700;
+  font-size:.85rem; cursor:pointer; white-space:nowrap; }
+.btn-dismiss { padding:10px 20px; background:var(--navy);
+  border:1px solid rgba(255,255,255,.15); border-radius:8px; color:var(--muted2);
+  font-weight:600; font-size:.85rem; cursor:pointer; white-space:nowrap; }
+.btn-verify:hover  { background:linear-gradient(135deg,#ef4444,#dc2626); }
+.btn-dismiss:hover { color:var(--text); border-color:rgba(255,255,255,.3); }
+
+/* Empty */
+.empty { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-icon { font-size:3rem; margin-bottom:12px; }
+.empty-title { font-size:1.1rem; font-weight:600; margin-bottom:6px; color:var(--muted2); }
+
+@media(max-width:650px) {
+  .verdict-row { flex-direction:column; }
+  .page { padding:16px 12px; }
+  .summary-strip .sstat { min-width:calc(50% - 6px); }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">🛣 RoadSeva</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="/commissioner" class="nav-a">Dashboard</a>
+    <a href="/contracts" class="nav-a">Contracts</a>
+    <a href="/breach-review" class="nav-a active">Breach Review</a>
+    <a href="/contracts" class="nav-a">Contracts & Performance</a>
+    <span class="user-chip">{{ staff.name }} · {{ staff.role | replace('_',' ') | title }}</span>
+    <a href="/logout" class="nav-a" style="color:var(--red)">Logout</a>
+  </div>
+</div>
+
+<div class="confidential">
+  🔒 <strong>Restricted — Commissioner Level</strong> &nbsp;·&nbsp;
+  Breach verifications become permanent procurement evidence.
+</div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>⚖️ Warranty Breach Review</h1>
+    <p>Review flagged inspection failures. Your verdict becomes the evidence record.</p>
+  </div>
+
+  {% set notice = request.query_params.get('notice','') %}
+  {% set error  = request.query_params.get('error','') %}
+  {% if notice %}<div class="notice">✅ {{ notice | replace('+',' ') }}</div>{% endif %}
+  {% if error  %}<div class="error-msg">⚠ {{ error | replace('+',' ') }}</div>{% endif %}
+
+  <!-- Summary -->
+  <div class="summary-strip">
+    <div class="sstat">
+      <div class="lbl">Pending Review</div>
+      <div class="val" style="color:var(--orange);">{{ summary.pending_candidates }}</div>
+    </div>
+    <div class="sstat">
+      <div class="lbl">Verified Breaches</div>
+      <div class="val" style="color:var(--red);">{{ summary.verified_breaches }}</div>
+    </div>
+    <div class="sstat">
+      <div class="lbl">High Risk Contractors</div>
+      <div class="val" style="color:var(--yellow);">{{ summary.high_risk_contractors }}</div>
+    </div>
+    <div class="sstat">
+      <div class="lbl">Contractors w/ Repairs</div>
+      <div class="val" style="color:var(--blue);">{{ summary.with_repairs }}</div>
+    </div>
+  </div>
+
+  <!-- Important note -->
+  <div class="important">
+    <strong>How to review:</strong> A candidate means a field officer submitted a low condition
+    score (1–2) on a scheduled inspection. That alone is not a breach verdict.
+    Before verifying, consider: Was this within the DLP period? Is the contractor
+    responsible (vs utility cut, flooding, design failure)? Is the evidence sufficient?
+    <br><br>
+    <strong>Verify</strong> = confirmed warranty failure → enters contractor performance record.<br>
+    <strong>Dismiss</strong> = not attributable to contractor → reason recorded, contractor cleared.
+  </div>
+
+  {% if not candidates %}
+  <div class="empty">
+    <div class="empty-icon">✅</div>
+    <div class="empty-title">No candidates pending review</div>
+    <div style="font-size:.85rem;">All flagged inspections have been reviewed.</div>
+  </div>
+  {% else %}
+
+  {% for ev in candidates %}
+  <div class="candidate-card {% if ev.within_dlp %}within-dlp{% endif %}">
+
+    <!-- Header -->
+    <div class="card-header">
+      <div>
+        <div class="card-title">{{ ev.road_name or 'Road segment not identified' }}</div>
+        <div class="card-sub">
+          {{ ev.ward or '—' }}
+          {% if ev.road_code %}&nbsp;·&nbsp; {{ ev.road_code }}{% endif %}
+          &nbsp;·&nbsp; Flagged {{ ev.flagged_at[:10] if ev.flagged_at else '—' }}
+        </div>
+      </div>
+      <div class="badges">
+        {% if ev.within_dlp %}
+          <span class="badge badge-dlp">Within DLP</span>
+        {% endif %}
+        {% if ev.contract_code %}
+          <span class="badge badge-insp">{{ ev.contract_code }}</span>
+        {% else %}
+          <span class="badge badge-nocon">No contract linked</span>
+        {% endif %}
+        <span class="badge badge-cand">Candidate</span>
+      </div>
+    </div>
+
+    <!-- Evidence grid -->
+    <div class="evidence-grid">
+      <div class="ev-item">
+        <div class="ev-label">Contractor</div>
+        <div class="ev-value">{{ ev.contractor_name or ev.raw_contractor_name or '—' }}</div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Days Since Repair</div>
+        <div class="ev-value {% if ev.within_dlp %}red{% endif %}">
+          {{ ev.days_since_repair }} days
+        </div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">DLP Period</div>
+        <div class="ev-value">{{ ev.dlp_months or '—' }} months</div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Repair Date</div>
+        <div class="ev-value">{{ ev.repaired_at[:10] if ev.repaired_at else '—' }}</div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Condition Score</div>
+        <div class="ev-value {% if ev.condition_score and ev.condition_score <= 2 %}red{% elif ev.condition_score and ev.condition_score == 3 %}orange{% else %}green{% endif %}">
+          {% if ev.condition_score %}
+            {{ ev.condition_score }} / 5
+            {% if ev.condition_score == 1 %}— Failed
+            {% elif ev.condition_score == 2 %}— Poor
+            {% elif ev.condition_score == 3 %}— Fair
+            {% endif %}
+          {% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Inspector</div>
+        <div class="ev-value">{{ ev.inspector_name or '—' }}</div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Detection Method</div>
+        <div class="ev-value" style="text-transform:capitalize;">
+          {{ ev.match_method | replace('_',' ') if ev.match_method else '—' }}
+        </div>
+      </div>
+      <div class="ev-item">
+        <div class="ev-label">Repair GPS</div>
+        <div class="ev-value">
+          {% if ev.repair_lat %}
+            <a href="https://maps.google.com/?q={{ ev.repair_lat }},{{ ev.repair_lng }}&z=18"
+               target="_blank" style="color:var(--blue);text-decoration:none;">
+               View on map 🗺
+            </a>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Inspector notes -->
+    {% if ev.condition_notes %}
+    <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);
+      border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem;color:var(--muted2);">
+      <span style="color:var(--muted);font-size:.72rem;text-transform:uppercase;
+        letter-spacing:.05em;display:block;margin-bottom:4px;">Inspector's Notes</span>
+      {{ ev.condition_notes }}
+    </div>
+    {% endif %}
+
+    <!-- Verdict form -->
+    <div class="verdict-form">
+      <h4>Your Verdict</h4>
+      <form action="/breach-review/verify" method="post">
+        <input type="hidden" name="event_id" value="{{ ev.event_id }}">
+        <input type="hidden" name="csrf"     value="{{ csrf }}">
+        <div class="verdict-row">
+          <div class="verdict-notes">
+            <textarea name="notes" rows="2"
+              placeholder="Reason for verification or dismissal (recommended — becomes part of the evidence record)"
+              style="width:100%;"></textarea>
+          </div>
+          <button type="submit" name="verdict" value="verified_recurrence" class="btn-verify">
+            ⚠ Verify Breach
+          </button>
+          <button type="submit" name="verdict" value="dismissed" class="btn-dismiss">
+            ✓ Dismiss
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+</body>
+</html>
