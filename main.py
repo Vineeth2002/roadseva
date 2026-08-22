@@ -1134,6 +1134,47 @@ async def field_dashboard(request: Request):
 
 # ── SUBMIT INSPECTION RESULT ──────────────────────────────────────────────────
 
+
+# ── WARD BRIEFING ─────────────────────────────────────────────────────────────
+
+@app.get("/ward-briefing", response_class=HTMLResponse)
+async def ward_briefing(request: Request):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES, "ae",
+                                  *permissions.COMMISSIONER_ROLES):
+        return permissions.redirect_home(staff)
+
+    role = staff.get("role", "")
+    ward = request.query_params.get("ward", "")
+    if not ward and role in permissions.FIELD_ROLES:
+        ward_list = staff.get("ward_list", "") or ""
+        ward = ward_list.split(",")[0].strip() if ward_list else ""
+
+    briefing = database.get_ward_briefing(ward, staff["name"]) if ward else {}
+    return templates.TemplateResponse(request, "ward_briefing.html", {
+        "staff":    staff,
+        "briefing": briefing,
+        "ward":     ward,
+    })
+
+
+@app.get("/complaint-story/{report_id}", response_class=HTMLResponse)
+async def complaint_story(request: Request, report_id: str):
+    staff, mc = require_login_fc(request)
+    if not staff: return RedirectResponse("/login", status_code=302)
+    if mc: return RedirectResponse("/change-password?forced=1", status_code=302)
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/staff", status_code=302)
+    story = database.get_complaint_story(report_id)
+    return templates.TemplateResponse(request, "complaint_story.html", {
+        "staff":  staff,
+        "report": report,
+        "story":  story,
+    })
+
 @app.post("/submit-inspection", response_class=HTMLResponse)
 async def submit_inspection(request: Request,
     inspection_id:   str  = Form(...),

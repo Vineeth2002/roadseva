@@ -4471,3 +4471,446 @@ def get_contractor_performance_summary() -> dict:
     all_perf = get_contractor_performance()
     result["high_risk_contractors"] = sum(1 for r in all_perf if r["risk_tier"] == "HIGH")
     return result
+
+
+# =============================================================================
+# WARD BRIEFING / HANDOVER INTELLIGENCE
+# =============================================================================
+# Gives any staff member — new or experienced — a complete operational picture
+# of their ward the moment they log in. No phone calls, no paper files needed.
+# =============================================================================
+
+def get_complaint_story(report_id: str) -> list:
+    """
+    Returns the full human-readable story of a complaint in chronological order.
+    Translates raw audit_log actions into plain language a new engineer can
+    understand without any prior context.
+    """
+    conn = get_conn(); c = conn.cursor()
+    try:
+        # Get base report
+        c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
+        report = c.fetchone()
+        if not report:
+            return []
+        report = dict(report)
+
+        story = []
+
+        # 1. Submission event
+        ch = report.get("intake_channel") or "citizen_web"
+        channel_label = {
+            "phone": "📞 Phone call to GVMC",
+            "ivrs": "📞 IVRS system",
+            "letter": "📄 Written letter",
+            "walkin": "🚶 Walk-in at Spandana",
+            "spandana": "🚶 Spandana office",
+            "whatsapp": "💬 WhatsApp",
+        }.get(ch, "🌐 Citizen web portal")
+
+        story.append({
+            "when":   report["submitted_at"],
+            "who":    report.get("citizen_name") or "Citizen",
+            "action": "submitted",
+            "label":  f"Complaint submitted via {channel_label}",
+            "detail": f"{report.get('damage_type','').replace('_',' ').title()} — {report.get('ward','')}",
+            "severity": report.get("severity",""),
+            "icon":   "📋",
+            "urgency": "normal",
+        })
+
+        # 2. Audit log events — translated to plain language
+        c.execute(_q("""
+            SELECT action, old_value, new_value, done_by, done_at
+            FROM audit_log WHERE report_id=?
+            ORDER BY done_at ASC
+        """), (report_id,))
+        audits = [dict(r) for r in c.fetchall()]
+
+        for a in audits:
+            entry = _translate_audit_to_story(a)
+            if entry:
+                story.append(entry)
+
+        # 3. Comments
+        c.execute(_q("""
+            SELECT comment, added_by, added_at FROM comments
+            WHERE report_id=? ORDER BY added_at ASC
+        """), (report_id,))
+        for row in c.fetchall():
+            row = dict(row)
+            story.append({
+                "when":   row["added_at"],
+                "who":    row["added_by"],
+                "action": "comment",
+                "label":  "Added a note",
+                "detail": row["comment"],
+                "icon":   "💬",
+                "urgency": "normal",
+            })
+
+        # Sort chronologically
+        story.sort(key=lambda x: x["when"])
+        return story
+    finally:
+        conn.close()
+
+
+def _translate_audit_to_story(a: dict) -> dict:
+    """Converts a raw audit_log row into a human-readable story entry."""
+    action   = a["action"]
+    old_val  = a.get("old_value", "") or ""
+    new_val  = a.get("new_value", "") or ""
+    done_by  = a.get("done_by", "") or ""
+    done_at  = a.get("done_at", "") or ""
+
+    translation = {
+        "action":  action,
+        "when":    done_at,
+        "who":     done_by,
+        "urgency": "normal",
+    }
+
+    if action == "status_change":
+        status_labels = {
+            "open":        "Open",
+            "assigned":    "Assigned to officer",
+            "inspecting":  "Field inspection started",
+            "inspected":   "Field inspection done",
+            "in_progress": "Repair in progress",
+            "resolved":    "Marked resolved",
+            "closed":      "Closed",
+            "disputed":    "Citizen disputed resolution",
+        }
+        old_label = status_labels.get(old_val, old_val)
+        new_label = status_labels.get(new_val, new_val)
+        translation.update({
+            "label":  f"Status changed: {old_label} → {new_label}",
+            "detail": f"By {done_by}",
+            "icon":   "🔄",
+            "urgency": "high" if new_val == "disputed" else "normal",
+        })
+
+    elif action == "assigned":
+        translation.update({
+            "label":  f"Assigned to {new_val}",
+            "detail": f"Previously: {old_val or 'Unassigned'}",
+            "icon":   "👤",
+            "urgency": "normal",
+        })
+
+    elif action == "auto_assigned":
+        translation.update({
+            "label":  f"Auto-assigned to {new_val} (ward coverage)",
+            "detail": "System matched ward to available officer",
+            "icon":   "🤖",
+            "urgency": "normal",
+        })
+
+    elif action == "sla_escalated":
+        level = new_val.split("(")[0].strip() if "(" in new_val else new_val
+        escalation_num = ""
+        if "escalation #" in new_val:
+            escalation_num = new_val.split("escalation #")[1].replace(")", "").strip()
+        translation.update({
+            "label":  f"⚠ SLA breach escalated to {level}",
+            "detail": f"Escalation #{escalation_num} — complaint overdue. Immediate attention needed." if escalation_num else "Complaint overdue.",
+            "icon":   "🚨",
+            "urgency": "critical",
+        })
+
+    elif action == "triage_ward_assigned":
+        translation.update({
+            "label":  f"Ward assigned via triage: {new_val}",
+            "detail": "GPS could not auto-detect ward — manually assigned by triage officer",
+            "icon":   "🗺",
+            "urgency": "normal",
+        })
+
+    elif action == "inspection_verified":
+        translation.update({
+            "label":  "Field inspection verified on site",
+            "detail": new_val[:100] if new_val else "Site visit completed",
+            "icon":   "✅",
+            "urgency": "normal",
+        })
+
+    elif action == "override_verification":
+        translation.update({
+            "label":  "Verification overridden by supervisor",
+            "detail": new_val[:100] if new_val else "",
+            "icon":   "⚡",
+            "urgency": "high",
+        })
+
+    elif action == "repair_linked":
+        translation.update({
+            "label":  "Repair linked to road asset and contract",
+            "detail": new_val[:100] if new_val else "",
+            "icon":   "🔗",
+            "urgency": "normal",
+        })
+
+    elif action == "inspection_completed":
+        translation.update({
+            "label":  "Scheduled inspection completed",
+            "detail": new_val[:100] if new_val else "",
+            "icon":   "🔍",
+            "urgency": "normal",
+        })
+
+    elif action == "breach_reviewed":
+        translation.update({
+            "label":  f"Warranty breach reviewed: {new_val.split('|')[0].strip()}",
+            "detail": new_val.split("|")[1].strip() if "|" in new_val else "",
+            "icon":   "⚖️",
+            "urgency": "high",
+        })
+
+    else:
+        translation.update({
+            "label":  action.replace("_", " ").title(),
+            "detail": f"{old_val} → {new_val}" if old_val else new_val[:80],
+            "icon":   "📌",
+            "urgency": "normal",
+        })
+
+    return translation
+
+
+def get_ward_briefing(ward: str, officer_name: str = "") -> dict:
+    """
+    Complete operational briefing for a ward.
+    Works for new joiners and veterans alike — gives the full picture.
+
+    Returns everything needed to start working without asking anyone:
+    - Inherited work (complaints previously handled by others)
+    - Blocked/stalled complaints with reason
+    - Overdue SLA complaints
+    - Pending inspections
+    - Active contractors
+    - Recent completions (what good work looks like here)
+    - Key contacts
+    """
+    conn = get_conn(); c = conn.cursor()
+    ts   = now()
+    today = ts[:10]
+
+    try:
+        result = {}
+
+        # ── 1. All open complaints in this ward ───────────────────────────────
+        c.execute(_q("""
+            SELECT report_id, damage_type, severity, status, submitted_at,
+                   assigned_to, updated_at, sla_expiry, intake_channel,
+                   citizen_name, latitude, longitude
+            FROM reports
+            WHERE ward=? AND status NOT IN ('resolved','closed')
+            ORDER BY severity DESC, submitted_at ASC
+        """), (ward,))
+        all_open = [dict(r) for r in c.fetchall()]
+
+        # ── 2. Categorise complaints ──────────────────────────────────────────
+        inherited   = []  # open but previously assigned to someone else
+        my_open     = []  # assigned to current officer
+        unassigned  = []  # nobody has it
+        overdue_sla = []  # SLA breached
+        stalled     = []  # no action in 48+ hours
+
+        for r in all_open:
+            # SLA breach
+            if r["sla_expiry"] and r["sla_expiry"] < ts:
+                overdue_sla.append(r)
+
+            # Stalled — no update in 48h
+            last_action = r["updated_at"] or r["submitted_at"]
+            try:
+                from datetime import datetime as dt
+                last_dt = dt.strptime(last_action[:19], "%Y-%m-%d %H:%M:%S")
+                curr_dt = dt.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
+                hours_idle = (curr_dt - last_dt).total_seconds() / 3600
+                r["hours_idle"] = round(hours_idle)
+                r["is_stalled"] = hours_idle > 48
+            except Exception:
+                r["hours_idle"] = 0
+                r["is_stalled"] = False
+
+            # Assignment category
+            assigned = r.get("assigned_to") or ""
+            if not assigned:
+                unassigned.append(r)
+            elif officer_name and assigned == officer_name:
+                my_open.append(r)
+            else:
+                inherited.append(r)  # assigned to someone else — new person needs to know
+
+            # Stalled
+            if r["is_stalled"] and r not in overdue_sla:
+                stalled.append(r)
+
+        # ── 3. What's blocking each stalled complaint ─────────────────────────
+        for r in stalled:
+            c.execute(_q("""
+                SELECT action, new_value, done_by, done_at
+                FROM audit_log WHERE report_id=?
+                ORDER BY done_at DESC LIMIT 1
+            """), (r["report_id"],))
+            last_audit = c.fetchone()
+            r["last_action"] = dict(last_audit) if last_audit else None
+            r["block_reason"] = _infer_block_reason(r)
+
+        # ── 4. Pending inspections in this ward ───────────────────────────────
+        c.execute(_q("""
+            SELECT
+                si.id AS inspection_id, si.due_date, si.inspection_type,
+                si.status, si.assigned_to,
+                rr.report_id, rr.contractor_name, rr.repaired_at,
+                ra.road_name,
+                CASE WHEN si.due_date < ? THEN 1 ELSE 0 END AS is_overdue
+            FROM scheduled_inspections si
+            JOIN repair_records rr ON si.repair_record_id = rr.id
+            JOIN reports rep ON rr.report_id = rep.report_id
+            LEFT JOIN road_assets ra ON rr.road_asset_id = ra.id
+            WHERE rep.ward=? AND si.status='pending'
+            ORDER BY si.due_date ASC
+        """), (today, ward))
+        pending_inspections = [dict(r) for r in c.fetchall()]
+
+        # ── 5. Active contractors in this ward ────────────────────────────────
+        c.execute(_q("""
+            SELECT DISTINCT
+                co.name AS contractor_name,
+                co.contact_person, co.contact_phone,
+                ct.contract_code, ct.work_end_date, ct.dlp_months,
+                ct.responsible_ae
+            FROM contracts ct
+            JOIN contractors co ON ct.contractor_id = co.id
+            JOIN contract_segments cs ON cs.contract_id = ct.id
+            JOIN road_assets ra ON cs.road_asset_id = ra.id
+            WHERE ra.ward=? AND ct.status='active'
+              AND ct.work_end_date >= ?
+        """), (ward, today))
+        active_contractors = [dict(r) for r in c.fetchall()]
+
+        # ── 6. Recently resolved — what good work looks like ──────────────────
+        c.execute(_q("""
+            SELECT report_id, damage_type, status, updated_at, assigned_to
+            FROM reports
+            WHERE ward=? AND status IN ('resolved','closed')
+            ORDER BY updated_at DESC LIMIT 5
+        """), (ward,))
+        recent_resolved = [dict(r) for r in c.fetchall()]
+
+        # ── 7. Key contacts ───────────────────────────────────────────────────
+        c.execute(_q("""
+            SELECT name, role, phone
+            FROM staff
+            WHERE is_active=1
+              AND (ward_list LIKE ? OR zone=? OR role IN ('ae','commissioner','triage_officer'))
+            ORDER BY role ASC
+        """), (f'%{ward}%', ward))
+        key_contacts = [dict(r) for r in c.fetchall()]
+
+        # ── 8. Ward health score (simple) ─────────────────────────────────────
+        total_open     = len(all_open)
+        critical_count = sum(1 for r in all_open if r.get("severity") == "critical")
+        overdue_count  = len(overdue_sla)
+        health_score   = "CRITICAL" if critical_count > 3 or overdue_count > 5 else                          "AT RISK"  if critical_count > 0 or overdue_count > 2 else                          "STABLE"   if total_open < 10 else "BUSY"
+
+        result = {
+            "ward":               ward,
+            "officer_name":       officer_name,
+            "generated_at":       ts,
+            "health_score":       health_score,
+            "total_open":         total_open,
+            "my_open":            my_open,
+            "inherited":          inherited,
+            "unassigned":         unassigned,
+            "overdue_sla":        overdue_sla,
+            "stalled":            stalled,
+            "pending_inspections": pending_inspections,
+            "active_contractors": active_contractors,
+            "recent_resolved":    recent_resolved,
+            "key_contacts":       key_contacts,
+            "counts": {
+                "total_open":    total_open,
+                "inherited":     len(inherited),
+                "unassigned":    len(unassigned),
+                "overdue_sla":   overdue_count,
+                "stalled":       len(stalled),
+                "inspections":   len(pending_inspections),
+                "contractors":   len(active_contractors),
+            }
+        }
+        return result
+
+    finally:
+        conn.close()
+
+
+def _infer_block_reason(r: dict) -> str:
+    """Infer why a complaint is stalled based on its current status."""
+    status = r.get("status", "")
+    hours  = r.get("hours_idle", 0)
+    reasons = {
+        "open":        f"Not yet assigned to any officer — sitting unattended for {hours}h",
+        "assigned":    f"Assigned but no field visit recorded in {hours}h — officer may need follow-up",
+        "inspecting":  f"Field inspection started but not completed in {hours}h",
+        "inspected":   f"Inspection done but repair work not started in {hours}h — contractor may be delayed",
+        "in_progress": f"Repair marked in progress but no update in {hours}h — check with contractor",
+        "disputed":    f"Citizen disputed the resolution — needs supervisor review",
+    }
+    return reasons.get(status, f"No activity for {hours}h")
+
+
+def get_reassignment_packet(from_officer: str, to_ward: str) -> dict:
+    """
+    When a staff member is newly assigned to a ward, generate a
+    complete handover packet showing everything their predecessor left.
+
+    Used by admin when reassigning staff — gives the new person
+    full context on day one.
+    """
+    conn = get_conn(); c = conn.cursor()
+    try:
+        # Find previous officer(s) for this ward
+        c.execute(_q("""
+            SELECT DISTINCT assigned_to, COUNT(*) as cnt
+            FROM reports
+            WHERE ward=? AND assigned_to != '' AND assigned_to != ?
+            GROUP BY assigned_to
+            ORDER BY cnt DESC
+            LIMIT 3
+        """), (to_ward, from_officer))
+        previous_officers = [dict(r) for r in c.fetchall()]
+
+        # Their unfinished work
+        c.execute(_q("""
+            SELECT report_id, damage_type, severity, status,
+                   submitted_at, updated_at, assigned_to, sla_expiry
+            FROM reports
+            WHERE ward=? AND status NOT IN ('resolved','closed')
+            ORDER BY severity DESC, submitted_at ASC
+        """), (to_ward,))
+        unfinished = [dict(r) for r in c.fetchall()]
+
+        # What was completed (so new person knows what success looks like)
+        c.execute(_q("""
+            SELECT report_id, damage_type, status, updated_at, assigned_to
+            FROM reports
+            WHERE ward=? AND status IN ('resolved','closed')
+            ORDER BY updated_at DESC LIMIT 10
+        """), (to_ward,))
+        completed = [dict(r) for r in c.fetchall()]
+
+        return {
+            "to_ward":           to_ward,
+            "new_officer":       from_officer,
+            "previous_officers": previous_officers,
+            "unfinished_work":   unfinished,
+            "completed_work":    completed,
+            "unfinished_count":  len(unfinished),
+            "completed_count":   len(completed),
+        }
+    finally:
+        conn.close()

@@ -353,6 +353,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
     {% if staff.role in ('admin','ae','commissioner') %}
     <a href="/staff-log" class="nav-link" style="background:#e67e22;border-color:#e67e22;">📋 Log Grievance</a>
     {% endif %}
+    <a href="/ward-briefing" class="nav-link" style="background:#1e3a5f;border-color:#2563eb;color:#93c5fd;">📋 Ward Briefing</a>
     <a href="/team" class="nav-link">👥 Team</a>
     <a href="/change-password" class="nav-link">🔑 Password</a>
     <a href="/logout" class="nav-link nav-logout">Logout</a>
@@ -751,6 +752,7 @@ body { font-family:Arial,sans-serif; background:#f0f4f8; color:#1a1a2e; }
       {% endif %}
 
       <div class="report-id-small">📋 {{ r.report_id }}
+        <a href="/complaint-story/{{ r.report_id }}" target="_blank" style="margin-left:8px;font-size:.72rem;padding:2px 8px;background:#1e3a5f;border:1px solid rgba(59,130,246,.4);border-radius:10px;color:#93c5fd;text-decoration:none;">📖 Story</a>
         {% set ch = r.intake_channel or 'citizen_web' %}
         {% if ch in ('phone','ivrs') %}<span class="src-badge src-phone">📞 Phone</span>
         {% elif ch == 'letter' %}<span class="src-badge src-letter">📄 Letter</span>
