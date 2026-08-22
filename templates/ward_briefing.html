@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ward Briefing — RoadSeva GVMC</title>
+<style>
+:root {
+  --bg:#080f1a; --navy:#0d1b2e; --navy2:#122236; --border:rgba(255,255,255,.07);
+  --text:#e2e8f0; --muted:#64748b; --muted2:#94a3b8;
+  --accent:#e8a020; --green:#22c55e; --red:#ef4444;
+  --orange:#f97316; --yellow:#eab308; --blue:#3b82f6; --purple:#8b5cf6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+
+.topbar { background:var(--navy); border-bottom:1px solid var(--border);
+  padding:0 24px; height:56px; display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:100; }
+.topbar-brand { font-size:1rem; font-weight:700; color:var(--accent); }
+.nav-a { color:var(--muted2); text-decoration:none; font-size:.82rem;
+  padding:5px 10px; border-radius:6px; }
+.nav-a:hover { background:rgba(255,255,255,.05); color:var(--text); }
+.user-chip { background:var(--navy2); border:1px solid var(--border);
+  border-radius:20px; padding:3px 12px; font-size:.78rem; }
+
+.page { max-width:1200px; margin:0 auto; padding:24px 20px; }
+
+/* Health banner */
+.health-banner { border-radius:12px; padding:18px 22px; margin-bottom:24px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.health-CRITICAL { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); }
+.health-AT\ RISK  { background:rgba(249,115,22,.10); border:1px solid rgba(249,115,22,.4); }
+.health-BUSY     { background:rgba(234,179,8,.08);  border:1px solid rgba(234,179,8,.3); }
+.health-STABLE   { background:rgba(34,197,94,.08);  border:1px solid rgba(34,197,94,.3); }
+.health-title { font-size:1.2rem; font-weight:700; }
+.health-CRITICAL .health-title { color:var(--red); }
+.health-AT\ RISK  .health-title { color:var(--orange); }
+.health-BUSY     .health-title { color:var(--yellow); }
+.health-STABLE   .health-title { color:var(--green); }
+.health-sub { font-size:.83rem; color:var(--muted2); margin-top:4px; }
+
+/* Count pills */
+.count-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+.count-pill { background:var(--navy2); border:1px solid var(--border);
+  border-radius:10px; padding:12px 16px; text-align:center; min-width:110px; }
+.count-pill .num { font-size:1.6rem; font-weight:700; line-height:1; }
+.count-pill .lbl { font-size:.72rem; color:var(--muted2); margin-top:3px;
+  text-transform:uppercase; letter-spacing:.04em; }
+.num-red    { color:var(--red); }
+.num-orange { color:var(--orange); }
+.num-yellow { color:var(--yellow); }
+.num-blue   { color:var(--blue); }
+.num-green  { color:var(--green); }
+.num-muted  { color:var(--muted2); }
+
+/* Sections */
+.section { margin-bottom:28px; }
+.section-head { display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px; }
+.section-head h2 { font-size:.95rem; font-weight:700; color:var(--text); }
+.section-badge { font-size:.72rem; font-weight:700; padding:2px 8px;
+  border-radius:20px; }
+.badge-red    { background:rgba(239,68,68,.15);  color:var(--red); }
+.badge-orange { background:rgba(249,115,22,.15); color:var(--orange); }
+.badge-blue   { background:rgba(59,130,246,.15); color:var(--blue); }
+.badge-green  { background:rgba(34,197,94,.15);  color:var(--green); }
+.badge-muted  { background:rgba(100,116,139,.15);color:var(--muted2); }
+
+/* Complaint rows */
+.complaint-list { display:flex; flex-direction:column; gap:8px; }
+.complaint-row { background:var(--navy2); border:1px solid var(--border);
+  border-radius:10px; padding:14px 16px;
+  display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start; }
+.complaint-row.critical { border-left:3px solid var(--red); }
+.complaint-row.high     { border-left:3px solid var(--orange); }
+.complaint-row.medium   { border-left:3px solid var(--yellow); }
+.complaint-row.overdue  { border-left:3px solid var(--red); background:rgba(239,68,68,.04); }
+.complaint-row.stalled  { border-left:3px solid var(--purple); }
+.sev-dot { width:10px; height:10px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+.sev-critical { background:var(--red); }
+.sev-high     { background:var(--orange); }
+.sev-medium   { background:var(--yellow); }
+.sev-low      { background:var(--green); }
+.c-id   { font-size:.75rem; font-family:monospace; color:var(--accent); }
+.c-type { font-weight:600; font-size:.88rem; }
+.c-meta { font-size:.75rem; color:var(--muted2); margin-top:3px; }
+.c-block { font-size:.75rem; color:var(--orange); margin-top:4px;
+  background:rgba(249,115,22,.08); padding:4px 8px; border-radius:6px; }
+.c-action { text-align:right; }
+.btn-story { display:inline-block; padding:5px 12px; background:#1e3a5f;
+  border:1px solid rgba(59,130,246,.4); border-radius:6px; color:#93c5fd;
+  font-size:.75rem; text-decoration:none; white-space:nowrap; }
+.btn-story:hover { background:#1e4a7f; }
+
+/* Inspection rows */
+.insp-row { background:var(--navy2); border:1px solid var(--border);
+  border-radius:10px; padding:12px 16px; margin-bottom:8px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.insp-row.overdue { border-left:3px solid var(--red); }
+.insp-type { font-size:.8rem; font-weight:600; }
+.insp-meta { font-size:.75rem; color:var(--muted2); }
+
+/* Contractor cards */
+.contractor-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+.contractor-card { background:var(--navy2); border:1px solid var(--border);
+  border-radius:10px; padding:14px 16px; }
+.contractor-name { font-weight:600; font-size:.9rem; margin-bottom:6px; }
+.contractor-meta { font-size:.75rem; color:var(--muted2); line-height:1.6; }
+.contractor-phone { color:var(--blue); text-decoration:none; }
+
+/* Contacts */
+.contact-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+.contact-card { background:var(--navy2); border:1px solid var(--border);
+  border-radius:10px; padding:12px 14px; }
+.contact-name { font-weight:600; font-size:.85rem; }
+.contact-role { font-size:.72rem; color:var(--accent); text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:4px; }
+.contact-phone { font-size:.8rem; color:var(--blue); }
+
+/* Recent resolved */
+.resolved-row { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.15);
+  border-radius:8px; padding:10px 14px; margin-bottom:6px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+
+/* Empty state */
+.empty { text-align:center; padding:32px; color:var(--muted);
+  font-size:.85rem; background:var(--navy2); border-radius:10px;
+  border:1px solid var(--border); }
+
+/* Ward select form */
+.ward-form { background:var(--navy2); border:1px solid var(--border);
+  border-radius:12px; padding:24px; max-width:500px; margin:80px auto; text-align:center; }
+.ward-form h2 { font-size:1.1rem; margin-bottom:16px; }
+.ward-form select { width:100%; padding:10px 14px; background:var(--navy);
+  border:1px solid var(--border); border-radius:8px; color:var(--text);
+  font-size:.9rem; margin-bottom:14px; }
+.ward-form button { width:100%; padding:11px; background:var(--accent);
+  border:none; border-radius:8px; color:#000; font-weight:700; cursor:pointer; }
+
+.generated-at { font-size:.72rem; color:var(--muted); margin-bottom:20px; }
+
+@media(max-width:600px) {
+  .complaint-row { grid-template-columns:auto 1fr; }
+  .c-action { grid-column:1/-1; text-align:left; }
+  .page { padding:14px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">🛣 RoadSeva — Ward Briefing</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    {% if staff.role in ['was','field_engineer'] %}
+      <a href="/field" class="nav-a">← Field Dashboard</a>
+    {% else %}
+      <a href="/staff" class="nav-a">← Staff Dashboard</a>
+    {% endif %}
+    <span class="user-chip">{{ staff.name }}</span>
+    <a href="/logout" class="nav-a" style="color:var(--red)">Logout</a>
+  </div>
+</div>
+
+<div class="page">
+
+{% if not briefing %}
+<!-- No ward selected — show selector -->
+<div class="ward-form">
+  <div style="font-size:2.5rem;margin-bottom:12px;">📋</div>
+  <h2>Select a Ward to Brief</h2>
+  <p style="font-size:.82rem;color:var(--muted2);margin-bottom:16px;">
+    Choose the ward you're responsible for to see its complete operational picture.
+  </p>
+  <form method="get" action="/ward-briefing">
+    <input type="text" name="ward" placeholder="e.g. Ward 9, Ward 15..."
+      style="width:100%;padding:10px 14px;background:var(--navy);border:1px solid var(--border);
+      border-radius:8px;color:var(--text);font-size:.9rem;margin-bottom:14px;outline:none;">
+    <button type="submit">View Ward Briefing</button>
+  </form>
+</div>
+
+{% else %}
+
+<!-- Health Banner -->
+<div class="health-banner health-{{ briefing.health_score }}">
+  <div>
+    <div class="health-title">
+      {% if briefing.health_score == 'CRITICAL' %}🚨
+      {% elif briefing.health_score == 'AT RISK' %}⚠️
+      {% elif briefing.health_score == 'BUSY' %}📊
+      {% else %}✅
+      {% endif %}
+      {{ briefing.ward }} — {{ briefing.health_score }}
+    </div>
+    <div class="health-sub">
+      Operational briefing for {{ briefing.officer_name or 'this officer' }}
+      &nbsp;·&nbsp; Generated {{ briefing.generated_at[:16] }}
+    </div>
+  </div>
+  <a href="/ward-briefing?ward={{ briefing.ward }}"
+     style="padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid var(--border);
+     border-radius:8px;color:var(--muted2);text-decoration:none;font-size:.8rem;">
+    🔄 Refresh
+  </a>
+</div>
+
+<!-- Count pills -->
+<div class="count-row">
+  <div class="count-pill">
+    <div class="num {% if briefing.counts.total_open > 10 %}num-red{% elif briefing.counts.total_open > 5 %}num-orange{% else %}num-blue{% endif %}">
+      {{ briefing.counts.total_open }}
+    </div>
+    <div class="lbl">Total Open</div>
+  </div>
+  <div class="count-pill">
+    <div class="num num-orange">{{ briefing.counts.overdue_sla }}</div>
+    <div class="lbl">SLA Overdue</div>
+  </div>
+  <div class="count-pill">
+    <div class="num num-yellow">{{ briefing.counts.stalled }}</div>
+    <div class="lbl">Stalled 48h+</div>
+  </div>
+  <div class="count-pill">
+    <div class="num num-muted">{{ briefing.counts.inherited }}</div>
+    <div class="lbl">Inherited</div>
+  </div>
+  <div class="count-pill">
+    <div class="num num-muted">{{ briefing.counts.unassigned }}</div>
+    <div class="lbl">Unassigned</div>
+  </div>
+  <div class="count-pill">
+    <div class="num num-blue">{{ briefing.counts.inspections }}</div>
+    <div class="lbl">Inspections Due</div>
+  </div>
+</div>
+
+<!-- ══ OVERDUE SLA ══ -->
+{% if briefing.overdue_sla %}
+<div class="section">
+  <div class="section-head">
+    <h2>🚨 SLA Breached — Immediate Action Required</h2>
+    <span class="section-badge badge-red">{{ briefing.overdue_sla | length }}</span>
+  </div>
+  <div class="complaint-list">
+    {% for r in briefing.overdue_sla %}
+    <div class="complaint-row overdue">
+      <div class="sev-dot sev-{{ r.severity or 'medium' }}"></div>
+      <div>
+        <div class="c-id">{{ r.report_id }}</div>
+        <div class="c-type">{{ r.damage_type | replace('_',' ') | title }}</div>
+        <div class="c-meta">
+          Submitted {{ r.submitted_at[:10] }}
+          {% if r.assigned_to %}&nbsp;·&nbsp; Assigned to {{ r.assigned_to }}{% endif %}
+          &nbsp;·&nbsp; SLA expired {{ r.sla_expiry[:10] if r.sla_expiry else '—' }}
+        </div>
+        {% if r.hours_idle > 0 %}
+        <div class="c-block">⏱ No activity for {{ r.hours_idle }}h — escalate now</div>
+        {% endif %}
+      </div>
+      <div class="c-action">
+        <a href="/complaint-story/{{ r.report_id }}" class="btn-story">📖 Full Story</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ STALLED ══ -->
+{% if briefing.stalled %}
+<div class="section">
+  <div class="section-head">
+    <h2>⚠ Stalled Complaints — No Activity 48h+</h2>
+    <span class="section-badge badge-orange">{{ briefing.stalled | length }}</span>
+  </div>
+  <div class="complaint-list">
+    {% for r in briefing.stalled %}
+    <div class="complaint-row stalled">
+      <div class="sev-dot sev-{{ r.severity or 'medium' }}"></div>
+      <div>
+        <div class="c-id">{{ r.report_id }}</div>
+        <div class="c-type">{{ r.damage_type | replace('_',' ') | title }}</div>
+        <div class="c-meta">
+          Status: {{ r.status | replace('_',' ') | title }}
+          {% if r.assigned_to %}&nbsp;·&nbsp; {{ r.assigned_to }}{% endif %}
+        </div>
+        {% if r.block_reason %}
+        <div class="c-block">🔒 {{ r.block_reason }}</div>
+        {% endif %}
+      </div>
+      <div class="c-action">
+        <a href="/complaint-story/{{ r.report_id }}" class="btn-story">📖 Full Story</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ INHERITED WORK ══ -->
+{% if briefing.inherited %}
+<div class="section">
+  <div class="section-head">
+    <h2>🔄 Inherited Work — Previously Assigned to Others</h2>
+    <span class="section-badge badge-muted">{{ briefing.inherited | length }}</span>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted2);margin-bottom:12px;">
+    These were assigned to previous officers. You now need to know about them.
+  </p>
+  <div class="complaint-list">
+    {% for r in briefing.inherited %}
+    <div class="complaint-row {{ r.severity or 'medium' }}">
+      <div class="sev-dot sev-{{ r.severity or 'medium' }}"></div>
+      <div>
+        <div class="c-id">{{ r.report_id }}</div>
+        <div class="c-type">{{ r.damage_type | replace('_',' ') | title }}</div>
+        <div class="c-meta">
+          Status: {{ r.status | replace('_',' ') | title }}
+          &nbsp;·&nbsp; Previously: <strong>{{ r.assigned_to }}</strong>
+          &nbsp;·&nbsp; Since {{ r.submitted_at[:10] }}
+        </div>
+        {% if r.is_stalled %}
+        <div class="c-block">⏱ Stalled — {{ r.hours_idle }}h since last action</div>
+        {% endif %}
+      </div>
+      <div class="c-action">
+        <a href="/complaint-story/{{ r.report_id }}" class="btn-story">📖 Full Story</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ UNASSIGNED ══ -->
+{% if briefing.unassigned %}
+<div class="section">
+  <div class="section-head">
+    <h2>📥 Unassigned — Nobody Has Picked These Up</h2>
+    <span class="section-badge badge-orange">{{ briefing.unassigned | length }}</span>
+  </div>
+  <div class="complaint-list">
+    {% for r in briefing.unassigned %}
+    <div class="complaint-row {{ r.severity or 'medium' }}">
+      <div class="sev-dot sev-{{ r.severity or 'medium' }}"></div>
+      <div>
+        <div class="c-id">{{ r.report_id }}</div>
+        <div class="c-type">{{ r.damage_type | replace('_',' ') | title }}</div>
+        <div class="c-meta">Submitted {{ r.submitted_at[:10] }} &nbsp;·&nbsp; {{ r.severity | title }} severity</div>
+      </div>
+      <div class="c-action">
+        <a href="/complaint-story/{{ r.report_id }}" class="btn-story">📖 Full Story</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ PENDING INSPECTIONS ══ -->
+{% if briefing.pending_inspections %}
+<div class="section">
+  <div class="section-head">
+    <h2>🔍 Pending DLP Inspections</h2>
+    <span class="section-badge badge-blue">{{ briefing.pending_inspections | length }}</span>
+  </div>
+  {% for ins in briefing.pending_inspections %}
+  <div class="insp-row {% if ins.is_overdue %}overdue{% endif %}">
+    <div>
+      <div class="insp-type">
+        {% if ins.is_overdue %}🔴{% else %}🔵{% endif %}
+        {{ ins.inspection_type | replace('_',' ') | title }}
+        — {{ ins.road_name or ins.report_id }}
+      </div>
+      <div class="insp-meta">
+        Due: <strong style="color:{% if ins.is_overdue %}var(--red){% else %}var(--muted2){% endif %};">
+          {{ ins.due_date }}{% if ins.is_overdue %} ⚠ OVERDUE{% endif %}
+        </strong>
+        &nbsp;·&nbsp; Repaired {{ ins.repaired_at[:10] if ins.repaired_at else '—' }}
+        &nbsp;·&nbsp; {{ ins.contractor_name or 'Unknown contractor' }}
+      </div>
+    </div>
+    <a href="/field" style="padding:5px 12px;background:var(--navy);border:1px solid var(--border);
+      border-radius:6px;color:var(--muted2);font-size:.75rem;text-decoration:none;">
+      Submit Result →
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ══ ACTIVE CONTRACTORS ══ -->
+{% if briefing.active_contractors %}
+<div class="section">
+  <div class="section-head">
+    <h2>🏗 Active Contractors in This Ward</h2>
+    <span class="section-badge badge-muted">{{ briefing.active_contractors | length }}</span>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted2);margin-bottom:12px;">
+    These are contractors currently working under active contracts in {{ briefing.ward }}.
+    Contact them directly for repair updates.
+  </p>
+  <div class="contractor-grid">
+    {% for co in briefing.active_contractors %}
+    <div class="contractor-card">
+      <div class="contractor-name">{{ co.contractor_name }}</div>
+      <div class="contractor-meta">
+        📋 {{ co.contract_code }}<br>
+        🛡 DLP: {{ co.dlp_months }} months &nbsp;·&nbsp; Ends {{ co.work_end_date }}<br>
+        👤 AE: {{ co.responsible_ae or '—' }}<br>
+        {% if co.contact_person %}
+        Contact: {{ co.contact_person }}
+        {% if co.contact_phone %}
+        — <a href="tel:{{ co.contact_phone }}" class="contractor-phone">{{ co.contact_phone }}</a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ KEY CONTACTS ══ -->
+{% if briefing.key_contacts %}
+<div class="section">
+  <div class="section-head">
+    <h2>📞 Key Contacts</h2>
+    <span class="section-badge badge-muted">{{ briefing.key_contacts | length }}</span>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted2);margin-bottom:12px;">
+    People you need to know — your AE, adjacent officers, triage contacts.
+  </p>
+  <div class="contact-grid">
+    {% for ct in briefing.key_contacts %}
+    <div class="contact-card">
+      <div class="contact-role">{{ ct.role | replace('_',' ') | title }}</div>
+      <div class="contact-name">{{ ct.name }}</div>
+      {% if ct.phone %}
+      <div class="contact-phone">
+        <a href="tel:{{ ct.phone }}" style="color:var(--blue);text-decoration:none;">
+          📱 {{ ct.phone }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ RECENTLY RESOLVED — what good looks like ══ -->
+{% if briefing.recent_resolved %}
+<div class="section">
+  <div class="section-head">
+    <h2>✅ Recently Resolved — Reference for Quality</h2>
+    <span class="section-badge badge-green">{{ briefing.recent_resolved | length }}</span>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted2);margin-bottom:12px;">
+    These were completed successfully. Check their stories to understand the expected standard.
+  </p>
+  {% for r in briefing.recent_resolved %}
+  <div class="resolved-row">
+    <div>
+      <span style="font-family:monospace;font-size:.75rem;color:var(--accent);">{{ r.report_id }}</span>
+      &nbsp; {{ r.damage_type | replace('_',' ') | title }}
+      &nbsp;·&nbsp; <span style="font-size:.78rem;color:var(--muted2);">
+        Resolved {{ r.updated_at[:10] if r.updated_at else '—' }}
+        {% if r.assigned_to %} by {{ r.assigned_to }}{% endif %}
+      </span>
+    </div>
+    <a href="/complaint-story/{{ r.report_id }}" class="btn-story">📖 See how it was done</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if not briefing.overdue_sla and not briefing.stalled and not briefing.inherited and not briefing.unassigned %}
+<div class="empty">
+  <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+  <div style="font-weight:600;margin-bottom:6px;">Ward is clear</div>
+  <div>No overdue, stalled, inherited, or unassigned complaints in {{ briefing.ward }}.</div>
+</div>
+{% endif %}
+
+{% endif %}
+</div>
+</body>
+</html>
