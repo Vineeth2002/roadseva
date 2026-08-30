@@ -38,6 +38,21 @@ def fresh_db(tmp_path):
     database.DB_PATH = original
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """security._limiter is process-global, in-memory, and real-time
+    (30 req/sec/IP burst window) — every test in this file shares one
+    bucket under TestClient's fixed 'testclient' IP. Test-only reset,
+    does not touch security.py's production rate-limiting logic. Without
+    this, test execution speed (e.g. a faster app-startup path) can trip
+    the shared burst limit and fail unrelated tests with 429s — a
+    pre-existing fragility in the limiter's design, not a route bug."""
+    import security
+    security._limiter._data.clear()
+    yield
+    security._limiter._data.clear()
+
+
 @pytest.fixture
 def client(fresh_db):
     from main import app
@@ -50,7 +65,7 @@ def sample_report_id(fresh_db):
     """Creates a real complaint in the test DB and returns its ID."""
     rid = database.add_report(
         city="GVMC",
-        ward="Ward 1 - Gajuwaka",
+        ward="Ward 1 - Kondapeta / Wilsonpeta",
         damage_type="Pothole",
         description="Test pothole near bus stop",
         photo_path="",
@@ -84,8 +99,8 @@ def authed_client(fresh_db):
             role=role,
             created_by="test_suite",
             zone=kwargs.get("zone", "Zone 1" if role == "zonal_commissioner" else ""),
-            division=kwargs.get("division", "East" if role == "ae" else ""),
-            ward_list=kwargs.get("ward_list", "Ward 1 - Gajuwaka" if role == "was" else ""),
+            division=kwargs.get("division", "Bheemunipatnam" if role == "ae" else ""),
+            ward_list=kwargs.get("ward_list", "Ward 1 - Kondapeta / Wilsonpeta" if role == "was" else ""),
         )
         assert ok, f"Failed to create test {role} account: {result}"
 
