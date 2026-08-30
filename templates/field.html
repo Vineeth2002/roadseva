@@ -620,6 +620,17 @@ body { font-family:Arial,sans-serif; background:var(--bg); color:#1a1a2e; min-he
           </div>
 
           <div class="f-group">
+            <label>Your independent severity assessment *</label>
+            <select name="human_severity" required>
+              <option value="" selected disabled>Select severity — do not just match the AI label above</option>
+              <option value="critical">🔴 Critical</option>
+              <option value="high">🟠 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </div>
+
+          <div class="f-group">
             <label>Before photo — current damage *
               <span style="color:var(--red);font-weight:bold;">(Required)</span>
             </label>

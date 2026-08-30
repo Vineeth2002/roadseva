@@ -1,24 +1,70 @@
 import os
 import json
 import base64
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+_PROVIDER = "groq"
 
-def analyse_severity(photo_path: str, damage_type: str) -> dict:
+
+def _ist_now() -> str:
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _log_attempt(report_id, requested_at, raw_severity, raw_damage_confirmed,
+                  validation_status, error_detail, source_photo_reference):
+    """
+    Best-effort provenance write -- never allowed to affect the actual
+    inference result. If report_id wasn't supplied (keeps this function's
+    original two-argument call shape usable elsewhere without breaking),
+    this is a silent no-op rather than a forced requirement.
+    """
+    if not report_id:
+        return
+    try:
+        import database
+        database.log_inference_attempt(
+            report_id=report_id, provider=_PROVIDER, model=_MODEL,
+            requested_at=requested_at, completed_at=_ist_now(),
+            raw_severity=raw_severity, raw_damage_confirmed=raw_damage_confirmed,
+            validation_status=validation_status, error_detail=error_detail,
+            source_photo_reference=source_photo_reference,
+        )
+    except Exception as e:
+        print(f"[inference_runs] logging skipped: {e}")
+
+
+def analyse_severity(photo_path: str, damage_type: str,
+                      report_id: str = None, source_photo_reference: str = "") -> dict:
     """
     Analyse road damage photo using Groq Llama 4 Scout vision.
     FIX: text variable initialised before try block — no NameError in JSONDecodeError handler.
+
+    PROVENANCE: report_id and source_photo_reference are optional and
+    additive -- omitting them preserves this function's original
+    behavior exactly. When supplied (both real call sites now do), every
+    return path below logs exactly one ai_inference_runs row via
+    _log_attempt(), distinguished by validation_status. The Groq call,
+    prompt, and result-parsing logic below are unchanged from before this
+    fix -- only logging was added, at each existing return point.
     """
     text = ""
+    requested_at = _ist_now()
     try:
         from groq import Groq
 
         api_key = os.getenv("GROQ_API_KEY", "")
         if not api_key:
+            _log_attempt(report_id, requested_at, "", None,
+                          "missing_api_key", "Groq API key not configured", source_photo_reference)
             return _default_result("Groq API key not configured")
 
         photo_file = Path(photo_path)
         if not photo_file.exists():
+            _log_attempt(report_id, requested_at, "", None,
+                          "missing_photo", "Photo not found", source_photo_reference)
             return _default_result("Photo not found")
 
         with open(photo_path, "rb") as f:
@@ -98,6 +144,9 @@ Rules:
         severity = result.get("severity", "unknown").lower()
         description = result.get("damage_description", "")
 
+        _log_attempt(report_id, requested_at, severity, result.get("damage_confirmed", True),
+                      "ok", "", source_photo_reference)
+
         return {
             "severity":         severity,
             "severity_details": description,
@@ -111,9 +160,13 @@ Rules:
 
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {e} — text was: {text[:200]}")
+        _log_attempt(report_id, requested_at, "", None,
+                      "parse_error", f"{e} — text was: {text[:200]}", source_photo_reference)
         return _default_result(f"Could not parse AI response: {text[:100]}")
     except Exception as e:
         print(f"Groq severity analysis error: {e}")
+        _log_attempt(report_id, requested_at, "", None,
+                      "provider_error", str(e)[:500], source_photo_reference)
         return _default_result(str(e)[:200])
 
 
@@ -182,7 +235,8 @@ def retry_pending_severity():
                     tmp.write(image_bytes)
                     tmp_path = tmp.name
 
-                result = analyse_severity(tmp_path, r["damage_type"] or "Road Damage")
+                result = analyse_severity(tmp_path, r["damage_type"] or "Road Damage",
+                                           report_id=r["report_id"], source_photo_reference="reports.photo_data")
                 if result["severity"] != "unknown":
                     database.update_report_severity(
                         r["report_id"],

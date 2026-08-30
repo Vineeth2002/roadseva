@@ -309,13 +309,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
       <div class="status-now-icon">👷</div>
       <div class="status-now-text">
         <div class="status-now-heading">A field engineer has been assigned</div>
-        <div class="status-now-sub">{% if r.assigned_to %}<strong>{{ r.assigned_to }}</strong> has been assigned to inspect this location.{% else %}A field engineer has been assigned to inspect this location.{% endif %} They will visit the site and confirm the damage.</div>
+        <div class="status-now-sub">{% if is_staff and r.assigned_to %}<strong>{{ r.assigned_to }}</strong> has been assigned to inspect this location.{% else %}A field engineer has been assigned to inspect this location.{% endif %} They will visit the site and confirm the damage.</div>
       </div>
       {% elif status == 'inspecting' %}
       <div class="status-now-icon">🔍</div>
       <div class="status-now-text">
         <div class="status-now-heading">Engineer is currently on site</div>
-        <div class="status-now-sub">{% if r.assigned_to %}<strong>{{ r.assigned_to }}</strong> is{% else %}A field engineer is{% endif %} physically at the location right now, inspecting and documenting the damage.</div>
+        <div class="status-now-sub">{% if is_staff and r.assigned_to %}<strong>{{ r.assigned_to }}</strong> is{% else %}A field engineer is{% endif %} physically at the location right now, inspecting and documenting the damage.</div>
       </div>
       {% elif status == 'inspected' %}
       <div class="status-now-icon">🔧</div>
@@ -382,7 +382,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
           </div>
           <div class="tl-body">
             <div class="tl-label">Engineer assigned</div>
-            {% if r.assigned_to %}<div class="tl-by">{{ r.assigned_to }}</div>{% endif %}
+            {% if is_staff and r.assigned_to %}<div class="tl-by">{{ r.assigned_to }}</div>{% endif %}
             <div class="tl-note">A field engineer has been assigned to inspect this location</div>
           </div>
         </div>
@@ -480,7 +480,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
         <span class="cc-field-val" style="font-weight:400;color:var(--muted)">{{ r.description }}</span>
       </div>
       {% endif %}
-      {% if r.latitude and r.longitude %}
+      {% if is_staff and r.latitude and r.longitude %}
       <div class="cc-field">
         <span class="cc-field-label">GPS Location</span>
         <span class="cc-field-val">
@@ -503,7 +503,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
     </div>
 
     <!-- ── PHOTO ──────────────────────────────────── -->
-    {% if r.photo_data %}
+    {% if is_staff and r.photo_data %}
     <div class="rc-photo">
       <div class="photo-label">Complaint Photo</div>
       {% if r.photo_data.startswith('data:') %}

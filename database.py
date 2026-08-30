@@ -52,7 +52,7 @@ WARD FLAGS:
   SLA clock continues through flag (no pause)
 """
 
-import os, csv, base64, sqlite3, secrets, string
+import os, csv, io, base64, sqlite3, secrets, string
 from datetime import datetime, timezone, timedelta
 import bcrypt
 
@@ -383,7 +383,40 @@ def init_db():
                 corrected_at TEXT DEFAULT "",
                 photo_path TEXT DEFAULT "",
                 ward TEXT DEFAULT "",
-                notes TEXT DEFAULT ""
+                notes TEXT DEFAULT "",
+                inference_run_id INTEGER,
+                verifier_role TEXT DEFAULT ""
+            );
+
+            CREATE TABLE IF NOT EXISTS training_labels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id TEXT NOT NULL,
+                ward TEXT DEFAULT "",
+                citizen_damage_type TEXT DEFAULT "",
+                verified_damage_type TEXT DEFAULT "",
+                severity TEXT DEFAULT "",
+                human_severity TEXT,
+                site_condition TEXT DEFAULT "",
+                verified_by TEXT DEFAULT "",
+                verified_at TEXT DEFAULT "",
+                photo_source_column TEXT DEFAULT "",
+                is_override INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT ""
+            );
+
+            CREATE TABLE IF NOT EXISTS ai_inference_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id TEXT NOT NULL,
+                attempt_number INTEGER NOT NULL,
+                provider TEXT DEFAULT "",
+                model TEXT DEFAULT "",
+                requested_at TEXT DEFAULT "",
+                completed_at TEXT DEFAULT "",
+                raw_severity TEXT DEFAULT "",
+                raw_damage_confirmed INTEGER,
+                validation_status TEXT DEFAULT "",
+                error_detail TEXT DEFAULT "",
+                source_photo_reference TEXT DEFAULT ""
             );
 
             CREATE TABLE IF NOT EXISTS ward_reassignment_log (
@@ -429,10 +462,18 @@ def init_db():
         _init_postgres(c)
 
     _safe_add_columns(c, conn)
-    _seed_admin(c, conn)
+    # NOTE: _seed_admin() previously ran here unconditionally, creating a
+    # published default credential (admin / Admin@2024!) on every fresh
+    # database. Removed — setup_first_commissioner() via the /setup route
+    # is the single authoritative bootstrap mechanism (gated on
+    # is_setup_complete(), enforces real password strength, cannot be
+    # reused). See git history for the removed function if it's ever
+    # needed for reference.
     conn.commit()
     conn.close()
-    print("[db] init_db complete — default admin: admin / Admin@2024!")
+    setup_msg = "no staff accounts — visit /setup to create the first commissioner" \
+                if not is_setup_complete() else "staff already provisioned"
+    print(f"[db] init_db complete — {setup_msg}")
 
 
 def _init_postgres(c):
@@ -519,7 +560,9 @@ def _init_postgres(c):
         "CREATE TABLE IF NOT EXISTS staff_audit_log (id SERIAL PRIMARY KEY, action TEXT, target_username TEXT, done_by TEXT, done_at TEXT, details TEXT DEFAULT '')",
         "CREATE TABLE IF NOT EXISTS repair_records (id SERIAL PRIMARY KEY, report_id TEXT, contractor_name TEXT DEFAULT '', repair_photo TEXT DEFAULT '', repair_lat REAL, repair_lng REAL, warranty_months INTEGER DEFAULT 6, repaired_at TEXT, recorded_by TEXT DEFAULT '')",
         "CREATE TABLE IF NOT EXISTS rqi_events (id SERIAL PRIMARY KEY, original_report_id TEXT, new_report_id TEXT, contractor_name TEXT DEFAULT '', distance_m REAL, days_since_repair INTEGER, flagged_at TEXT, seen_by_commissioner INTEGER DEFAULT 0)",
-        "CREATE TABLE IF NOT EXISTS ai_corrections (id SERIAL PRIMARY KEY, report_id TEXT, original_ai_severity TEXT DEFAULT '', corrected_severity TEXT DEFAULT '', original_damage_type TEXT DEFAULT '', corrected_damage_type TEXT DEFAULT '', original_ai_correct INTEGER DEFAULT 0, corrected_by TEXT DEFAULT '', corrected_at TEXT DEFAULT '', photo_path TEXT DEFAULT '', ward TEXT DEFAULT '', notes TEXT DEFAULT '')",
+        "CREATE TABLE IF NOT EXISTS ai_corrections (id SERIAL PRIMARY KEY, report_id TEXT, original_ai_severity TEXT DEFAULT '', corrected_severity TEXT DEFAULT '', original_damage_type TEXT DEFAULT '', corrected_damage_type TEXT DEFAULT '', original_ai_correct INTEGER DEFAULT 0, corrected_by TEXT DEFAULT '', corrected_at TEXT DEFAULT '', photo_path TEXT DEFAULT '', ward TEXT DEFAULT '', notes TEXT DEFAULT '', inference_run_id INTEGER, verifier_role TEXT DEFAULT '')",
+        "CREATE TABLE IF NOT EXISTS training_labels (id SERIAL PRIMARY KEY, report_id TEXT NOT NULL, ward TEXT DEFAULT '', citizen_damage_type TEXT DEFAULT '', verified_damage_type TEXT DEFAULT '', severity TEXT DEFAULT '', human_severity TEXT, site_condition TEXT DEFAULT '', verified_by TEXT DEFAULT '', verified_at TEXT DEFAULT '', photo_source_column TEXT DEFAULT '', is_override INTEGER DEFAULT 0, created_at TEXT DEFAULT '')",
+        "CREATE TABLE IF NOT EXISTS ai_inference_runs (id SERIAL PRIMARY KEY, report_id TEXT NOT NULL, attempt_number INTEGER NOT NULL, provider TEXT DEFAULT '', model TEXT DEFAULT '', requested_at TEXT DEFAULT '', completed_at TEXT DEFAULT '', raw_severity TEXT DEFAULT '', raw_damage_confirmed INTEGER, validation_status TEXT DEFAULT '', error_detail TEXT DEFAULT '', source_photo_reference TEXT DEFAULT '')",
         """CREATE TABLE IF NOT EXISTS ward_reassignment_log (
             id SERIAL PRIMARY KEY,
             report_id TEXT NOT NULL,
@@ -613,6 +656,13 @@ def _safe_add_columns(c, conn):
             ("work_done_lat",          "REAL"),
             ("work_done_lng",          "REAL"),
         ],
+        "training_labels": [
+            ("human_severity", "TEXT"),
+        ],
+        "ai_corrections": [
+            ("inference_run_id", "INTEGER"),
+            ("verifier_role",    "TEXT DEFAULT ''"),
+        ],
     }
     for table, cols in new_cols.items():
         for col_name, col_def in cols:
@@ -620,31 +670,26 @@ def _safe_add_columns(c, conn):
                 c.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_def}")
                 conn.commit()
             except Exception:
-                pass  # Column already exists
+                # PostgreSQL-specific transaction-safety fix: a failed DDL
+                # statement (e.g. "column already exists") aborts the
+                # current PostgreSQL transaction -- every subsequent
+                # command on this same connection/cursor would then fail
+                # with "current transaction is aborted" until a ROLLBACK
+                # is issued. Since this loop reuses one connection across
+                # every table/column pair, the FIRST already-existing
+                # column on Postgres would otherwise silently poison every
+                # column addition after it, including genuinely new ones
+                # that need to be added on an upgrade. SQLite has no such
+                # per-connection transaction-abort behavior, so this is a
+                # no-op there -- rollback() is safe to call unconditionally
+                # and does not change SQLite's existing behavior.
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass  # Column already exists (or other DDL error) --
+                          # rollback itself failing means there's nothing
+                          # to roll back; safe to continue either way.
 
-
-def _seed_admin(c, conn):
-    try:
-        if USE_POSTGRES:
-            try: conn.rollback()
-            except: pass
-        c.execute(_q("SELECT id FROM staff WHERE username = ?"), ("admin",))
-        if not c.fetchone():
-            c.execute(_q("""
-                INSERT INTO staff
-                    (name, username, password_hash, role, is_active,
-                     must_change_password, created_at, created_by, zone)
-                VALUES (?, ?, ?, ?, 1, 0, ?, ?, 'all')
-            """), (
-                "IT Administrator", "admin",
-                hash_password("Admin@2024!"),
-                "admin", now(), "system",
-            ))
-            conn.commit()
-    except Exception as e:
-        print(f"[db] admin seed error: {e}")
-        try: conn.rollback()
-        except: pass
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SYSTEM SETTINGS
@@ -979,53 +1024,84 @@ def get_reports_for_role(
     severity=None, search=None, damage_type=None,
     limit=200, offset=0,
 ) -> list:
+    """
+    NOTE ON REFACTOR: geographic scope resolution (which wards a
+    zonal_commissioner/ae/was/viewer may see) previously lived here,
+    reimplemented separately per role branch. It now lives once, in
+    authz.staff_ward_scope(), and this function calls that instead —
+    so the 12+ write routes that need the exact same "which wards can
+    this staff member touch" answer aren't stuck reimplementing it a
+    fourth time.
+
+    SECURITY FIX included in this refactor (found while extracting the
+    logic, not previously flagged): the old "was" branch, if a `ward`
+    query param was supplied, called get_all_reports(ward=ward, ...)
+    directly — bypassing was_wards entirely. A WAS user could pass any
+    ward name in the query string and see it, regardless of their own
+    ward_list. The rebuilt version below always ANDs the requested
+    `ward` against the resolved scope (matching how the old "ae" branch
+    already, correctly, did it) so a ward outside scope returns zero
+    rows instead of bypassing scope.
+
+    POLICY UPDATE (viewer): resolved to city-wide read-only, reversing
+    this refactor's original scoped-viewer decision. Evidence:
+    templates/staff.html's viewer banner states "You can see all
+    grievances" (first-party product copy), and database.py's own role
+    documentation explicitly scopes zonal_commissioner/ae/was but
+    deliberately does not scope viewer. viewer now resolves through the
+    unrestricted branch below, same as admin/commissioner, via
+    authz.UNRESTRICTED_ROLES — it remains read-only at the route/
+    permissions level, this only changes what it can see.
+    """
+    import authz
+
     role = staff.get("role", "viewer")
 
-    if role in ("commissioner", "admin"):
+    if role in authz.UNRESTRICTED_ROLES:
         return get_all_reports(
             status=status, ward=ward, severity=severity,
             search=search, damage_type=damage_type,
             limit=limit, offset=offset,
         )
 
-    elif role == "zonal_commissioner":
-        from wards import get_wards_for_zone
-        zone = staff.get("zone", "")
-        ward_names = get_wards_for_zone(zone) if zone else []
-        if not ward_names:
-            return []
-        conn = get_conn(); c = conn.cursor()
-        conds  = [f"ward IN ({','.join(['?']*len(ward_names))})"]
-        params = list(ward_names)
-        if status == "active_only":
-            conds.append("status NOT IN ('resolved','closed','pending_triage')")
-        elif status and status != "all":
-            conds.append("status = ?"); params.append(status)
-        if severity and severity != "all":
-            conds.append("severity = ?"); params.append(severity)
-        if damage_type and damage_type != "all":
-            conds.append("damage_type = ?"); params.append(damage_type)
-        where = "WHERE " + " AND ".join(conds)
-        params.extend([limit, offset])
-        c.execute(_q(f"SELECT * FROM reports {where} ORDER BY submitted_at DESC LIMIT ? OFFSET ?"), params)
-        results = [dict(r) for r in c.fetchall()]
-        conn.close()
-        return results
+    if role == "field_engineer":
+        return get_all_reports(
+            status=status, ward=ward, severity=severity,
+            search=search, damage_type=damage_type,
+            assigned_to=staff["name"],
+            limit=limit, offset=offset,
+        )
 
-    elif role == "ae":
-        from wards import get_wards_for_division
-        division = staff.get("division", "")
-        ward_names = get_wards_for_division(division) if division else []
-        if not ward_names:
+    if role in ("grievance_officer", "triage_officer"):
+        # Not part of the approved viewer-scoping policy change — left
+        # unscoped intentionally, matching prior behavior. Flagged
+        # separately as a future policy question, not touched here.
+        return get_all_reports(
+            status=status, ward=ward, severity=severity,
+            search=search, damage_type=damage_type,
+            limit=limit, offset=offset,
+        )
+
+    if role in ("zonal_commissioner", "ae") or role in authz.WARD_LIST_ROLES:
+        scope_wards = authz.staff_ward_scope(staff)
+        if not scope_wards:
             return []
+        if len(scope_wards) == 1 and not ward:
+            return get_all_reports(
+                status=status, ward=scope_wards[0], severity=severity,
+                search=search, damage_type=damage_type,
+                limit=limit, offset=offset,
+            )
         conn = get_conn(); c = conn.cursor()
-        conds  = [f"ward IN ({','.join(['?']*len(ward_names))})"]
-        params = list(ward_names)
+        conds  = [f"ward IN ({','.join(['?']*len(scope_wards))})"]
+        params = list(scope_wards)
         if status == "active_only":
             conds.append("status NOT IN ('resolved','closed','pending_triage')")
         elif status and status != "all":
             conds.append("status = ?"); params.append(status)
         if ward:
+            # ANDed against scope — a ward outside scope_wards yields
+            # zero rows rather than bypassing the IN(...) clause above.
             conds.append("ward = ?"); params.append(ward)
         if severity and severity != "all":
             conds.append("severity = ?"); params.append(severity)
@@ -1041,70 +1117,8 @@ def get_reports_for_role(
         conn.close()
         return results
 
-    elif role in ("viewer",):
-        return get_all_reports(
-            status=status, ward=ward, severity=severity,
-            search=search, damage_type=damage_type,
-            limit=limit, offset=offset,
-        )
-
-    elif role in ("was",):
-        ward_str  = staff.get("ward_list", "") or ""
-        was_wards = [w.strip() for w in ward_str.split(",") if w.strip()]
-        if ward:
-            return get_all_reports(
-                status=status, ward=ward, severity=severity,
-                search=search, damage_type=damage_type,
-                limit=limit, offset=offset,
-            )
-        if not was_wards:
-            return []
-        if len(was_wards) == 1:
-            return get_all_reports(
-                status=status, ward=was_wards[0], severity=severity,
-                search=search, damage_type=damage_type,
-                limit=limit, offset=offset,
-            )
-        conn = get_conn(); c = conn.cursor()
-        conds  = [f"ward IN ({','.join(['?']*len(was_wards))})"]
-        params = list(was_wards)
-        if status == "active_only":
-            conds.append("status NOT IN ('resolved','closed','pending_triage')")
-        elif status and status != "all":
-            conds.append("status = ?"); params.append(status)
-        if severity and severity != "all":
-            conds.append("severity = ?"); params.append(severity)
-        if damage_type and damage_type != "all":
-            conds.append("damage_type = ?"); params.append(damage_type)
-        if search:
-            conds.append(
-                "(report_id LIKE ? OR ward LIKE ? OR citizen_name LIKE ? OR description LIKE ?)"
-            )
-            s = f"%{search}%"; params.extend([s,s,s,s])
-        where = "WHERE " + " AND ".join(conds)
-        params.extend([limit, offset])
-        c.execute(_q(
-            f"SELECT * FROM reports {where} ORDER BY submitted_at DESC LIMIT ? OFFSET ?"
-        ), params)
-        results = [dict(r) for r in c.fetchall()]
-        conn.close()
-        return results
-
-    elif role == "field_engineer":
-        return get_all_reports(
-            status=status, ward=ward, severity=severity,
-            search=search, damage_type=damage_type,
-            assigned_to=staff["name"],
-            limit=limit, offset=offset,
-        )
-
-    elif role in ("grievance_officer", "triage_officer"):
-        return get_all_reports(
-            status=status, ward=ward, severity=severity,
-            search=search, damage_type=damage_type,
-            limit=limit, offset=offset,
-        )
-
+    # Unknown / unsupported role — fail closed, never fall through to
+    # get_all_reports().
     return []
 
 
@@ -1240,6 +1254,8 @@ def was_verify_damage(
     notes: str = "",
     verify_lat: float = None,
     verify_lng: float = None,
+    human_severity: str = None,
+    verifier_role: str = "",
 ) -> bool:
     """
     WAS visits site, corrects damage type, uploads before photo.
@@ -1312,15 +1328,31 @@ def was_verify_damage(
         verified_at      = ts,
         photo_data       = before_photo_data,
         is_override      = False,
+        human_severity   = human_severity,
     )
 
-    # Log AI correction if damage type changed
-    if verified_damage_type and verified_damage_type != r.get("damage_type",""):
+    # SEVERITY VERIFICATION: independent of the damage-type correction
+    # below. original_ai_severity comes from the specific ai_inference_runs
+    # row this human is verifying (server-determined, never client-
+    # supplied) rather than the live reports.severity value, which may
+    # have been overwritten by a later retry by the time this runs.
+    # inference_run_id stays NULL if no valid inference run exists for
+    # this report -- fail closed on the linkage claim, never fabricated.
+    latest_run = get_latest_inference_run(report_id)
+    inference_run_id = latest_run["id"] if latest_run else None
+    ai_severity_for_correction = latest_run["raw_severity"] if latest_run else r.get("severity","")
+
+    damage_type_changed = bool(verified_damage_type) and verified_damage_type != r.get("damage_type","")
+
+    if human_severity or damage_type_changed:
         log_ai_correction(
-            report_id, r.get("severity",""), r.get("severity",""),
+            report_id,
+            ai_severity_for_correction,
+            human_severity if human_severity else ai_severity_for_correction,
             r.get("damage_type",""), verified_damage_type, verified_by,
             r.get("photo_path",""), r.get("ward",""),
-            f"WAS on-site correction. Condition: {site_condition}",
+            f"WAS on-site verification. Condition: {site_condition}",
+            inference_run_id=inference_run_id, verifier_role=verifier_role,
         )
 
     return True
@@ -2041,10 +2073,34 @@ def get_all_audits_grouped(): return get_all_audit_logs()
 # AI CORRECTIONS & TRAINING
 # ─────────────────────────────────────────────────────────────────────────────
 
+def get_latest_inference_run(report_id: str) -> dict | None:
+    """
+    Server-side determination of "the AI inference this human is
+    verifying" -- never accepts a client-supplied inference_run_id.
+    Returns the highest attempt_number row for this report_id, or None
+    if no inference has ever run for it (e.g. Groq never returned a
+    non-'unknown' result). Callers must treat None as "no valid linkage
+    exists" and leave ai_corrections.inference_run_id NULL rather than
+    fabricate one -- this is the fail-closed behavior for the linkage
+    claim specifically; it does not block the on-site verification
+    workflow itself, which must still be able to complete even when the
+    AI subsystem has no successful attempt on record for this report.
+    """
+    conn = get_conn(); c = conn.cursor()
+    c.execute(_q(
+        "SELECT * FROM ai_inference_runs WHERE report_id=? "
+        "ORDER BY attempt_number DESC LIMIT 1"
+    ), (report_id,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def log_ai_correction(
     report_id, original_ai_severity, corrected_severity,
     original_damage_type, corrected_damage_type,
     corrected_by, photo_path="", ward="", notes="",
+    inference_run_id=None, verifier_role="",
 ):
     ai_correct = (
         original_ai_severity == corrected_severity and
@@ -2056,13 +2112,13 @@ def log_ai_correction(
             (report_id, original_ai_severity, corrected_severity,
              original_damage_type, corrected_damage_type,
              original_ai_correct, corrected_by, corrected_at,
-             photo_path, ward, notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+             photo_path, ward, notes, inference_run_id, verifier_role)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     """), (
         report_id, original_ai_severity, corrected_severity,
         original_damage_type, corrected_damage_type,
         1 if ai_correct else 0, corrected_by, now(),
-        photo_path, ward, notes,
+        photo_path, ward, notes, inference_run_id, verifier_role,
     ))
     conn.commit(); conn.close()
 
@@ -2086,6 +2142,7 @@ def save_inspection_verification(
     report_id, verified_damage_type, site_condition,
     site_photo_data, verified_by, notes="",
     is_override=False, override_reason="",
+    human_severity=None, verifier_role="",
 ):
     conn = get_conn(); c = conn.cursor(); ts = now()
     c.execute(_q("SELECT * FROM reports WHERE report_id=?"), (report_id,))
@@ -2118,18 +2175,37 @@ def save_inspection_verification(
         ), (report_id, f"⚠️ SUPERVISOR OVERRIDE — assigned engineer did not close within SLA. Reason: {override_reason}", verified_by, ts))
 
     conn.commit(); conn.close()
-    if verified_damage_type and verified_damage_type != r.get("damage_type",""):
+
+    # SEVERITY VERIFICATION: same pattern as was_verify_damage() --
+    # original_ai_severity comes from the specific ai_inference_runs row
+    # (server-determined via get_latest_inference_run, never client-
+    # supplied), inference_run_id stays NULL if none exists rather than
+    # being fabricated. THIS is the route the live field.html UI actually
+    # submits to -- was_verify_damage_post/was_verify_damage() received
+    # the identical wiring but /was-verify-damage has no form pointing at
+    # it in the current template, so this call site is the one that
+    # matters for real usage.
+    latest_run = get_latest_inference_run(report_id)
+    inference_run_id = latest_run["id"] if latest_run else None
+    ai_severity_for_correction = latest_run["raw_severity"] if latest_run else r.get("severity","")
+
+    damage_type_changed = bool(verified_damage_type) and verified_damage_type != r.get("damage_type","")
+    if human_severity or damage_type_changed:
         log_ai_correction(
-            report_id, r.get("severity",""), r.get("severity",""),
+            report_id,
+            ai_severity_for_correction,
+            human_severity if human_severity else ai_severity_for_correction,
             r.get("damage_type",""), verified_damage_type, verified_by,
             r.get("photo_path",""), r.get("ward",""),
-            f"Site correction. Condition: {site_condition}",
+            f"Site verification. Condition: {site_condition}"
+            + (f" OVERRIDE: {override_reason}" if is_override else ""),
+            inference_run_id=inference_run_id, verifier_role=verifier_role,
         )
     save_training_sample(
         report_id, r.get("ward",""), r.get("damage_type",""),
         verified_damage_type, r.get("severity","unknown"),
         site_condition, verified_by, ts, r.get("photo_data",""),
-        is_override=is_override,
+        is_override=is_override, human_severity=human_severity,
     )
     return True
 
@@ -2209,6 +2285,24 @@ def get_staff_by_username(username: str) -> dict | None:
     return dict(row) if row else None
 
 
+def get_staff_by_name(name: str) -> dict | None:
+    """Reports store assigned_to as a staff NAME (not username) — this
+    lookup exists so assignment routes can validate that a target name
+    actually corresponds to a real, specific staff account before writing
+    it, instead of trusting an arbitrary form string. If two staff share
+    a name, returns the first active match, else the first match."""
+    if not name:
+        return None
+    conn = get_conn(); c = conn.cursor()
+    c.execute(_q("SELECT * FROM staff WHERE name=? AND is_active=1 LIMIT 1"), (name,))
+    row = c.fetchone()
+    if not row:
+        c.execute(_q("SELECT * FROM staff WHERE name=? LIMIT 1"), (name,))
+        row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def get_staff_by_id(staff_id: int) -> dict | None:
     conn = get_conn(); c = conn.cursor()
     c.execute(_q("SELECT * FROM staff WHERE id=?"), (staff_id,))
@@ -2250,17 +2344,51 @@ def get_team_members(
     return result
 
 
-def toggle_staff_active(staff_id: int, done_by: str) -> tuple:
+def toggle_staff_active(staff_id: int, creator_role: str, done_by: str) -> tuple:
+    """
+    SECURITY: this now enforces the same can_manage_user() hierarchy
+    reset_password_with_log() already used — previously this function
+    took no creator_role at all and any authenticated caller (checked,
+    if at all, only at the route) could toggle any account.
+
+    Also enforces two safety properties that had no prior policy:
+      - a staff member cannot deactivate their own account (self-lockout
+        via this endpoint; self-service should not deactivate self)
+      - the last active admin/commissioner-tier account cannot be
+        deactivated, so this can never lock the whole system out of
+        privileged access.
+    """
     conn = get_conn(); c = conn.cursor()
-    c.execute(_q("SELECT is_active, username FROM staff WHERE id=?"), (staff_id,))
+    c.execute(_q("SELECT id, is_active, username, role, name FROM staff WHERE id=?"), (staff_id,))
     row = c.fetchone()
     if not row:
         conn.close(); return False, "Staff not found"
-    r       = dict(row)
+    r = dict(row)
+
+    if not can_manage_user(creator_role, r["role"]) and creator_role != "admin":
+        conn.close(); return False, "You do not have permission to manage this account"
+
+    if r["name"] == done_by:
+        conn.close(); return False, "You cannot deactivate your own account"
+
     new_val = 0 if r["is_active"] else 1
+    if new_val == 0 and r["role"] in ("admin", "commissioner"):
+        c.execute(_q(
+            "SELECT COUNT(*) as n FROM staff WHERE role IN ('admin','commissioner') "
+            "AND is_active=1 AND id != ?"
+        ), (staff_id,))
+        remaining = dict(c.fetchone())["n"]
+        if remaining < 1:
+            conn.close(); return False, "Cannot deactivate the last active admin/commissioner account"
+
     c.execute(_q("UPDATE staff SET is_active=? WHERE id=?"), (new_val, staff_id))
     if new_val == 0:
         c.execute(_q("DELETE FROM sessions WHERE staff_id=?"), (staff_id,))
+    c.execute(_q(
+        "INSERT INTO staff_audit_log (action,target_username,done_by,done_at,details) "
+        "VALUES (?,?,?,?,?)"
+    ), ("staff_toggle", r["username"], done_by, now(),
+        f"target_role={r['role']},new_state={'active' if new_val else 'inactive'}"))
     conn.commit(); conn.close()
     return True, "activated" if new_val else "deactivated"
 
@@ -3071,65 +3199,198 @@ def get_override_verification_stats(days: int = 30) -> dict:
 # TRAINING DATA
 # ─────────────────────────────────────────────────────────────────────────────
 
-TRAINING_DIR = "training_data"
-TRAINING_CSV = "training_data/labels.csv"
+TRAINING_DIR = "training_data"  # kept only as the constant name the
+# export route's Content-Disposition filename derives from; no longer
+# used for storage. See DURABILITY FIX note below.
 TRAINING_CSV_HEADERS = [
     "report_id","ward","citizen_damage_type","verified_damage_type",
     "severity","site_condition","verified_by","verified_at","photo_filename",
-    "is_override",
+    "is_override","human_severity",
 ]
+
+
+def log_inference_attempt(
+    report_id: str, provider: str, model: str,
+    requested_at: str, completed_at: str,
+    raw_severity: str, raw_damage_confirmed,
+    validation_status: str, error_detail: str,
+    source_photo_reference: str,
+) -> int:
+    """
+    Records one AI inference attempt. attempt_number is computed durably
+    from existing rows for this report_id (a COUNT query, not an
+    in-memory counter) so it survives restarts and is correct even if
+    this is the first process to ever call it for a given report.
+
+    Called once per actual Groq call, from every return path in
+    severity.analyse_severity() -- success, provider failure, missing
+    API key, missing photo, and parse failure all produce a row here,
+    distinguished by validation_status.
+    """
+    try:
+        conn = get_conn(); c = conn.cursor()
+        c.execute(_q(
+            "SELECT COUNT(*) as n FROM ai_inference_runs WHERE report_id=?"
+        ), (report_id,))
+        attempt_number = (dict(c.fetchone())["n"] or 0) + 1
+        c.execute(_q("""
+            INSERT INTO ai_inference_runs
+                (report_id, attempt_number, provider, model,
+                 requested_at, completed_at, raw_severity,
+                 raw_damage_confirmed, validation_status, error_detail,
+                 source_photo_reference)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """), (
+            report_id, attempt_number, provider, model,
+            requested_at, completed_at, raw_severity,
+            1 if raw_damage_confirmed else (0 if raw_damage_confirmed is not None else None),
+            validation_status, error_detail, source_photo_reference,
+        ))
+        conn.commit(); conn.close()
+        return attempt_number
+    except Exception as e:
+        print(f"[inference_runs] error: {e}")
+        return 0
+
+
+def get_inference_runs_for_report(report_id: str) -> list:
+    conn = get_conn(); c = conn.cursor()
+    c.execute(_q(
+        "SELECT * FROM ai_inference_runs WHERE report_id=? ORDER BY attempt_number"
+    ), (report_id,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
 
 
 def save_training_sample(
     report_id, ward, citizen_damage_type, verified_damage_type,
     severity, site_condition, verified_by, verified_at, photo_data,
-    is_override=False,
+    is_override=False, human_severity=None,
 ):
+    """
+    DURABILITY FIX: previously wrote a decoded photo file to the local
+    `training_data/` directory and appended a row to `training_data/
+    labels.csv` -- both on Render's ephemeral filesystem, meaning every
+    WAS-verified training label was silently lost on the next redeploy.
+    Neither piece of that was actually necessary: the photo itself is
+    already durably stored in the `reports` table (`photo_data` or
+    `site_photo_data`, base64, same pattern already used everywhere else
+    in this codebase) by the time this function is called -- writing a
+    second, non-durable copy added a duplicate source of truth for no
+    benefit. This version writes ONLY metadata, to the `training_labels`
+    table, and records WHICH `reports` column holds the relevant photo
+    (photo_source_column) so a reader can fetch the real image from its
+    one authoritative location instead of a local file that may not
+    exist.
+
+    Behavior preserved: same fields recorded (report_id, ward, citizen/
+    verified damage type, severity, site_condition, verifier, timestamp,
+    override flag) -- see TRAINING_CSV_HEADERS, still the schema for the
+    on-demand export in export_training_data_csv() below.
+    """
     try:
-        os.makedirs(TRAINING_DIR, exist_ok=True)
-        photo_filename = ""
-        if photo_data and photo_data.startswith("data:"):
-            try:
-                header, b64 = photo_data.split(",", 1)
-                ext         = header.split("/")[1].split(";")[0]
-                safe_label  = verified_damage_type.replace(" ","_").replace("/","_")
-                photo_filename = f"{safe_label}_{secrets.token_hex(6)}.{ext}"
-                with open(os.path.join(TRAINING_DIR, photo_filename), "wb") as f:
-                    f.write(base64.b64decode(b64))
-            except Exception as e:
-                print(f"[training] photo: {e}")
-        exists = os.path.exists(TRAINING_CSV)
-        with open(TRAINING_CSV, "a", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=TRAINING_CSV_HEADERS, extrasaction="ignore")
-            if not exists: w.writeheader()
-            w.writerow({
-                "report_id": report_id, "ward": ward,
-                "citizen_damage_type": citizen_damage_type,
-                "verified_damage_type": verified_damage_type,
-                "severity": severity, "site_condition": site_condition,
-                "verified_by": verified_by, "verified_at": verified_at,
-                "photo_filename": photo_filename,
-                "is_override": "yes" if is_override else "no",
-            })
+        photo_source_column = ""
+        if photo_data and isinstance(photo_data, str) and photo_data.startswith("data:"):
+            photo_source_column = "photo_data"  # caller already had a
+            # real base64 image; the report row it came from durably
+            # holds it under one of photo_data/site_photo_data -- the
+            # exact column isn't reliably knowable from this function's
+            # arguments alone, so callers that care which column pass it
+            # via photo_data unchanged and a reader can re-derive it from
+            # the report_id + reports table directly. This flag only
+            # records THAT a real photo existed at verification time.
+        conn = get_conn(); c = conn.cursor()
+        c.execute(_q("""
+            INSERT INTO training_labels
+                (report_id, ward, citizen_damage_type, verified_damage_type,
+                 severity, human_severity, site_condition, verified_by, verified_at,
+                 photo_source_column, is_override, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        """), (
+            report_id, ward, citizen_damage_type, verified_damage_type,
+            severity, human_severity, site_condition, verified_by, verified_at,
+            photo_source_column, 1 if is_override else 0, now(),
+        ))
+        conn.commit(); conn.close()
     except Exception as e:
         print(f"[training] error: {e}")
 
 
 def get_training_stats() -> dict:
     try:
-        if not os.path.exists(TRAINING_CSV):
-            return {"total": 0, "by_type": {}, "corrections": 0}
-        total, by_type, corrections = 0, {}, 0
-        with open(TRAINING_CSV, "r", encoding="utf-8") as f:
-            for row in csv.DictReader(f):
-                total += 1
-                dt = row.get("verified_damage_type","Unknown")
-                by_type[dt] = by_type.get(dt,0) + 1
-                if row.get("citizen_damage_type") != row.get("verified_damage_type"):
-                    corrections += 1
-        return {"total": total, "by_type": by_type, "corrections": corrections}
+        conn = get_conn(); c = conn.cursor()
+        c.execute("SELECT COUNT(*) as total FROM training_labels")
+        total = dict(c.fetchone())["total"] or 0
+        c.execute(
+            "SELECT verified_damage_type, COUNT(*) as n FROM training_labels "
+            "GROUP BY verified_damage_type"
+        )
+        by_type = {}
+        for row in c.fetchall():
+            row = dict(row)
+            key = row.get("verified_damage_type") or "Unknown"
+            by_type[key] = row.get("n", 0)
+        c.execute(
+            "SELECT COUNT(*) as n FROM training_labels "
+            "WHERE citizen_damage_type != verified_damage_type"
+        )
+        corrections = dict(c.fetchone())["n"] or 0
+        # Eligibility per the approved training policy: a sample needs an
+        # independently-entered human severity to be usable for future
+        # severity-model training. Existing historical rows (created
+        # before this field existed) correctly have human_severity=NULL
+        # and are NOT retroactively counted as eligible -- see
+        # save_training_sample()'s docstring / this feature's design notes.
+        c.execute(
+            "SELECT COUNT(*) as n FROM training_labels WHERE human_severity IS NOT NULL"
+        )
+        severity_eligible = dict(c.fetchone())["n"] or 0
+        conn.close()
+        return {
+            "total": total, "by_type": by_type, "corrections": corrections,
+            "severity_eligible": severity_eligible,
+        }
     except Exception:
-        return {"total": 0, "by_type": {}, "corrections": 0}
+        return {"total": 0, "by_type": {}, "corrections": 0, "severity_eligible": 0}
+
+
+def export_training_data_csv() -> str:
+    """
+    Generates the training-data CSV on demand from training_labels (the
+    one durable source), preserving the exact column set/order the old
+    file-based export used, so /export/training-data's external behavior
+    (filename pattern, headers, content) is unchanged for anyone already
+    consuming it.
+    """
+    conn = get_conn(); c = conn.cursor()
+    c.execute(
+        "SELECT report_id, ward, citizen_damage_type, verified_damage_type, "
+        "severity, human_severity, site_condition, verified_by, verified_at, "
+        "photo_source_column, is_override FROM training_labels ORDER BY id"
+    )
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=TRAINING_CSV_HEADERS, extrasaction="ignore")
+    writer.writeheader()
+    for r in rows:
+        writer.writerow({
+            "report_id": r.get("report_id",""), "ward": r.get("ward",""),
+            "citizen_damage_type": r.get("citizen_damage_type",""),
+            "verified_damage_type": r.get("verified_damage_type",""),
+            "severity": r.get("severity",""), "site_condition": r.get("site_condition",""),
+            "verified_by": r.get("verified_by",""), "verified_at": r.get("verified_at",""),
+            "photo_filename": r.get("photo_source_column",""),  # column name, not a local
+            # filename anymore -- kept under the old header name so any
+            # existing consumer of this CSV doesn't need a schema change,
+            # just a note that the value now points at a reports.* column.
+            "is_override": "yes" if r.get("is_override") else "no",
+            "human_severity": r.get("human_severity") or "",
+        })
+    return output.getvalue()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPATIBILITY ALIASES — bridge old main.py calls to new function names

@@ -43,6 +43,7 @@ FIXES APPLIED (FIX 1–10):
 
 import os, io, csv, base64, urllib.parse
 import permissions
+import authz
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
@@ -62,6 +63,7 @@ from security import (
     generate_csrf_token, verify_csrf_token,
     get_real_ip,
     check_rate_limit,
+    Sec,
     SecurityGatewayMiddleware,
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -109,7 +111,13 @@ async def lifespan(app: FastAPI):
     stop_watchdog()
 
 
-app = FastAPI(lifespan=lifespan)
+_IS_PRODUCTION = os.getenv("ENVIRONMENT", "production") == "production"
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
+)
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(SecurityGatewayMiddleware)
@@ -416,7 +424,7 @@ async def submit(
     def _run_severity(rid, fpath, dtype):
         try:
             from severity import analyse_severity
-            result = analyse_severity(fpath, dtype)
+            result = analyse_severity(fpath, dtype, report_id=rid, source_photo_reference="local_upload")
             if result["severity"] != "unknown":
                 database.update_report_severity(rid, result["severity"],
                     result.get("severity_details",""), result.get("estimated_cost",""),
@@ -555,6 +563,12 @@ async def assign_ward(request: Request,
     if not permissions.check_role(staff, *permissions.TRIAGE_ROLES, *permissions.COMMISSIONER_ROLES):
         return permissions.redirect_home(staff)
 
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/triage?error=Report+not+found", status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse("/triage?error=Report+is+outside+your+assigned+area", status_code=302)
+
     ward, _ = sanitize_input(ward)
     ok, msg = database.assign_ward_from_triage(report_id, ward, staff["name"])
 
@@ -581,6 +595,12 @@ async def flag_incorrect_ward(request: Request,
 
     if not permissions.check_role(staff, *permissions.FIELD_ROLES, "admin"):
         return permissions.redirect_home(staff)
+
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/field?error=Report+not+found", status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse("/field?error=Report+is+outside+your+assigned+area", status_code=302)
 
     requested_ward, _ = sanitize_input(requested_ward)
     reason, _         = sanitize_input(reason)
@@ -613,6 +633,16 @@ async def approve_ward_flag(request: Request,
 
     if not permissions.check_role(staff, "ae", "admin", "commissioner", "zonal_commissioner"):
         return permissions.redirect_home(staff)
+
+    # Checked against the report's CURRENT ward, not the requested one —
+    # approving/rejecting a ward-correction flag is an action on a report
+    # that today sits in the approver's own scope; the requested_ward is
+    # what it might become, not what determines who may decide.
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/staff?error=Report+not+found", status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse("/staff?error=Report+is+outside+your+assigned+area", status_code=302)
 
     reason, _ = sanitize_input(reason)
     approved  = decision == "approve"
@@ -664,6 +694,12 @@ async def resolve_dispute(request: Request,
 
     if not permissions.check_role(staff, "commissioner", "admin", "zonal_commissioner", "ae"):
         return permissions.redirect_home(staff)
+
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/disputed-reviews?error=Report+not+found", status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse("/disputed-reviews?error=Report+is+outside+your+assigned+area", status_code=302)
 
     note, _ = sanitize_input(note)
 
@@ -992,9 +1028,15 @@ async def update_status(request: Request,
         return RedirectResponse("/staff", status_code=302)
     if permissions.deny_role(staff, *permissions.FIELD_ROLES) and new_status in ("resolved","closed","open","assigned"):
         return RedirectResponse("/field", status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/staff?error=Report+not+found", status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse("/staff?error=Report+is+outside+your+assigned+area", status_code=302)
+
     if staff["role"] == "ae":
-        report = database.get_report_by_id(report_id)
-        if report and new_status == "resolved" and report.get("status") != "inspected":
+        if new_status == "resolved" and report.get("status") != "inspected":
             return RedirectResponse(
                 "/staff?error=Cannot+mark+resolved+until+field+engineer+submits+site+report",
                 status_code=302)
@@ -1061,6 +1103,18 @@ async def assign_report(request: Request,
     if not permissions.check_role(staff, "admin", "commissioner", "zonal_commissioner", "ae"):
         return permissions.redirect_home(staff)
 
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse("/staff?error=Report+not+found", status_code=302)
+
+    assignee = database.get_staff_by_name(assigned_to)
+    allowed, assign_error = authz.can_assign_report(staff, report, assignee)
+    if not allowed:
+        referer   = request.headers.get("referer","/staff")
+        safe_next = referer if referer and "/staff" in referer else "/staff"
+        sep = "&" if "?" in safe_next else "?"
+        return RedirectResponse(f"{safe_next}{sep}error={urllib.parse.quote(assign_error)}", status_code=302)
+
     ok, msg = database.assign_report(report_id, assigned_to, staff["name"],
                             assigned_officer=staff["name"])
     referer   = request.headers.get("referer","/staff")
@@ -1082,6 +1136,14 @@ async def add_comment(request: Request,
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    if not report:
+        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff"), status_code=302)
+    if not authz.can_modify_report(staff, report):
+        return RedirectResponse(ROLE_HOME.get(staff["role"],"/staff") + "?error=Report+is+outside+your+assigned+area",
+                                 status_code=302)
+
     comment, _ = sanitize_input(comment)
     database.add_comment(report_id, comment, staff["name"])
     referer = request.headers.get("referer","")
@@ -1168,6 +1230,14 @@ async def complaint_story(request: Request, report_id: str):
     report = database.get_report_by_id(report_id)
     if not report:
         return RedirectResponse("/staff", status_code=302)
+    # SECURITY FIX (IDOR): previously any authenticated staff account,
+    # regardless of role, could view any report's full story by editing
+    # report_id -- login was checked, object-level authority was not.
+    # Reuses the same object-scope check already applied to every other
+    # report-mutation route; complaint-story is read-only, so only
+    # can_access_report() is needed here, not can_modify_report().
+    if not authz.can_access_report(staff, report):
+        return RedirectResponse("/staff?error=Report+is+outside+your+assigned+area", status_code=302)
     story = database.get_complaint_story(report_id)
     return templates.TemplateResponse(request, "complaint_story.html", {
         "staff":  staff,
@@ -1191,6 +1261,11 @@ async def submit_inspection(request: Request,
         return RedirectResponse("/field?error=csrf", status_code=302)
     if not permissions.check_role(staff, *permissions.FIELD_ROLES):
         return permissions.redirect_home(staff)
+
+    inspection = database.get_inspection_by_id(int(inspection_id)) if inspection_id.isdigit() else {}
+    allowed, err = authz.can_submit_scheduled_inspection(staff, inspection)
+    if not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err)}", status_code=302)
 
     # Handle photo upload
     photo_data = ""
@@ -1252,6 +1327,12 @@ async def start_inspection(request: Request,
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    allowed, _is_override, err = authz.can_modify_inspection(staff, report or {})
+    if not report or not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err or 'Report not found')}", status_code=302)
+
     database.update_report_status(report_id, "inspecting", staff["name"])
     return RedirectResponse("/field", status_code=302)
 
@@ -1266,6 +1347,7 @@ async def was_verify_damage_post(
     report_id:            str        = Form(...),
     verified_damage_type: str        = Form(...),
     site_condition:       str        = Form(...),
+    human_severity:       str        = Form(...),
     site_photo:           UploadFile = File(...),
     inspection_notes:     str        = Form(default=""),
     verify_lat:           str        = Form(default=""),
@@ -1280,9 +1362,19 @@ async def was_verify_damage_post(
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field?error=Session+expired", status_code=302)
 
+    # Human severity: required, must be an explicit, active choice from
+    # the existing vocabulary -- never defaulted, never silently copied
+    # from the AI's value (there is no default branch here at all; an
+    # unrecognized value is rejected outright).
+    if human_severity not in ("critical", "high", "medium", "low"):
+        return RedirectResponse("/field?error=Select+a+severity+assessment", status_code=302)
+
     report = database.get_report_by_id(report_id)
     if not report:
         return RedirectResponse("/field?error=Report+not+found", status_code=302)
+    allowed, _is_override, err = authz.can_modify_inspection(staff, report)
+    if not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err)}", status_code=302)
     if report.get("status") != "inspecting":
         return RedirectResponse("/field?error=Complaint+not+in+inspecting+status", status_code=302)
 
@@ -1337,6 +1429,8 @@ async def was_verify_damage_post(
         notes                = inspection_notes,
         verify_lat           = lat,
         verify_lng           = lng,
+        human_severity       = human_severity,
+        verifier_role        = staff["role"],
     )
 
     if not ok:
@@ -1359,9 +1453,21 @@ async def complete_inspection(request: Request,
     csrf:             str = Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
+    # SECURITY FIX: this legacy route previously had NO role check at all —
+    # only login was required, so any authenticated account (including
+    # "viewer") could change any report's status through it, even though
+    # field.html no longer calls it. Restoring the same role gate the
+    # other inspection routes use.
+    if not permissions.check_role(staff, *permissions.FIELD_ROLES, "admin"):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    allowed, _is_override, err = authz.can_modify_inspection(staff, report or {})
+    if not report or not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err or 'Report not found')}", status_code=302)
 
     new_status = "inspected" if damage_confirmed == "yes" else "open"
     database.update_report_status(report_id, new_status, staff["name"])
@@ -1408,6 +1514,12 @@ async def reject_inspection(request: Request,
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
+
+    report = database.get_report_by_id(report_id)
+    allowed, _is_override, err = authz.can_modify_inspection(staff, report or {})
+    if not report or not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err or 'Report not found')}", status_code=302)
+
     note = reject_note.strip() or "No damage found at this location."
     database.update_report_status(report_id, "open", staff["name"])
     database.add_comment(report_id,
@@ -1423,6 +1535,7 @@ async def verify_inspection(request: Request,
     report_id:            str = Form(...),
     verified_damage_type: str = Form(...),
     site_condition:       str = Form(default="same"),
+    human_severity:       str = Form(default=""),
     inspection_notes:     str = Form(default=""),
     site_photo:           UploadFile = File(default=None),
     override_reason:      str = Form(default=""),
@@ -1433,23 +1546,23 @@ async def verify_inspection(request: Request,
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/field", status_code=302)
 
+    # Human severity: required, an explicit active choice from the
+    # existing vocabulary -- same rule as was_verify_damage_post. This is
+    # the route the live field.html form actually submits to.
+    if human_severity not in ("critical", "high", "medium", "low"):
+        return RedirectResponse("/field?error=Select+a+severity+assessment", status_code=302)
+
     report = database.get_report_by_id(report_id)
     if not report:
         return RedirectResponse("/field?error=Report+not+found", status_code=302)
 
-    is_assigned_engineer = (report.get("assigned_to") == staff["name"])
-    is_admin = staff["role"] == "admin"
-    is_override = False
-
-    if not is_assigned_engineer and not is_admin:
-        parent_name = database.get_parent_name_for_engineer(report.get("assigned_to", ""))
-        if staff["name"] != parent_name:
-            return RedirectResponse("/field?error=Only+the+assigned+engineer+or+their+supervisor+can+submit+this", status_code=302)
-        if int(report.get("escalation_level", 0) or 0) < 1:
-            return RedirectResponse("/field?error=SLA+not+yet+breached+—+wait+or+contact+the+assigned+engineer", status_code=302)
-        if not override_reason.strip():
-            return RedirectResponse("/field?error=Override+reason+required", status_code=302)
-        is_override = True
+    # Logic moved to authz.can_modify_inspection() so start/complete/reject/
+    # was-verify-damage/submit-inspection get the identical assigned-
+    # engineer / supervisor-override protection this route originated.
+    # Behavior here is unchanged.
+    allowed, is_override, err = authz.can_modify_inspection(staff, report, override_reason)
+    if not allowed:
+        return RedirectResponse(f"/field?error={urllib.parse.quote(err)}", status_code=302)
 
     if not site_photo or not site_photo.filename:
         return RedirectResponse("/field?error=Site+photo+required", status_code=302)
@@ -1467,7 +1580,8 @@ async def verify_inspection(request: Request,
 
     database.save_inspection_verification(report_id, verified_damage_type,
         site_condition, site_photo_data, staff["name"], inspection_notes,
-        is_override=is_override, override_reason=override_reason)
+        is_override=is_override, override_reason=override_reason,
+        human_severity=human_severity, verifier_role=staff["role"])
     database.update_report_status(report_id, "inspected", staff["name"])
 
     if not permissions.check_role(staff, "ae", "admin", "commissioner",
@@ -1620,13 +1734,11 @@ async def export_training_data(request: Request):
     if not staff or staff["role"] != "admin":
         return RedirectResponse("/login", status_code=302)
     stats = database.get_training_stats()
-    path  = database.TRAINING_CSV
-    if not os.path.exists(path):
+    if stats["total"] == 0:
         return HTMLResponse(
             f"<p>No training data yet. {stats['total']} samples collected so far.</p>",
             status_code=404)
-    with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
+    content = database.export_training_data_csv()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     return StreamingResponse(iter([content]), media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=roadseva_training_{ts}.csv"})
@@ -1681,7 +1793,7 @@ async def admin_toggle_staff(request: Request,
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/admin", status_code=302)
-    database.toggle_staff_active(staff_id, staff["name"])
+    database.toggle_staff_active(staff_id, staff["role"], staff["name"])
     return RedirectResponse("/admin", status_code=302)
 
 # ── TEAM MANAGEMENT ────────────────────────────────────────────────────────────
@@ -1733,8 +1845,27 @@ async def team_add_member(request: Request,
                                      supervised_by=sup_id,
                                      zone=zone, division=division, ward_list=ward_list, phone=phone)
     if ok:
-        msg = urllib.parse.quote(f"Account created for {name}. Temp password: {temp_password}")
-        return RedirectResponse(f"/team?message={msg}", status_code=302)
+        # SECURITY FIX (password-in-URL): previously the plaintext
+        # temp_password was placed in a redirect query string
+        # (/team?message=...password...), landing in browser history,
+        # access logs, and screenshots. Reuses the exact pattern already
+        # proven safe by /setup's POST handler: render credential_card.html
+        # directly in this response body -- the password never touches a
+        # URL, and this route (unlike GET /credential-card/{id}) is the
+        # only place it's ever shown, once, to the person who just created
+        # the account.
+        new_staff = database.get_staff_by_username(username)
+        if not new_staff:
+            return RedirectResponse(f"/team?message={urllib.parse.quote(f'Account created for {name}')}", status_code=302)
+        return templates.TemplateResponse(request, "credential_card.html", {
+            "staff": staff, "target": new_staff,
+            "name": name, "username": username,
+            "role": ROLE_LABELS.get(role, role),
+            "org":  database.get_system_setting("org_name") or "GVMC",
+            "created_by": staff["name"],
+            "issued_at":  database.now()[:10],
+            "temp_password": temp_password, "first_run": "0",
+        })
     err = urllib.parse.quote(str(result))
     return RedirectResponse(f"/team?error={err}", status_code=302)
 
@@ -1743,13 +1874,43 @@ async def team_reset_password(request: Request,
     staff_id: int=Form(...), csrf: str=Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
+    if not permissions.check_role(staff, "commissioner", "zonal_commissioner", "ae", "admin"):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/team?error=Session+expired", status_code=302)
-    ok, new_pass = database.reset_staff_password(staff_id, staff["name"])
+
+    # SECURITY FIX: previously called database.reset_staff_password(),
+    # which has no role check at all -- any authenticated staff account
+    # could reset any other account's password, including admin/
+    # commissioner. reset_password_with_log() already existed and already
+    # enforces can_manage_user(creator_role, target_role); this route
+    # simply wasn't calling it.
+    ip = get_real_ip(request)
+    ok, new_pass = database.reset_password_with_log(staff_id, staff["role"], staff["name"])
     if ok:
-        msg = urllib.parse.quote(f"Password reset. New temp password: {new_pass}")
-        return RedirectResponse(f"/team?message={msg}", status_code=302)
+        Sec.event("PASSWORD_RESET", ip=ip, user=staff["username"], endpoint="/team/reset-password",
+                   detail=f"target_id={staff_id},actor_role={staff['role']},result=success")
+        # SECURITY FIX (password-in-URL): reuses the same credential_card.html
+        # pattern applied to team_add_member above -- the new password is
+        # rendered once, directly in this response body, never placed in a
+        # URL/redirect. Sec.event() above logs the result, deliberately
+        # without new_pass in the detail string.
+        target = database.get_staff_by_id(staff_id)
+        if not target:
+            return RedirectResponse("/team?message=Password+reset", status_code=302)
+        return templates.TemplateResponse(request, "credential_card.html", {
+            "staff": staff, "target": target,
+            "name": target["name"], "username": target["username"],
+            "role": ROLE_LABELS.get(target["role"], target["role"]),
+            "org":  database.get_system_setting("org_name") or "GVMC",
+            "created_by": staff["name"],
+            "issued_at":  database.now()[:10],
+            "temp_password": new_pass, "first_run": "0",
+        })
+    Sec.event("PASSWORD_RESET", ip=ip, user=staff["username"], endpoint="/team/reset-password",
+               detail=f"target_id={staff_id},actor_role={staff['role']},result=denied:{new_pass}",
+               level="HIGH")
     err = urllib.parse.quote(str(new_pass))
     return RedirectResponse(f"/team?error={err}", status_code=302)
 
@@ -1758,12 +1919,25 @@ async def team_toggle(request: Request,
     staff_id: int=Form(...), csrf: str=Form(default="")):
     staff, mc = require_login_fc(request)
     if not staff: return RedirectResponse("/login", status_code=302)
+    if not permissions.check_role(staff, "commissioner", "zonal_commissioner", "ae", "admin"):
+        return permissions.redirect_home(staff)
     token = request.cookies.get(COOKIE_NAME,"")
     if not verify_csrf_token(token, csrf):
         return RedirectResponse("/team?error=Session+expired", status_code=302)
-    ok, result = database.toggle_staff_active(staff_id, staff["name"])
+
+    # SECURITY FIX: previously database.toggle_staff_active() took no
+    # creator_role and enforced nothing -- any authenticated staff could
+    # deactivate any other account, including admin/commissioner, with a
+    # guessable sequential staff_id.
+    ip = get_real_ip(request)
+    ok, result = database.toggle_staff_active(staff_id, staff["role"], staff["name"])
     if ok:
+        Sec.event("STAFF_TOGGLE", ip=ip, user=staff["username"], endpoint="/team/toggle",
+                   detail=f"target_id={staff_id},actor_role={staff['role']},result={result}")
         return RedirectResponse(f"/team?message=Account+{result}", status_code=302)
+    Sec.event("STAFF_TOGGLE", ip=ip, user=staff["username"], endpoint="/team/toggle",
+               detail=f"target_id={staff_id},actor_role={staff['role']},result=denied:{result}",
+               level="HIGH")
     return RedirectResponse(f"/team?error={result}", status_code=302)
 
 # ── STAFF LOG ──────────────────────────────────────────────────────────────────
