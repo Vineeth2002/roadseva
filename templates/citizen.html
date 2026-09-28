@@ -784,7 +784,22 @@ function _setNextBtn(enabled) {
   btn.title = enabled ? '' : 'Capture GPS first to proceed';
 }
 
-async function detectWardFromGPS(lat, lng) {
+async function detectWardFromGPS(lat, lng, accuracy) {
+  // ACCURACY GATE: a device falling back to cell-tower/Wi-Fi positioning
+  // (common indoors or in dense areas) can report a location 500m-2km off
+  // target. Without this check, a legitimate GVMC citizen standing badly
+  // inaccurate GPS could be told "you're outside GVMC" and hard-blocked
+  // from submitting at all -- a real, present bug, not a hypothetical one.
+  // 100m matches the threshold this project's own GPS-accuracy review
+  // treated as the point where auto-detection should stop being trusted.
+  const UNRELIABLE_ACCURACY_M = 100;
+  if (typeof accuracy === 'number' && accuracy > UNRELIABLE_ACCURACY_M) {
+    gpsOutsideGVMC = false;
+    _setNextBtn(true);
+    document.querySelector('.gps-status').textContent =
+      `⚠️ GPS signal is weak (±${Math.round(accuracy)}m) — please select your ward manually to be sure it's correct`;
+    return;
+  }
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
     const res = await fetch(url, {headers: {'Accept-Language': 'en'}});
@@ -876,7 +891,7 @@ function captureGPS() {
       dis.style.color = 'var(--green)';
       btn.textContent='✅ GPS Captured'; btn.className='btn-gps success'; btn.disabled=false;
       st.className='gps-status ok'; st.textContent='✓ Location captured — ward will be auto-detected';
-      detectWardFromGPS(lat, lng);
+      detectWardFromGPS(lat, lng, pos.coords.accuracy);
       // Clear any description error since GPS satisfies the requirement
       const descErr = document.getElementById('desc-err');
       if (descErr) descErr.style.display = 'none';
