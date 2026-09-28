@@ -5,10 +5,13 @@ D:\Anaconda\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload -
 #test cases check everything is working fine
 D:\Anaconda\python.exe -m pytest tests/ -v
 
-#for every files created or edited or saved in the project, run the following commands to update the github repository  
+git switch main
+git pull origin main
+git switch -c fix/dashboard-update
+
 git add .
 git commit -m "update"
-git push origin main
+git push -u origin fix/dashboard-update
 
 This shows all files recursively, excluding the .git folder noise
 dir C:\RoadSeva /b /a-d
