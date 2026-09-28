@@ -10,6 +10,10 @@ git add .
 git commit -m "update"
 git push origin main
 
+Create a new branch  (in place of dashboard update, you can give any name to the branch)
+git switch -c fix/dashboard-update   
+git push -u origin fix/dashboard-update
+
 This shows all files recursively, excluding the .git folder noise
 dir C:\RoadSeva /b /a-d
 dir C:\RoadSeva /b /s | findstr /v ".git"
